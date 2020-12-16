@@ -117,38 +117,8 @@ Catch {
 # metto a dominio il PC
 $dominio = 'agm.local'
 
-$form_PWD = FormBase -w 400 -h 250 -text "LOGIN"
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Size(10,20) 
-$label.Size = New-Object System.Drawing.Size(300,20) 
-$label.Text = "Inserisci le tue credenziali"
-$form_PWD.Controls.Add($label)
-$usrlabel = New-Object System.Windows.Forms.Label
-$usrlabel.Location = New-Object System.Drawing.Size(10,50) 
-$usrlabel.Size = New-Object System.Drawing.Size(100,20) 
-$usrlabel.Text = "Utente:"
-$form_PWD.Controls.Add($usrlabel)
-$pwdlabel = New-Object System.Windows.Forms.Label
-$pwdlabel.Location = New-Object System.Drawing.Size(10,80) 
-$pwdlabel.Size = New-Object System.Drawing.Size(100,20) 
-$pwdlabel.Text = "Password:"
-$form_PWD.Controls.Add($pwdlabel)
-$MaskedTextBox = New-Object System.Windows.Forms.MaskedTextBox
-$MaskedTextBox.PasswordChar = '*'
-$MaskedTextBox.Location = New-Object System.Drawing.Point(130,80)
-$MaskedTextBox.Size = New-Object System.Drawing.Size(150,20)
-$form_PWD.Add_Shown({$MaskedTextBox.Select()})
-$form_PWD.Controls.Add($MaskedTextBox)
-$textBox = New-Object System.Windows.Forms.TextBox
-$textBox.Location = New-Object System.Drawing.Point(130,50)
-$textBox.Size = New-Object System.Drawing.Size(150,20)
-$form_PWD.Add_Shown({$textBox.Select()})
-$form_PWD.Controls.Add($textBox)
-OKButton -form $form_PWD -x 100 -y 120 -text "Ok"
-$result = $form_PWD.ShowDialog()
-$usr = $textBox.Text
-$pwd = ConvertTo-SecureString $MaskedTextBox.Text -AsPlainText -Force
-$ad_login = New-Object System.Management.Automation.PSCredential($usr, $pwd)
+# Recupero le credenziali AD
+$ad_login = LoginWindow
 
 # form di scelta OU
 $form_modalita = FormBase -w 400 -h 230 -text "OU DESTINAZIONE"
