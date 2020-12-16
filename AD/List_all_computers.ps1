@@ -6,24 +6,11 @@ Author....: Dario CORRADA
 Questo script accede ad Active Directory ed estrae in un file CSV l'elenco di tutti computer presenti
 #>
 
-
-# header
-$ErrorActionPreference= 'Inquire'
-$WarningPreference = 'SilentlyContinue'
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-Add-Type -AssemblyName PresentationFramework
-
-Import-Module -Name '\\192.168.2.251\Dario\SCRIPT\Moduli_PowerShell\Forms.psm1'
-
 # setto le policy di esecuzione degli script
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
-
-# Controllo accesso
-$login = LoginWindow
 
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }

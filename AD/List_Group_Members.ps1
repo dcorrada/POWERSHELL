@@ -4,14 +4,11 @@ Version...: 19.10.1
 Author....: Dario CORRADA
 
 Questo script serve elenca tutti i membri appartenenti ad un Gruppo di Active Directory
-
-+++ UPDATES +++
-
-[2019-10-03 Dario CORRADA] 
-Prima release
-
 #>
+
+# header
 $ErrorActionPreference= 'Inquire'
+$WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
@@ -21,10 +18,6 @@ $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
-
-# Controllo accesso
-Import-Module -Name '\\itmilitgroup\SD_Utilities\SCRIPT\Moduli_PowerShell\Patrol.psm1'
-$login = Patrol -scriptname List_Group_Members
 
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
