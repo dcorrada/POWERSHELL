@@ -1,9 +1,13 @@
 <#
 Name......: Inizializza_PC.ps1
-Version...: 20.12.1
+Version...: 20.12.2
 Author....: Dario CORRADA
 
-Questo script rinomina un PC usando il suo seriale, lo mette a dominio e crea un'utenza locale con privilegi di admin
+Questo script inizializza un PC da assegnare:
+* installa Chrome, AcrobatDC e 7Zip;
+* crea un'utenza locale con privilegi di admin;
+* rinomina il PC usando il suo seriale;
+* mette il PC a dominio.
 #>
 
 # header
@@ -31,10 +35,16 @@ $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/Acrobat
 $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
 Write-Host -ForegroundColor Green " DONE"
 
+Write-Host -NoNewline "Installazione software..."
+Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
+Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
+Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
+Write-Host -ForegroundColor Green " DONE"
+
 Remove-Item $tmppath -Recurse -Force
 
 
-# creo utenza locale
+# creazione utenza locale
 $answ = [System.Windows.MessageBox]::Show("Creare utenza locale?",'ACCOUNT','YesNo','Info')
 if ($answ -eq "Yes") {
     
