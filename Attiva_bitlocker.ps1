@@ -21,7 +21,8 @@ $ErrorActionPreference= 'Inquire'
 # attivo Bitlocker
 $ErrorActionPreference= 'Stop'
 Try {
-    Enable-BitLocker -MountPoint "C:" -EncryptionMethod XtsAes128 –UsedSpaceOnly -TpmProtector -RecoveryPasswordProtector
+    Enable-BitLocker -MountPoint "C:" -EncryptionMethod XtsAes128 -UsedSpaceOnly -TpmProtector
+    Add-BitLockerKeyProtector -MountPoint "C:" -RecoveryPasswordProtector
     Write-Host "BitLocker attivato" -ForegroundColor Green
     $ErrorActionPreference= 'Inquire'
 }
@@ -42,11 +43,13 @@ Try {
 	# Get the Mount Point
 	$BootDrive = $BitLockerVolumeInfo.MountPoint
 
+<#
 	# Check if the drive is encrypted
-	if ($BitLockerVolumeInfo.ProtectionStatus -eq 'On') {
+	if ($BitLockerVolumeInfo.ProtectionStatus -ne 'On') {
 		[System.Windows.MessageBox]::Show("BitLocker non attivato",'BitLocker','Ok','Warning')
 		exit
 	}
+#>
 
 	# Get the correct ID (The one from the RecoveryPassword)
 	$BitLockerKeyProtectorId = ($BitLockerVolumeInfo.KeyProtector | Where-Object -FilterScript {
