@@ -21,7 +21,7 @@ $ErrorActionPreference= 'Inquire'
 # attivo Bitlocker
 $ErrorActionPreference= 'Stop'
 Try {
-    Enable-BitLocker -MountPoint "C:" -EncryptionMethod Aes256 –UsedSpaceOnly -TpmProtector -RecoveryPasswordProtector
+    Enable-BitLocker -MountPoint "C:" -EncryptionMethod XtsAes128 –UsedSpaceOnly -TpmProtector -RecoveryPasswordProtector
     Write-Host "BitLocker attivato" -ForegroundColor Green
     $ErrorActionPreference= 'Inquire'
 }
