@@ -1,0 +1,5 @@
+Per generare una nuova chiave
+
+Import-Module -Name '[path]\FileCryptography.psm1'
+
+New-CryptographyKey -Algorithm AES -AsPlainText
