@@ -4,13 +4,6 @@ Version...: 19.05.1
 Author....: Dario CORRADA
 
 Questo script accede ad Active Directory crea una lista di computer con le versioni dell'OS
-
-
-+++ UPDATES +++
-
-[2019-03-29 Dario CORRADA] 
-Primo rilascio
-
 #>
 
 
@@ -24,10 +17,6 @@ $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
-
-# Controllo accesso
-Import-Module -Name '\\itmilitgroup\SD_Utilities\SCRIPT\Moduli_PowerShell\Patrol.psm1'
-$it_login = Patrol -scriptname OSversion -ITuser
 
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
@@ -48,7 +37,6 @@ $form.Controls.Add($label)
 $textBox = New-Object System.Windows.Forms.TextBox
 $textBox.Location = New-Object System.Drawing.Point(10,60)
 $textBox.Size = New-Object System.Drawing.Size(450,30)
-$textBox.Text = "GDv7-Clients"
 $form.Controls.Add($textBox)
 
 $OKButton = New-Object System.Windows.Forms.Button
@@ -69,14 +57,15 @@ $ou2find = $textBox.Text
 Write-host "Recupero la lista delle OU disponibili..."
 $ou_available = Get-ADOrganizationalUnit -Filter *
 
+$suffix = ",DC=agm,DC=local"
 if ($ou_available.Name -contains $ou2find) {
     Write-Host "Ricerca computer appartenenti a [$ou2find]"
-    $string = "OU=" + $ou2find + ",DC=it,DC=kworld,DC=kpmg,DC=com"
+    $string = "OU=" + $ou2find + $suffix
     $ErrorActionPreference= 'SilentlyContinue'
     $computer_list = Get-ADComputer -Filter * -SearchBase $string
     $ErrorActionPreference= 'Inquire'
     if ($computer_list -eq $null) {
-        $string = "CN=" + $ou2find + ",DC=it,DC=kworld,DC=kpmg,DC=com"
+        $string = "CN=" + $ou2find + $suffix
         $computer_list = Get-ADComputer -Filter * -SearchBase $string
     }
 } else {
