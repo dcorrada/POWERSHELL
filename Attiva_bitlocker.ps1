@@ -34,8 +34,34 @@ Catch {
 # faccio un backup su Azure AD
 $ErrorActionPreference= 'Stop'
 Try {
-    $BLV = Get-BitLockerVolume -MountPoint "C:"
-    Backup-BitLockerKeyProtector -MountPoint "C:" -KeyProtectorId $BLV.KeyProtector[1].KeyProtectorId
+	# Get BitLocker Volume info
+	$BitLockerVolumeInfo = (Get-BitLockerVolume -ErrorAction 'Stop' | Where-Object -FilterScript {
+			$_.VolumeType -eq 'OperatingSystem'
+	})
+
+	# Get the Mount Point
+	$BootDrive = $BitLockerVolumeInfo.MountPoint
+
+	# Check if the drive is encrypted
+	if ($BitLockerVolumeInfo.ProtectionStatus -eq 'On') {
+		[System.Windows.MessageBox]::Show("BitLocker non attivato",'BitLocker','Ok','Warning')
+		exit
+	}
+
+	# Get the correct ID (The one from the RecoveryPassword)
+	$BitLockerKeyProtectorId = ($BitLockerVolumeInfo.KeyProtector | Where-Object -FilterScript {
+		$_.KeyProtectorType -eq 'RecoveryPassword'
+	} | Select-Object -ExpandProperty KeyProtectorId)
+
+	# Check if we have a recovery password/id
+	if ($BitLockerKeyProtectorId) {
+		# Do the backup towards AzureAD
+		$null = (BackupToAAD-BitLockerKeyProtector -MountPoint $BootDrive -KeyProtectorId $BitLockerKeyProtectorId -Confirm:$false -ErrorAction 'Stop')
+		[System.Windows.MessageBox]::Show("BitLocker recovery salvato su Azure AD",'BitLocker','Ok','Info')
+	} else {
+		[System.Windows.MessageBox]::Show("Non ci sono recovery info da salvare su Azure AD",'BitLocker','Ok','Warning')
+		exit
+	}
     Write-Host "Backup BitLocker effettuato" -ForegroundColor Green
     $ErrorActionPreference= 'Inquire'
 }
