@@ -4,19 +4,14 @@ Version...: 19.04.1
 Author....: Dario CORRADA
 
 Questo script accede ad Active Directory e sposta una lista di computer da una OU specificata ad un'altra
-
-
-+++ UPDATES +++
-
-[2019-04-15 Dario CORRADA] 
-Primo rilascio
-
-[2019-04-17 Dario CORRADA] 
-Si puo' evitare di specificare la OU sorgente
-
 #>
 
 $ErrorActionPreference= 'Inquire'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+
+Import-Module -Name '\\192.168.2.251\Dario\SCRIPT\Moduli_PowerShell\Forms.psm1'
 
 # setto le policy di esecuzione degli script
 $ErrorActionPreference= 'SilentlyContinue'
@@ -25,8 +20,7 @@ Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 
 # Controllo accesso
-Import-Module -Name '\\itmilitgroup\SD_Utilities\SCRIPT\Moduli_PowerShell\Patrol.psm1'
-$AD_login = Patrol -scriptname SpostamentoOU -ITuser
+$AD_login = LoginWindow
 
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
@@ -54,11 +48,11 @@ if (Test-Path $file_path -PathType Leaf) {
                 if ($computer_ADobj.DistinguishedName -match $dest_ou) {
                     Write-Host -ForegroundColor Cyan " skipped"
                 } elseif ($computer_ADobj.DistinguishedName -match $source_ou) {
-                    $target_path = "OU=" + $dest_ou + ",DC=it,DC=kworld,DC=kpmg,DC=com"
+                    $target_path = "OU=" + $dest_ou + ",DC=agm,DC=local"
                     $computer_ADobj | Move-ADObject -Credential $AD_login -TargetPath $target_path
                     Write-Host -ForegroundColor Green " remapped"
                 } elseif ($source_ou -eq $dest_ou) {
-                    $target_path = "OU=" + $dest_ou + ",DC=it,DC=kworld,DC=kpmg,DC=com"
+                    $target_path = "OU=" + $dest_ou + ",DC=agm,DC=local"
                     $computer_ADobj | Move-ADObject -Credential $AD_login -TargetPath $target_path
                     Write-Host -ForegroundColor Green " remapped"
                 } else {
