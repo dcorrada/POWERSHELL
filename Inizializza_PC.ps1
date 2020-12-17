@@ -121,20 +121,23 @@ $dominio = 'agm.local'
 $ad_login = LoginWindow
 
 # form di scelta OU
-$form_modalita = FormBase -w 400 -h 230 -text "OU DESTINAZIONE"
+$form_modalita = FormBase -w 300 -h 230 -text "OU DESTINAZIONE"
 $noou = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "null"
-$interni  = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "utenti_interni"
-$esterni = RadioButton -form $form_modalita -checked $false -x 30 -y 80 -text "utenti_esterni"
-OKButton -form $form_modalita -x 90 -y 130 -text "Ok"
+$consulenti  = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "Client Consulenti"
+$milano = RadioButton -form $form_modalita -checked $false -x 30 -y 80 -text "Client Milano"
+$torino = RadioButton -form $form_modalita -checked $false -x 30 -y 110 -text "Client Torino"
+OKButton -form $form_modalita -x 90 -y 150 -text "Ok"
 $result = $form_modalita.ShowDialog()
 
 if ($result -eq "OK") {
     if ($noou.Checked) {
         $outarget = "null"
-    } elseif ($interni.Checked) {
-        $outarget = 'OU=utenti_interni,DC=agm,DC=local'
-    } elseif ($esterni.Checked) {
-        $outarget = 'OU=utenti_esterni,DC=agm,DC=local'
+    } elseif ($consulenti.Checked) {
+        $outarget = 'OU=Client Consulenti,OU=Delegate,DC=agm,DC=local'
+    } elseif ($milano.Checked) {
+        $outarget = 'OU=Client Milano,OU=Delegate,DC=agm,DC=local'
+    } elseif ($torino.Checked) {
+        $outarget = 'OU=Client Torino,OU=Delegate,DC=agm,DC=local'
     }    
 }
 
