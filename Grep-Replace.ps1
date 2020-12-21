@@ -13,17 +13,16 @@ Vedi GIT
 #>
 
 # header
+$ErrorActionPreference= 'SilentlyContinue'
+Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-
-# setto le policy di esecuzione degli script
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
+$workdir = Get-Location
+Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
 
 # chiedo il percoso da cercare
 [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms")
@@ -32,7 +31,6 @@ $foldername.RootFolder = "MyComputer"
 $foldername.ShowDialog() > $null
 
 # chiedo la chiave di ricerca e la stringa da sostituire
-Import-Module -Name 'C:\Users\dario.corrada\OneDrive - AGM Solutions\POWERSHELL\Moduli_PowerShell\Forms.psm1'
 $form_EXP = FormBase -w 350 -h 200 -text "TROVA E SOSTITUISCI"
 $searchlabel = New-Object System.Windows.Forms.Label
 $searchlabel.Location = New-Object System.Drawing.Point(10,20)

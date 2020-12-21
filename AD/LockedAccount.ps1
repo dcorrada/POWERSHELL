@@ -6,18 +6,17 @@ Author....: Dario CORRADA
 Questo script accede ad Active Directory, cerca gli account bloccati e permette di sbloccarli
 #>
 
-$ErrorActionPreference= 'Inquire'
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-Add-Type -AssemblyName PresentationFramework
-
-Import-Module -Name '\\192.168.2.251\Dario\SCRIPT\Moduli_PowerShell\Forms.psm1'
-
-# setto le policy di esecuzione degli script
+# header 
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
+$WarningPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+$workdir = Get-Location
+Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
 
 # Controllo accesso
 $AD_login = LoginWindow

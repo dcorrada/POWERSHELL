@@ -6,11 +6,15 @@ Author....: Dario CORRADA
 Questo script accede ad Active Directory ed estrae in un file CSV l'elenco di tutti gli account presenti
 #>
 
-# setto le policy di esecuzione degli script
+# header 
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
+$WarningPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
 
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
