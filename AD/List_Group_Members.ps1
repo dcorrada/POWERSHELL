@@ -6,18 +6,15 @@ Author....: Dario CORRADA
 Questo script serve elenca tutti i membri appartenenti ad un Gruppo di Active Directory
 #>
 
-# header
+# header 
+$ErrorActionPreference= 'SilentlyContinue'
+Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-
-# setto le policy di esecuzione degli script
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }

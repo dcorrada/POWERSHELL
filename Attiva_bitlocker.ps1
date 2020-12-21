@@ -7,16 +7,14 @@ Questo script attiva bitlocker su C: e fa un backup delle chiavi in cloud su Azu
 #>
 
 # header
+$ErrorActionPreference= 'SilentlyContinue'
+Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-
-# setto le policy di esecuzione degli script
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
 
 # attivo Bitlocker
 $ErrorActionPreference= 'Stop'

@@ -7,11 +7,12 @@ Questo script serve per disinstallare software usando le chiavi di registro
 (serve nei casi non sia presente nella lista di uninstall)
 #>
 
-# setto le policy di esecuzione degli script
+# header 
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
+$WarningPreference = 'SilentlyContinue'
 
 $searchkey = Read-Host "Chiave di ricerca"
 

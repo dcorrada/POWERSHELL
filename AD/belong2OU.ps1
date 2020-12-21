@@ -6,11 +6,12 @@ Author....: Dario CORRADA
 Questo script accede ad Active Directory e fornisce la lista dei computer che appartengono ad una OU
 #>
 
-# setto le policy di esecuzione degli script
+# header 
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
+$WarningPreference = 'SilentlyContinue'
 
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 

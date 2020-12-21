@@ -9,19 +9,17 @@ Questo script inizializza un PC da assegnare:
 * rinomina il PC usando il suo seriale;
 #>
 
-# header
+# header 
+$ErrorActionPreference= 'SilentlyContinue'
+Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-
-Import-Module -Name '\\192.168.2.251\Dario\SCRIPT\Moduli_PowerShell\Forms.psm1'
-
-# setto le policy di esecuzione degli script
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
+$workdir = Get-Location
+Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
 
 # download e installazione software
 # modificare i path dei download per scaricare software aggiornato
