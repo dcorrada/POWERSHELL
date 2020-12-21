@@ -33,7 +33,7 @@ Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
 # form di scelta 
 $form_modalita = FormBase -w 300 -h 200 -text "CERTIFICATI"
 $togli = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Rimuovi certificato"
-$metti  = RadioButton -form $form_modalita -checked $false -x 30 -y 60 -text "Importa certificato"
+$metti  = RadioButton -form $form_modalita -checked $false -x 30 -y 60 -text "Richiedi certificato"
 OKButton -form $form_modalita -x 90 -y 120 -text "Ok"
 $result = $form_modalita.ShowDialog()
 
@@ -73,14 +73,35 @@ if ($result -eq "OK") {
         }
 
     } elseif ($metti.Checked) {
-        $answ = [System.Windows.MessageBox]::Show("Opzione non ancora disponibile",'TODO','Ok','Info')
-<#
-        $certreq_log = certreq -q -enroll -user [nomeutente]
+        # elenco i certificati disponibili
+        $formlist = FormBase -w 400 -h 200 -text "CERTIFICATI"
+        $DropDown = new-object System.Windows.Forms.ComboBox
+        $DropDown.Location = new-object System.Drawing.Size(10,60)
+        $DropDown.Size = new-object System.Drawing.Size(350,30)
+        $font = New-Object System.Drawing.Font("Arial", 12)
+        $DropDown.Font = $font
+        foreach ($elem in ("Utente", "EFS di base")) {
+            $DropDown.Items.Add($elem)  > $null
+        }
+        $formlist.Controls.Add($DropDown)
+        $DropDownLabel = new-object System.Windows.Forms.Label
+        $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
+        $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
+        $DropDownLabel.Text = "Scegliere il certificato"
+        $formlist.Controls.Add($DropDownLabel)
+        OKButton -form $formlist -x 100 -y 100 -text "Ok"
+        $formlist.Add_Shown({$DropDown.Select()})
+        $result = $formlist.ShowDialog()
+        $selected = $DropDown.Text
 
-        Questa riga importa automaticamente un certificato emesso da un utente.
-        
-        Leggersi la documentazione relativa al comando certreq su:
-        https://docs.microsoft.com/it-it/windows-server/administration/windows-commands/certreq_1  
-#>
+        if ($selected -match "Utente") {
+            $tag = "User"
+        } elseif ($metti.Checked) {
+            $tag = "EFS"
+        }
+
+        # Leggersi la documentazione relativa al comando certreq su:
+        # https://docs.microsoft.com/it-it/windows-server/administration/windows-commands/certreq_1  
+        $certreq_log = certreq -enroll -user -policyserver * $tag
     }
 }
