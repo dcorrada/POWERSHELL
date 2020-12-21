@@ -1,0 +1,23 @@
+Al primo avvio di PATROL lanciare lo script crea_DB.ps1. Verranno creati due file:
+
+	* crypto.key        -> chiave di criptaggio
+	* PatrolDB.csv.AES  -> il DB criptato
+
+
+Per proteggere i vostri script usando l'accesso tramite PATROL:
+
+1) Aggiungere, a monte del codice del vostro script, le seguenti righe:
+
+	# Controllo accesso
+	Import-Module -Name "[path_di_installazione]\Moduli\Patrol.psm1"
+	$credential = Patrol -scriptname [nome_script]
+   
+   La funzione "Patrol" ritorna l'oggetto $credential contenente una coppia di credenziali username/password
+   La password e' cifrata con il metodo SecureString di PowerShell 
+
+2) Lanciare lo script UpdateDB.ps1 e scegliere l'opzione "Aggiungi record" per inserire una coppia di valori
+   [nome_script] e nome utente da abilitare
+
+Per proteggere ulteriormente i vostri script e' consigliabile compilarli usando software come PS2EXE:
+
+	https://gallery.technet.microsoft.com/scriptcenter/PS2EXE-Convert-PowerShell-9e4e07f1
