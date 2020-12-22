@@ -16,7 +16,7 @@ if ($testadmin -eq $false) {
 
 # recupero il percorso di installazione
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Certificati\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Attiva_bitlocker\.ps1$" > $null
 $workdir = $matches[1]
 
 # header
