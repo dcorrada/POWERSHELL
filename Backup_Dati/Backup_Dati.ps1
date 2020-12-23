@@ -254,9 +254,12 @@ While (Get-Job -State "Running") {
     $CurrentTime = $Time.Elapsed
     $estimated = [int]((($CurrentTime.TotalSeconds/$percent) * (100 - $percent)) / 60)
     $label.Text = "Avanzamento totale: $formattato% - $estimated minuti alla fine"
-    $bar.Value = $progress
+    if ($progress -ge 100) {
+        $bar.Value = 100
+    } else {
+        $bar.Value = $progress
+    }
     $form_bar.Refresh()
-    
     Write-Host " "
     Start-Sleep 5
 }

@@ -28,7 +28,6 @@ $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-$workdir = Get-Location
 Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
 
 $hostname = $env:computername
