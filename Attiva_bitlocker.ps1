@@ -6,6 +6,19 @@ Author....: Dario CORRADA
 Questo script attiva bitlocker su C: e fa un backup delle chiavi in cloud su Azure AD
 #>
 
+# faccio in modo di elevare l'esecuzione dello script con privilegi di admin
+$currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+$testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+if ($testadmin -eq $false) {
+    Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+    exit $LASTEXITCODE
+}
+
+# recupero il percorso di installazione
+$fullname = $MyInvocation.MyCommand.Path
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Attiva_bitlocker\.ps1$" > $null
+$workdir = $matches[1]
+
 # header
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
