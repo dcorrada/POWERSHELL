@@ -86,7 +86,7 @@ foreach ($folder in $allow_list) {
     if (Test-Path $full_path) {
         $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
         $output = [system.String]::Join(" ", $output)
-        $output -match "Bytes :\s+(\d+)\s+\d+" > $null
+        $output -match "Byte:\s+(\d+)\s+\d+" > $null
         $size = $Matches[1]
         if ($size -gt 1KB) {
             $backup_list[$folder] = $size
@@ -129,7 +129,7 @@ foreach ($folder in $elenco) {
             $full_path = $root_path + $folder
             $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
             $output = [system.String]::Join(" ", $output)
-            $output -match "Bytes :\s+(\d+)\s+\d+" > $null
+            $output -match "Byte:\s+(\d+)\s+\d+" > $null
             $size = $Matches[1]
             $backup_list[$folder] = $size
             Write-Host -NoNewline "."
@@ -142,11 +142,13 @@ $exclude_list = (
     "AppData",
     "Links",
     "OneDrive",
+    "OneDrive - AGM Solutions",
     "Saved Games",
     "Searches",
     "3D Objects",
     ".cisco",
-    ".config"
+    ".config",
+    "Dropbox"
 )
 $root_path = "C:\Users\$env:USERNAME\"
 $remote_root_list = Get-ChildItem $root_path -Attributes D
@@ -155,7 +157,7 @@ foreach ($folder in $remote_root_list.Name) {
         $full_path = $root_path + $folder
         $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
         $output = [system.String]::Join(" ", $output)
-        $output -match "Bytes :\s+(\d+)\s+\d+" > $null
+        $output -match "Byte:\s+(\d+)\s+\d+" > $null
         $size = $Matches[1]
         $full_path = "Users\$env:USERNAME\$folder"
         $backup_list[$full_path] = $size
@@ -217,17 +219,17 @@ While (Get-Job -State "Running") {
     Clear-Host
     Write-Host -ForegroundColor Yellow "*** TRASFERIMENTO DATI IN CORSO ***"
     
-    $total_bytes = 1
+    $total_bytes = 0
     $trasferred_bytes = 0
       
     foreach ($folder in $backup_list.Keys) {
         Write-Host -NoNewline "C:\$folder "
-        $source_path = $prefix + '\' + $folder
+        $source_path = 'C:\' + $folder
         $source_size = $backup_list[$folder]
         $dest_path = $copiasu + '\' + $folder
         $output = robocopy $dest_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
         $output = [system.String]::Join(" ", $output)
-        $output -match "Bytes :\s+(\d+)\s+\d+" > $null
+        $output -match "Byte:\s+(\d+)\s+\d+" > $null
         $dest_size = $Matches[1]
             
         $total_bytes += $source_size
@@ -273,7 +275,7 @@ foreach ($folder in $backup_list.Keys) {
     $dest = $copiasu + '\' + $folder
     $output = robocopy $dest c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
     $output = [system.String]::Join(" ", $output)
-    $output -match "Bytes :\s+(\d+)\s+\d+" > $null
+    $output -match "Byte:\s+(\d+)\s+\d+" > $null
     $dest_size = $Matches[1]
 
     $foldername = $folder.Replace('\','-')                      
