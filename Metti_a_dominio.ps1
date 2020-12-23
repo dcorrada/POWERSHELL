@@ -32,7 +32,32 @@ $workdir = Get-Location
 Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
 
 $hostname = $env:computername
-$dominio = 'agm.local'
+
+# recupero il nome del dominio
+$output = nslookup ls
+$output[0] -match "Server:\s+[a-zA-Z_\-0-9]+\.([a-zA-Z\-0-9\.]+)$" > $null
+$dominio = $matches[1]
+$answ = [System.Windows.MessageBox]::Show("Regitrarsi sul dominio [$dominio]?",'DOMAIN','YesNo','Info')
+if ($answ -eq "No") {    
+    $form = FormBase -w 520 -h 220 -text "DOMAIN"
+    $font = New-Object System.Drawing.Font("Arial", 12)
+    $form.Font = $font
+    $label = New-Object System.Windows.Forms.Label
+    $label.Location = New-Object System.Drawing.Point(10,20)
+    $label.Size = New-Object System.Drawing.Size(500,30)
+    $label.Text = "Nome dominio:"
+    $form.Controls.Add($label)
+    $textBox = New-Object System.Windows.Forms.TextBox
+    $textBox.Location = New-Object System.Drawing.Point(10,60)
+    $textBox.Size = New-Object System.Drawing.Size(450,30)
+    $form.Controls.Add($textBox)
+    $OKButton = New-Object System.Windows.Forms.Button
+    OKButton -form $form -x 200 -y 110 -text "Ok"
+    $form.Topmost = $true
+    $result = $form.ShowDialog()
+    $dominio = $textBox.Text
+}
+
 
 # Recupero le credenziali AD
 $ad_login = LoginWindow
