@@ -21,6 +21,11 @@ $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 $ErrorActionPreference= 'Inquire'
 
+# roba grafica
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+
 $ErrorActionPreference= 'Stop'
 try {
     Import-Module PSWindowsUpdate
