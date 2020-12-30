@@ -39,6 +39,8 @@ if (Test-Path $file_path -PathType Leaf) {
     Write-host "Recupero la lista delle OU disponibili..."
     $ou_available = Get-ADOrganizationalUnit -Filter *
     $computer_list = Get-Content $file_path # recupero la lista dei PC
+    $obj = Get-ADDomain
+    $suffix = ',' + $obj.DistinguishedName
     if ($ou_available.Name -contains $source_ou) {
         if ($ou_available.Name -contains $dest_ou) {
             foreach ($computer_name in $computer_list) {
@@ -48,11 +50,11 @@ if (Test-Path $file_path -PathType Leaf) {
                 if ($computer_ADobj.DistinguishedName -match $dest_ou) {
                     Write-Host -ForegroundColor Cyan " skipped"
                 } elseif ($computer_ADobj.DistinguishedName -match $source_ou) {
-                    $target_path = "OU=" + $dest_ou + ",DC=agm,DC=local"
+                    $target_path = "OU=" + $dest_ou + $suffix
                     $computer_ADobj | Move-ADObject -Credential $AD_login -TargetPath $target_path
                     Write-Host -ForegroundColor Green " remapped"
                 } elseif ($source_ou -eq $dest_ou) {
-                    $target_path = "OU=" + $dest_ou + ",DC=agm,DC=local"
+                    $target_path = "OU=" + $dest_ou + $suffix
                     $computer_ADobj | Move-ADObject -Credential $AD_login -TargetPath $target_path
                     Write-Host -ForegroundColor Green " remapped"
                 } else {

@@ -70,15 +70,22 @@ $torino = RadioButton -form $form_modalita -checked $false -x 30 -y 110 -text "C
 OKButton -form $form_modalita -x 90 -y 150 -text "Ok"
 $result = $form_modalita.ShowDialog()
 
+# genero il suffisso del distinguished name
+$dnsuffix = ''
+foreach ($dctag in $dominio.Split('.')) {
+    $dnsuffix += ',DC=' + $dctag
+}
+
+# negli "elseif" modificare il prefisso di $outarget in base al percorso di OU desiderato
 if ($result -eq "OK") {
     if ($noou.Checked) {
         $outarget = "null"
     } elseif ($consulenti.Checked) {
-        $outarget = 'OU=Client Consulenti,OU=Delegate,DC=agm,DC=local'
+        $outarget = 'OU=Client Consulenti,OU=Delegate' + $dnsuffix
     } elseif ($milano.Checked) {
-        $outarget = 'OU=Client Milano,OU=Delegate,DC=agm,DC=local'
+        $outarget = 'OU=Client Milano,OU=Delegate' + $dnsuffix
     } elseif ($torino.Checked) {
-        $outarget = 'OU=Client Torino,OU=Delegate,DC=agm,DC=local'
+        $outarget = 'OU=Client Torino,OU=Delegate' + $dnsuffix
     }    
 }
 
