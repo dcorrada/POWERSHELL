@@ -25,61 +25,55 @@ $AD_login = LoginWindow
 # Importo il modulo di Active Directory
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
 
-# inputs
-$file_path = Read-Host "File lista dei PC..."
-$source_ou = Read-Host "OU sorgente........."
-$dest_ou = Read-Host "OU destinazione....."
+# recupero la lista dei PC
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms')
+$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
+$OpenFileDialog.filter = 'Text file (*.txt)| *.txt'
+$OpenFileDialog.ShowDialog() | Out-Null
+$file_path = $OpenFileDialog.filename
+$computer_list = Get-Content $file_path
 
-if ($source_ou -eq '') {
-    $source_ou = $dest_ou
+# Recupero la lista delle OU disponibili
+$ou_available = Get-ADOrganizationalUnit -Filter *
+$ou_list = @()
+foreach ($item in $ou_available) {
+    $ou_list += $item.DistinguishedName
 }
 
-
-if (Test-Path $file_path -PathType Leaf) {    
-    Write-host "Recupero la lista delle OU disponibili..."
-    $ou_available = Get-ADOrganizationalUnit -Filter *
-    $computer_list = Get-Content $file_path # recupero la lista dei PC
-    $obj = Get-ADDomain
-    $suffix = ',' + $obj.DistinguishedName
-    if ($ou_available.Name -contains $source_ou) {
-        if ($ou_available.Name -contains $dest_ou) {
-            foreach ($computer_name in $computer_list) {
-                Write-Host -Nonewline $computer_name
-                $computer_ADobj = Get-ADComputer $computer_name -Credential $AD_login
-                # Write-Host $computer_ADobj.DistinguishedName
-                if ($computer_ADobj.DistinguishedName -match $dest_ou) {
-                    Write-Host -ForegroundColor Cyan " skipped"
-                } elseif ($computer_ADobj.DistinguishedName -match $source_ou) {
-                    $target_path = "OU=" + $dest_ou + $suffix
-                    $computer_ADobj | Move-ADObject -Credential $AD_login -TargetPath $target_path
-                    Write-Host -ForegroundColor Green " remapped"
-                } elseif ($source_ou -eq $dest_ou) {
-                    $target_path = "OU=" + $dest_ou + $suffix
-                    $computer_ADobj | Move-ADObject -Credential $AD_login -TargetPath $target_path
-                    Write-Host -ForegroundColor Green " remapped"
-                } else {
-                    Write-Host -ForegroundColor Cyan " skipped"
-                }
-            }
-            pause
-        } else {
-            Write-Host -ForegroundColor Red "E- OU destinazione non trovata"
-            pause
-            Write-Host "`nLista OU disponibili:"
-            $ou_available.Name | Sort-Object
-            pause
-            exit
-        }
-    } else {
-        Write-Host -ForegroundColor Red "E- Ou sorgente non trovata"
-        pause
-        Write-Host -ForegroundColor Cyan "`nLista OU disponibili:"
-        $ou_available.Name | Sort-Object
-        pause
-        exit
+$source_dest = @()
+foreach ($item in ('OU SORGENTE', 'OU DESTINAZIONE')) {
+    $formlist = FormBase -w 400 -h 200 -text $item
+    $DropDown = new-object System.Windows.Forms.ComboBox
+    $DropDown.Location = new-object System.Drawing.Size(10,60)
+    $DropDown.Size = new-object System.Drawing.Size(350,30)
+    foreach ($elem in ($ou_list | sort)) {
+        $DropDown.Items.Add($elem)  > $null
     }
-} else {
-    Write-Host -ForegroundColor Red "E- File non trovato"
-    pause
-    exit
+    $formlist.Controls.Add($DropDown)
+    $DropDownLabel = new-object System.Windows.Forms.Label
+    $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
+    $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
+    $DropDownLabel.Text = "Scegliere OU"
+    $formlist.Controls.Add($DropDownLabel)
+    OKButton -form $formlist -x 100 -y 100 -text "Ok"
+    $formlist.Add_Shown({$DropDown.Select()})
+    $result = $formlist.ShowDialog()
+    $source_dest += $DropDown.Text
 }
+
+foreach ($computer_name in $computer_list) {
+    Write-Host -Nonewline $computer_name
+    $computer_ADobj = Get-ADComputer $computer_name -Credential $AD_login
+    # Write-Host $computer_ADobj.DistinguishedName
+    if ($computer_ADobj.DistinguishedName -match $source_dest[1]) {
+        Write-Host -ForegroundColor Cyan " skipped"
+    } elseif ($computer_ADobj.DistinguishedName -match $source_dest[0]) {
+        $target_path = "OU=" + $dest_ou + $suffix
+        $computer_ADobj | Move-ADObject -Credential $AD_login -TargetPath $source_dest[1]
+        Write-Host -ForegroundColor Green " remapped"
+    } else {
+        Write-Host -ForegroundColor Cyan " skipped"
+    }
+}
+pause
