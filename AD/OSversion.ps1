@@ -55,7 +55,8 @@ $ou2find = $textBox.Text
 Write-host "Recupero la lista delle OU disponibili..."
 $ou_available = Get-ADOrganizationalUnit -Filter *
 
-$suffix = ",DC=agm,DC=local"
+$obj = Get-ADDomain
+$suffix = ',' + $obj.DistinguishedName
 if ($ou_available.Name -contains $ou2find) {
     Write-Host "Ricerca computer appartenenti a [$ou2find]"
     $string = "OU=" + $ou2find + $suffix

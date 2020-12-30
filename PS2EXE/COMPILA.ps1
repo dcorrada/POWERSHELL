@@ -12,10 +12,10 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-[System.Reflection.Assembly]::LoadWithPartialName(“System.windows.forms”)
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms')
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
-$OpenFileDialog.filter = “PowerShell script (*.ps1)| *.ps1”
+$OpenFileDialog.filter = 'PowerShell script (*.ps1)| *.ps1'
 $OpenFileDialog.ShowDialog() | Out-Null
 $ps1file = $OpenFileDialog.filename
 
@@ -80,10 +80,10 @@ $company = $textBox1.Text
 $copyright = $textBox2.Text
 $version = $textBox3.Text
 
-[System.Reflection.Assembly]::LoadWithPartialName(“System.windows.forms”)
+[System.Reflection.Assembly]::LoadWithPartialName(ï¿½System.windows.formsï¿½)
 $OpenFileDialog = New-Object System.Windows.Forms.SaveFileDialog
 $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
-$OpenFileDialog.filter = “Executable (*.exe)| *.exe”
+$OpenFileDialog.filter = ï¿½Executable (*.exe)| *.exeï¿½
 $OpenFileDialog.filename = $filename
 $OpenFileDialog.ShowDialog() | Out-Null
 $exefile = $OpenFileDialog.filename
