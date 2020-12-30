@@ -1,1 +1,0 @@
-([wmiclass]'ROOT\ccm:SMS_Client').SetAssignedSite("CM0");"Site Code changed"

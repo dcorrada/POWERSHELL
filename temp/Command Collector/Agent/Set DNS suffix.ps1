@@ -1,1 +1,0 @@
-New-ItemProperty -path "HKLM:\SOFTWARE\Microsoft\CCM\LocationServices" -name "DnsSuffix" -PropertyType String -Force -value lab.local

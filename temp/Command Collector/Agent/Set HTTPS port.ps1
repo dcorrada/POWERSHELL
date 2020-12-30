@@ -1,1 +1,0 @@
-New-ItemProperty -path "HKLM:\SOFTWARE\Microsoft\CCM" -name "HttpsPort" -Type DWORD -force -value 443

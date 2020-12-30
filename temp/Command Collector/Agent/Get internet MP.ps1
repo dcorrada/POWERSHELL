@@ -1,1 +1,0 @@
- "Internet MP:" + (Get-ItemProperty("HKLM:\SOFTWARE\Microsoft\SMS\Client\Internet Facing")).$("Internet MP Hostname")

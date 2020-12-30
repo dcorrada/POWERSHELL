@@ -1,1 +1,0 @@
-"Missing upd:" + @(get-wmiobject -query "SELECT * FROM CCM_SoftwareUpdate" -namespace "ROOT\ccm\ClientSDK").count

@@ -1,1 +1,0 @@
-(get-wmiobject -query "SELECT * FROM CCM_UpdateStatus WHERE Article = '2760512'" -namespace "root\ccm\SoftwareUpdates\UpdatesStore").Status

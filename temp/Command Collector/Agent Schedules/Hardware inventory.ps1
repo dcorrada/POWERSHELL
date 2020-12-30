@@ -1,1 +1,0 @@
-[void]([wmiclass]'ROOT\ccm:SMS_Client').TriggerSchedule('{00000000-0000-0000-0000-000000000001}');"Delta HW Inv. started"

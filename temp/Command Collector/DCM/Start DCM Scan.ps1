@@ -1,1 +1,0 @@
-([wmiclass]'ROOT\ccm:SMS_Client').TriggerSchedule('{00000000-0000-0000-0000-000000000110}');"DCM Scan started"
