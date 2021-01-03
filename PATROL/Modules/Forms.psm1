@@ -1,4 +1,4 @@
-﻿# funzioni per la gestione delle finestre
+﻿# functions for dialog boxes
 
 
 function FormBase {

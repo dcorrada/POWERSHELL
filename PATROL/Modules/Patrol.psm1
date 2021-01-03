@@ -1,7 +1,7 @@
 ﻿function Patrol {
     param ($scriptname)
 
-    # recupero il percorso di installazione
+    # get installation path
     $fullname = $MyInvocation.MyCommand.Path
     $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\UpdateDB\.ps1$" > $null
     $workdir = $matches[1]
@@ -9,9 +9,9 @@
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
     Add-Type -AssemblyName PresentationFramework
-    Import-Module -Name "$workdir\Moduli\Forms.psm1"
+    Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-    # Recupero le credenziali
+    # get AD credentials
     $form_PWD = New-Object System.Windows.Forms.Form
     $form_PWD.Text = "LOGIN"
     $form_PWD.Size = "400,250"
@@ -20,12 +20,12 @@
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Size(10,20) 
     $label.Size = New-Object System.Drawing.Size(300,20) 
-    $label.Text = "Inserisci le tue credenziali"
+    $label.Text = "Insert your credentials"
     $form_PWD.Controls.Add($label)
     $usrlabel = New-Object System.Windows.Forms.Label
     $usrlabel.Location = New-Object System.Drawing.Size(10,50) 
     $usrlabel.Size = New-Object System.Drawing.Size(100,20) 
-    $usrlabel.Text = "Utente:"
+    $usrlabel.Text = "Username:"
     $form_PWD.Controls.Add($usrlabel)
     $textBox = New-Object System.Windows.Forms.TextBox
     $textBox.Location = New-Object System.Drawing.Point(130,50)
@@ -56,8 +56,8 @@
     $credit = New-Object System.Management.Automation.PSCredential($usr, $pwd)
 
     if ((new-object directoryservices.directoryentry "",$textBox.Text,$MaskedTextBox.Text).psbase.name -ne $null) {
-        # carico il modulo per criptare/decriptare il DB
-        Import-Module -Name "$workdir\Moduli\FileCryptography.psm1"
+        # load the module to cript/decript DB
+        Import-Module -Name "$workdir\Modules\FileCryptography.psm1"
 
         Copy-Item -Path "$workdir\PatrolDB.csv.AES" -Destination "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv.AES"
         $stringa = Get-Content "$workdir\crypto.key"
@@ -87,11 +87,11 @@
         }        
        
     } else {
-        [System.Windows.MessageBox]::Show("Password o username errati",'ATTENZIONE','Ok','Error')
+        [System.Windows.MessageBox]::Show("Password o username uncorrect",'ERROR','Ok','Error')
         Exit
     }
 
-    # Scrivo il record di accesso
+    # write access record
     net stop workstation /y > $null
     net start workstation > $null
     Start-Sleep 3
@@ -109,7 +109,7 @@
     
 
     if ($status -eq 'blocked') {
-        [System.Windows.MessageBox]::Show("L'utente non e' abilitato all'utilizzo di questo script",'ATTENZIONE','Ok','Error')
+        [System.Windows.MessageBox]::Show("User is not enabled to run this script",'WARNING','Ok','Error')
         Exit
     }
 

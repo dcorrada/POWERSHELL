@@ -1,13 +1,13 @@
-# Script per la creazione di una chiave di criptaggio e relativo DB
+# This script creates a crypto key and related encrypted DB
 
 $workdir = Get-Location
 Import-Module -Name "$workdir\Moduli\FileCryptography.psm1"
 
-# creo la chiave
+# crypto key
 $key = New-CryptographyKey -Algorithm AES -AsPlainText
 $key | Out-File "$workdir\crypto.key" -Encoding ASCII -Append
 
-# creo il DB
+# encrypted DB
 $whoami = $env:UserName
 "SCRIPT;USER" | Out-File "$workdir\PatrolDB.csv" -Encoding ASCII -Append
 "UpdateDB;$whoami" | Out-File "$workdir\PatrolDB.csv" -Encoding ASCII -Append

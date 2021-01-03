@@ -3,15 +3,10 @@ Name......: UpdateDB.ps1
 Version...: 20.1.1
 Author....: Dario CORRADA
 
-Questo script gestice il DB di Patrol
-
-+++ UPDATES +++
-
-[2019-10-08  CORRADA] 
-Vedi GIT
+Questo script manage Patrol DB
 #>
 
-# faccio in modo di elevare l'esecuzione dello script con privilegi di admin
+# elevate script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 if ($testadmin -eq $false) {
@@ -19,25 +14,25 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# recupero il percorso di installazione
+# retrieve installation path
 $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\UpdateDB\.ps1$" > $null
 $repopath = $matches[1]
 
-# setto le policy di esecuzione dello script
+# setting execution policy
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 $ErrorActionPreference= 'Inquire'
 
-# roba di grafica da inizializzare
+# graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# carico moduli
-Import-Module -Name "$repopath\Moduli\Forms.psm1"
-Import-Module -Name "$repopath\Moduli\Patrol.psm1"
-Import-Module -Name "$repopath\Moduli\FileCryptography.psm1"
+# import modules
+Import-Module -Name "$repopath\Modules\Forms.psm1"
+Import-Module -Name "$repopath\Modules\Patrol.psm1"
+Import-Module -Name "$repopath\Modules\FileCryptography.psm1"
 
 function RetryButton {
     param ($form, $x, $y, $text)
@@ -53,25 +48,25 @@ function RetryButton {
 
 $logo = Patrol -scriptname UpdateDB
 
-# form di scelta modalita'
+# dialog box
 do {
-    $form_modalita = FormBase -w 350 -h 300 -text "MODALITA'"
-    $importa = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Importa Database"
-    $esporta = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "Esporta Database"
-    $add_user = RadioButton -form $form_modalita -checked $false -x 30 -y 80 -text "Aggiungi record"
-    $check_user = RadioButton -form $form_modalita -checked $false -x 30 -y 110 -text "Verifica privilegi utente"
-    $check_script = RadioButton -form $form_modalita -checked $false -x 30 -y 140 -text "Verifica accessi script"
+    $form_modalita = FormBase -w 350 -h 300 -text "OPTIONS'"
+    $importa = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Import Database"
+    $esporta = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "Export Database"
+    $add_user = RadioButton -form $form_modalita -checked $false -x 30 -y 80 -text "Add record"
+    $check_user = RadioButton -form $form_modalita -checked $false -x 30 -y 110 -text "Check user privileges"
+    $check_script = RadioButton -form $form_modalita -checked $false -x 30 -y 140 -text "Check script grants"
     OKButton -form $form_modalita -x 190 -y 180 -text "Exit"
     RetryButton -form $form_modalita -x 50 -y 180 -text "Next"
     $ciclo = $form_modalita.ShowDialog()
 
     if ($ciclo -eq "Retry") {
         if ($add_user.Checked) {
-            $form_add = FormBase -w 400 -h 200 -text "AGGIUNGI RECORD:"
+            $form_add = FormBase -w 400 -h 200 -text "ADD RECORD:"
             $usrlabel = New-Object System.Windows.Forms.Label
             $usrlabel.Location = New-Object System.Drawing.Size(10,30) 
             $usrlabel.Size = New-Object System.Drawing.Size(100,20) 
-            $usrlabel.Text = "Utente:"
+            $usrlabel.Text = "User:"
             $form_add.Controls.Add($usrlabel)
             $usrBox = New-Object System.Windows.Forms.TextBox
             $usrBox.Location = New-Object System.Drawing.Point(130,30)
@@ -108,7 +103,7 @@ do {
                 New-PSDrive -Name P -PSProvider FileSystem -Root $repopath -Credential $logo > $null
             }
             Catch { 
-                $errormsg = [System.Windows.MessageBox]::Show("Impossibile accedere alla cartella remota, controllare le credenziali",'ATTENZIONE','Ok','Error')
+                $errormsg = [System.Windows.MessageBox]::Show("Unable to access, check your credentials",'ERROR','Ok','Error')
             }
             $ErrorActionPreference = 'Inquire'
     
@@ -119,7 +114,6 @@ do {
             Copy-Item -Path "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv.AES" -Destination "P:\PatrolDB.csv.AES"
             Remove-Item -Path "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv.AES"
     
-            # mi disconnetto da \\itmilitgroup
             Remove-PSDrive -Name P
 
         }
@@ -141,7 +135,7 @@ do {
                 }
             }
 
-            $formlist = FormBase -w 400 -h 200 -text "LISTA UTENTI"
+            $formlist = FormBase -w 400 -h 200 -text "USERS LIST"
             $DropDown = new-object System.Windows.Forms.ComboBox
             $DropDown.Location = new-object System.Drawing.Size(10,60)
             $DropDown.Size = new-object System.Drawing.Size(250,30)
@@ -152,7 +146,7 @@ do {
             $DropDownLabel = new-object System.Windows.Forms.Label
             $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
             $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
-            $DropDownLabel.Text = "Scegliere l'utente"
+            $DropDownLabel.Text = "Select user"
             $formlist.Controls.Add($DropDownLabel)
             OKButton -form $formlist -x 100 -y 100 -text "Ok"
             $formlist.Add_Shown({$DropDown.Select()})
@@ -166,7 +160,7 @@ do {
                     $lista_risultato += $script
                 }
             }
-            Write-Host -ForegroundColor Cyan "Script a cui e' abilitato $selected"
+            Write-Host -ForegroundColor Cyan "Script avalaible for $selected"
             $lista_risultato | sort
                 
             Remove-Item -Path "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv"
@@ -189,7 +183,7 @@ do {
                 }
             }
 
-            $formlist = FormBase -w 400 -h 200 -text "LISTA SCRIPT"
+            $formlist = FormBase -w 400 -h 200 -text "SCRIPTS LIST"
             $DropDown = new-object System.Windows.Forms.ComboBox
             $DropDown.Location = new-object System.Drawing.Size(10,60)
             $DropDown.Size = new-object System.Drawing.Size(250,30)
@@ -200,7 +194,7 @@ do {
             $DropDownLabel = new-object System.Windows.Forms.Label
             $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
             $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
-            $DropDownLabel.Text = "Scegliere lo script"
+            $DropDownLabel.Text = "Select script"
             $formlist.Controls.Add($DropDownLabel)
             OKButton -form $formlist -x 100 -y 100 -text "Ok"
             $formlist.Add_Shown({$DropDown.Select()})
@@ -214,14 +208,14 @@ do {
                     $lista_risultato += $utente
                 }
             }
-            Write-Host -ForegroundColor Cyan "Utenti che hanno accesso a $selected"
+            Write-Host -ForegroundColor Cyan "Users granted to run $selected"
             $lista_risultato | sort
 
             Remove-Item -Path "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv"
         }
 
         if ($importa.Checked) {
-            Write-Host "Importo il database..."
+            Write-Host "Import database..."
 
             net stop workstation /y > $null
             net start workstation > $null
@@ -231,11 +225,10 @@ do {
                 New-PSDrive -Name P -PSProvider FileSystem -Root $repopath -Credential $logo > $null
             }
             Catch { 
-                $errormsg = [System.Windows.MessageBox]::Show("Impossibile accedere alla cartella remota, controllare le credenziali",'ATTENZIONE','Ok','Error')
+                $errormsg = [System.Windows.MessageBox]::Show("Unable to access, check your credentials",'ERROR','Ok','Error')
             }
             $ErrorActionPreference = 'Inquire'
             
-            # finestra di dialogo per selezionare il file CSV di input di Varonis
             $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
             $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
             $OpenFileDialog.filter = "Comma separated value (*.csv)| *.csv"
@@ -251,18 +244,16 @@ do {
             Remove-Item -Path "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv.AES"
             [System.Windows.MessageBox]::Show("DB importato come $repopath\PatrolDB.csv.AES",'PATROL DB','Ok','Info') > $null
     
-            # mi disconnetto da \\itmilitgroup
             Remove-PSDrive -Name P
         }
     
         if ($esporta.Checked) {
-            Write-Host "Esporto il database..."
+            Write-Host "Export database..."
             Copy-Item -Path "$repopath\PatrolDB.csv.AES" -Destination "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv.AES"
             $stringa = Get-Content "$repopath\crypto.key"
             $key = ConvertTo-SecureString $stringa -AsPlainText -Force
             Unprotect-File "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv.AES" -Algorithm AES -Key $key -RemoveSource
     
-            # finestra di dialogo per salvare il file CSV di output
             $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
             $SaveFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
             $SaveFileDialog.filter = "Comma separated value (*.csv)| *.csv"
@@ -271,10 +262,7 @@ do {
             $outfile = $SaveFileDialog.filename
             Move-Item -Path "C:\Users\$env:USERNAME\Desktop\PatrolDB.csv" -Destination $outfile
     
-            [System.Windows.MessageBox]::Show("DB esportato come $outfile",'PATROL DB','Ok','Info') > $null
+            [System.Windows.MessageBox]::Show("DB saved as $outfile",'PATROL DB','Ok','Info') > $null
         }
     }
 } until ($ciclo -eq "Ok")
-
-
-
