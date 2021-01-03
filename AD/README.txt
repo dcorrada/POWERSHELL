@@ -1,4 +1,4 @@
-Questi script usano il modulo Powershell ActiveDirectory
+These scripts require Powershell ActiveDirectory module
 
-Assicurarsi che sia presente, altrimenti installare il package RSAT (Remote Server Administration Tools)
-disponibile su https://www.microsoft.com/en-us/download/details.aspx?id=45520
+If not already installed, download RSAT package (Remote Server Administration Tools)
+available on https://www.microsoft.com/en-us/download/details.aspx?id=45520

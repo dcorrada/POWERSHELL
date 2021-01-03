@@ -3,7 +3,7 @@ Name......: LockedAccount.ps1
 Version...: 19.12.1
 Author....: Dario CORRADA
 
-Questo script accede ad Active Directory, cerca gli account bloccati e permette di sbloccarli
+This script looks for locked account and ask to unlock
 #>
 
 # header 
@@ -16,12 +16,14 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 $workdir = Get-Location
-Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
+$workdir -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AD$" > $null
+$repopath = $matches[1]
+Import-Module -Name "$repopath\Modules\Forms.psm1"
 
-# Controllo accesso
+# get AD credentials
 $AD_login = LoginWindow
 
-# Importo il modulo di Active Directory
+# Import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
 
 $locked_accounts = Search-ADAccount -LockedOut
@@ -43,14 +45,14 @@ Write-Host " "
 $result = "OK"
 while ($result -eq "OK") {
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "SBLOCCA UTENTE"
+    $form.Text = "ULOCK ACCOUNT"
     $form.Size = "400,200"
     $form.StartPosition = 'CenterScreen'
     $form.Topmost = $true
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Point(10,20)
     $label.Size = New-Object System.Drawing.Size(350,30)
-    $label.Text = "Inserire il nome utente da sbloccare:"
+    $label.Text = "Username:"
     $form.Controls.Add($label)
     $textBox = New-Object System.Windows.Forms.TextBox
     $textBox.Location = New-Object System.Drawing.Point(10,60)
@@ -78,10 +80,10 @@ while ($result -eq "OK") {
         $ErrorActionPreference = 'Stop'
         Try {
             Unlock-ADAccount –Identity $username -Credential $AD_login
-            Write-Host -ForegroundColor Green "$username sbloccato"
+            Write-Host -ForegroundColor Green "$username unlocked"
         }
         Catch { 
-            [System.Windows.MessageBox]::Show("Impossibile sbloccare $username",'ATTENZIONE','Ok','Error') > $null
+            [System.Windows.MessageBox]::Show("Unable to unlock $username",'ERROR','Ok','Error') > $null
         }
         $ErrorActionPreference = 'Inquire'
     }    

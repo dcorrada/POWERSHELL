@@ -3,7 +3,7 @@ Name......: Belong2OU.ps1
 Version...: 19.04.1
 Author....: Dario CORRADA
 
-Questo script accede ad Active Directory e fornisce la lista dei computer che appartengono ad una OU
+This script get computer list belonging to a specific OU
 #>
 
 # header 
@@ -13,18 +13,18 @@ Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 
-# Importo il modulo di Active Directory
+# import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
 
-$ou2find = Read-Host "OU in cui cercare"
+$ou2find = Read-Host "OU to search"
 
-Write-host "Recupero la lista delle OU disponibili..."
+# retrieving available OUs
 $ou_available = Get-ADOrganizationalUnit -Filter *
 
 $obj = Get-ADDomain
 $suffix = ',' + $obj.DistinguishedName
 if ($ou_available.Name -contains $ou2find) {
-    Write-Host "Ricerca computer appartenenti a [$ou2find]"
+    Write-Host "Searching computers belonging to [$ou2find]"
     $string = "OU=" + $ou2find + $suffix
     $ErrorActionPreference= 'SilentlyContinue'
     $computer_list = Get-ADComputer -Filter * -SearchBase $string
@@ -34,9 +34,9 @@ if ($ou_available.Name -contains $ou2find) {
         $computer_list = Get-ADComputer -Filter * -SearchBase $string
     }
     $computer_list.Name >> "C:\Users\$env:USERNAME\Desktop\OU_$ou2find.log"
-    Write-Host -Nonewline "Lista copiata in "
+    Write-Host -Nonewline "Computer list saved in "
     Write-Host -ForegroundColor Green "C:\Users\$env:USERNAME\Desktop\OU_$ou2find.log"
 } else {
-    Write-Host -ForegroundColor Red "OU sconosciuta"
+    Write-Host -ForegroundColor Red "OU unknown"
 }
 pause

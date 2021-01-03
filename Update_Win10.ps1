@@ -1,14 +1,12 @@
 <#
-Name......: Aggiorna_Win10.ps1
+Name......: Update_Win10.ps1
 Version...: 20.12.1
 Author....: Dario CORRADA
 
-Questo script serve per lanciare in automatico gli aggiornamenti di Windows
-
-+++ UPDATES +++
+This script automatically fetch and install Windows updates
 #>
 
-# faccio in modo di elevare l'esecuzione dello script con privilegi di admin
+# elevated script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 if ($testadmin -eq $false) {
@@ -16,12 +14,12 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# setto le policy di esecuzione dello script
+# setting script execution policy
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 $ErrorActionPreference= 'Inquire'
 
-# roba grafica
+# graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
@@ -35,14 +33,14 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
-# elenco degli aggiornamenti disponibili
+# list of available updates
 # Get-Windowsupdate
 
-# installo gli aggiornamenti
+# install the updates
 Install-WindowsUpdate -AcceptAll -Install -Confirm:$False #| Out-File "C:\Users\$env:USERNAME\Desktop\$(get-date -f yyyy-MM-dd)-WindowsUpdate.log" -force
 
 # reboot
-$answ = [System.Windows.MessageBox]::Show("Riavvio computer?",'REBOOT','YesNo','Info')
+$answ = [System.Windows.MessageBox]::Show("Reboot computer?",'REBOOT','YesNo','Info')
 if ($answ -eq "Yes") {    
     Restart-Computer
 }

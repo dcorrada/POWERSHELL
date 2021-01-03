@@ -1,12 +1,12 @@
 <#
-Name......: Attiva_Bitlocker.ps1
+Name......: Enable_BitLocker.ps1
 Version...: 20.12.1
 Author....: Dario CORRADA
 
-Questo script attiva bitlocker su C: e fa un backup delle chiavi in cloud su Azure AD
+This script enables BitLocker onto volume C: and backups recovery keys on Azure AD cloud
 #>
 
-# faccio in modo di elevare l'esecuzione dello script con privilegi di admin
+# elevated script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 if ($testadmin -eq $false) {
@@ -14,9 +14,9 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# recupero il percorso di installazione
+# get the working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Attiva_bitlocker\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Enable_BitLocker\.ps1$" > $null
 $workdir = $matches[1]
 
 # header
@@ -29,21 +29,21 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# attivo Bitlocker
+# enable Bitlocker
 $ErrorActionPreference= 'Stop'
 Try {
     Enable-BitLocker -MountPoint "C:" -EncryptionMethod XtsAes128 -UsedSpaceOnly -TpmProtector
     Add-BitLockerKeyProtector -MountPoint "C:" -RecoveryPasswordProtector
-    Write-Host "BitLocker attivato" -ForegroundColor Green
+    Write-Host "BitLocker enabled" -ForegroundColor Green
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
     Write-Output "`nError: $($error[0].ToString())"
-    [System.Windows.MessageBox]::Show("Impossibile attivare BitLocker",'BitLocker','Ok','Warning')
+    [System.Windows.MessageBox]::Show("Enabling BitLocker Failed",'BitLocker','Ok','Warning')
     exit
 }  
 
-# faccio un backup su Azure AD
+# backup on Azure AD
 $ErrorActionPreference= 'Stop'
 Try {
 	# Get BitLocker Volume info
@@ -57,7 +57,7 @@ Try {
 <#
 	# Check if the drive is encrypted
 	if ($BitLockerVolumeInfo.ProtectionStatus -ne 'On') {
-		[System.Windows.MessageBox]::Show("BitLocker non attivato",'BitLocker','Ok','Warning')
+		[System.Windows.MessageBox]::Show("BitLocker disabled",'BitLocker','Ok','Warning')
 		exit
 	}
 #>
@@ -71,16 +71,16 @@ Try {
 	if ($BitLockerKeyProtectorId) {
 		# Do the backup towards AzureAD
 		$null = (BackupToAAD-BitLockerKeyProtector -MountPoint $BootDrive -KeyProtectorId $BitLockerKeyProtectorId -Confirm:$false -ErrorAction 'Stop')
-		[System.Windows.MessageBox]::Show("BitLocker recovery salvato su Azure AD",'BitLocker','Ok','Info')
+		[System.Windows.MessageBox]::Show("Recovery key saved on Azure AD",'BitLocker','Ok','Info')
 	} else {
-		[System.Windows.MessageBox]::Show("Non ci sono recovery info da salvare su Azure AD",'BitLocker','Ok','Warning')
+		[System.Windows.MessageBox]::Show("No recovery key to save",'BitLocker','Ok','Warning')
 		exit
 	}
-    Write-Host "Backup BitLocker effettuato" -ForegroundColor Green
+    Write-Host "Recovery key saved on Azure AD" -ForegroundColor Green
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
     Write-Output "`nError: $($error[0].ToString())"
-    [System.Windows.MessageBox]::Show("Impossibile effettuare il backup su Azure AD",'BitLocker','Ok','Warning')
+    [System.Windows.MessageBox]::Show("Saving recovery key failed",'BitLocker','Ok','Warning')
     exit
 } 

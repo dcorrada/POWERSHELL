@@ -3,7 +3,7 @@ Name......: List_all_users.ps1
 Version...: 19.08.1
 Author....: Dario CORRADA
 
-Questo script accede ad Active Directory ed estrae in un file CSV l'elenco di tutti gli account presenti
+This script retrieve a list of all users belonging to a domain and save it in a CSV file
 #>
 
 # header 
@@ -16,13 +16,13 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# Importo il modulo di Active Directory
+# import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
 
-# recupero la lista di tutti gli account
-Write-Host "Recupero la lista di tutti gli account..."
+# retrieve user list
+Write-Host "Rtrieve user list..."
 $user_list = Get-ADUser -Filter * -Property *
-Write-Host -ForegroundColor Green "Trovati" $user_list.Count "account"
+Write-Host -ForegroundColor Green "Found" $user_list.Count "user"
 
 $rawdata = @{}
 $i = 1
@@ -31,7 +31,7 @@ foreach ($user_name in $user_list.Name) {
     $ErrorActionPreference = 'SilentlyContinue'
 
     Clear-Host
-    Write-Host "Registrazione" $i "di" $user_list.Count
+    Write-Host "Retrieving" $i "of" $user_list.Count
 
     $infouser = Get-ADUser -Identity $user_name -Properties *
     $infouser.CanonicalName -match "/(.+)/$user_name$" > $null

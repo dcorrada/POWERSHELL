@@ -1,5 +1,4 @@
-﻿# funzioni per la gestione delle finestre
-
+﻿# function to create dialogs windows
 
 function FormBase {
     param ($w, $h, $text)

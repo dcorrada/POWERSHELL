@@ -1,12 +1,12 @@
 <#
-Name......: Metti_a_dominio.ps1
+Name......: Join2Domain.ps1
 Version...: 20.12.1
 Author....: Dario CORRADA
 
-Questo script mette a dominio un PC
+This script joins a PC to a network domain
 #>
 
-# faccio in modo di elevare l'esecuzione dello script con privilegi di admin
+# elevated script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 if ($testadmin -eq $false) {
@@ -14,9 +14,9 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# recupero il percorso di installazione
+# get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Metti_a_dominio\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Join2Domain\.ps1$" > $null
 $workdir = $matches[1]
 
 # header 
@@ -28,15 +28,15 @@ $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 $hostname = $env:computername
 
-# recupero il nome del dominio
+# getting domain name
 $output = nslookup ls
 $output[0] -match "Server:\s+[a-zA-Z_\-0-9]+\.([a-zA-Z\-0-9\.]+)$" > $null
 $dominio = $matches[1]
-$answ = [System.Windows.MessageBox]::Show("Regitrarsi sul dominio [$dominio]?",'DOMAIN','YesNo','Info')
+$answ = [System.Windows.MessageBox]::Show("Join to [$dominio]?",'DOMAIN','YesNo','Info')
 if ($answ -eq "No") {    
     $form = FormBase -w 520 -h 220 -text "DOMAIN"
     $font = New-Object System.Drawing.Font("Arial", 12)
@@ -44,7 +44,7 @@ if ($answ -eq "No") {
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Point(10,20)
     $label.Size = New-Object System.Drawing.Size(500,30)
-    $label.Text = "Nome dominio:"
+    $label.Text = "Domain name:"
     $form.Controls.Add($label)
     $textBox = New-Object System.Windows.Forms.TextBox
     $textBox.Location = New-Object System.Drawing.Point(10,60)
@@ -58,11 +58,11 @@ if ($answ -eq "No") {
 }
 
 
-# Recupero le credenziali AD
+# getting AD credentials
 $ad_login = LoginWindow
 
-# form di scelta OU
-$form_modalita = FormBase -w 300 -h 230 -text "OU DESTINAZIONE"
+# OU dialog box
+$form_modalita = FormBase -w 300 -h 230 -text "OU DESTINATION"
 $noou = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "null"
 $consulenti  = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "Client Consulenti"
 $milano = RadioButton -form $form_modalita -checked $false -x 30 -y 80 -text "Client Milano"
@@ -70,13 +70,13 @@ $torino = RadioButton -form $form_modalita -checked $false -x 30 -y 110 -text "C
 OKButton -form $form_modalita -x 90 -y 150 -text "Ok"
 $result = $form_modalita.ShowDialog()
 
-# genero il suffisso del distinguished name
+# get distinguished name suffix
 $dnsuffix = ''
 foreach ($dctag in $dominio.Split('.')) {
     $dnsuffix += ',DC=' + $dctag
 }
 
-# negli "elseif" modificare il prefisso di $outarget in base al percorso di OU desiderato
+# in "elseif" blocks modify $outarget prefix according to yours OU paths
 if ($result -eq "OK") {
     if ($noou.Checked) {
         $outarget = "null"
@@ -101,7 +101,7 @@ Try {
     } else {
         Add-Computer -ComputerName $hostname -Credential $ad_login -DomainName $dominio -OUPath $outarget -Force
     }
-    Write-Host "PC messo a dominio" -ForegroundColor Green
+    Write-Host "PC joined to domain" -ForegroundColor Green
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
@@ -111,7 +111,7 @@ Catch {
 } 
 
 # reboot
-$answ = [System.Windows.MessageBox]::Show("Riavvio computer?",'REBOOT','YesNo','Info')
+$answ = [System.Windows.MessageBox]::Show("Reboot computer?",'REBOOT','YesNo','Info')
 if ($answ -eq "Yes") {    
     Restart-Computer
 }

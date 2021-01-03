@@ -1,17 +1,12 @@
 <#
-Name......: Backup_Dati.ps1
+Name......: Data_Backup.ps1
 Version...: 20.12.1
 Author....: Dario CORRADA
 
-Questo script serve per fare un backup dei dati di un PC su disco esterno o su un server
-
-+++ UPDATES +++
-
-[2019-10-08 Dario CORRADA] 
-Vedi GIT
+This script performs a complete user backup to an external disk or to a shared folder
 #>
 
-# faccio in modo di elevare l'esecuzione dello script con privilegi di admin
+# elevated script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 if ($testadmin -eq $false) {
@@ -19,66 +14,66 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# recupero il percorso di installazione
+# get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Backup_Dati\\Backup_Dati\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Data_Backup\\Data_Backup\.ps1$" > $null
 $repopath = $matches[1]
 
-# setto le policy di esecuzione dello script
+# setting script execution policy
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 $ErrorActionPreference= 'Inquire'
 
-# roba di grafica da inizializzare
+# graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$repopath\Moduli_Powershell\Forms.psm1"
+Import-Module -Name "$repopath\Modules\Forms.psm1"
 
-# directory temporanea
+# temporary directory
 $tmppath = 'C:\TEMPSOFTWARE'
 if (!(Test-Path $tmppath)) {
     New-Item -ItemType directory -Path $tmppath > $null
 }
 
-$copiasu = Read-Host "Inserisci il path di destinazione"
+$copiasu = Read-Host "Insert destination path"
 
-# login su percorso remoto
+# login on remote path (for shared folders)
 if ($copiasu -match "^\\\\") {
-    [System.Windows.MessageBox]::Show("Accedi a $copiasu con le tue credenziali, quindi clicca Ok per proseguire",'ATTENZIONE','Ok','Warning')
+    [System.Windows.MessageBox]::Show("Access on $copiasu with your credentials, then click Ok to continue",'WARNING','Ok','Warning')
 }
 
-# check del path di destinazione
+# check destination path
 if (Test-Path $copiasu) {
     $copiasu = $copiasu + "\$env:USERNAME"
     New-Item -ItemType directory -Path $copiasu > $null
 } else {
-    [System.Windows.MessageBox]::Show("$copiasu non raggiungibile",'ERRORE','Ok','Error') > $null
+    [System.Windows.MessageBox]::Show("$copiasu not found",'ERROR','Ok','Error') > $null
     Exit
 }
 
-# copio i bookmarks di Chrome
+# copying Chrome bookmarks
 $bookmarks = "C:\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default\Bookmarks"
 if (Test-Path $bookmarks -PathType Leaf) {
-    Write-Host -NoNewline "Copio bookmarks di Chrome..."
+    Write-Host -NoNewline "Copying Chrome bookmarks..."
     New-Item -ItemType directory -Path "$copiasu\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default" > $null
     Copy-Item $bookmarks -Destination "$copiasu\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default" > $null
     Write-Host -ForegroundColor Green " DONE"
 }
 
-# copio aspetto di Outlook
+# copying Outlook layout
 $outlook_aspect = "C:\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook\Outlook.xml"
 if (Test-Path $outlook_aspect -PathType Leaf) {
-    Write-Host -NoNewline "Copio aspetto di Outlook..."
+    Write-Host -NoNewline "Copying Outlook layout..."
     New-Item -ItemType directory -Path "$copiasu\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook" > $null
     Copy-Item $outlook_aspect -Destination "$copiasu\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook" > $null
     Write-Host -ForegroundColor Green " DONE"
 }
 
-Write-Host -NoNewline "Cerco i percorsi di backup..."
-$backup_list = @{} # variabili in cui inseriro' i percorsi su cui far la migrazione
+Write-Host -NoNewline "Searching paths to backup..."
+$backup_list = @{} # variable in which I will add paths to backup
 
-# lista cartelle su cui si dovrebbe fare la migrazione; se la cartella non e' vuota la metto nella lista dei backup    
+# backup paths list; empty folders are excluded from backup    
 [string[]]$allow_list = Get-Content -Path "$repopath\Backup_Dati\allow_list.log"
 $allow_list = $allow_list -replace ('\$username', $env:USERNAME)             
 foreach ($folder in $allow_list) {
@@ -95,7 +90,7 @@ foreach ($folder in $allow_list) {
     }
 }
 
-# lista cartelle da escludere dalla migrazione; se in C:\ ci sono altre cartelle oltre a queste le includo nella lista dei backup
+# paths excluded from backup;
 [string[]]$exclude_list = Get-Content -Path "$repopath\Backup_Dati\exclude_list.log"
 $root_path = 'C:\'
 $remote_root_list = Get-ChildItem $root_path -Attributes D
@@ -106,11 +101,11 @@ foreach ($folder in $remote_root_list.Name) {
     }
 }
 $string = [system.String]::Join("`r`n", $elenco)
-$form_folders = FormBase -w 400 -h 275 -text "ELENCO CARTELLE IN C:\"
+$form_folders = FormBase -w 400 -h 275 -text "FOLDER LIST IN C:\"
 $label = New-Object System.Windows.Forms.Label
 $label.Location = New-Object System.Drawing.Point(10,20)
 $label.Size = New-Object System.Drawing.Size(350,30)
-$label.Text = "Cancella le cartelle che non vuoi trasferire:"
+$label.Text = "Delete folders you don't want to backup:"
 $form_folders.Controls.Add($label)
 $textBox = New-Object System.Windows.Forms.TextBox
 $textBox.Multiline = $true
@@ -137,7 +132,7 @@ foreach ($folder in $elenco) {
     }
 }
 
-# lista delle cartelle da copiare in C:\Users\username
+# folders list to backup from C:\Users\username
 $exclude_list = (
     "AppData",
     "Links",
@@ -167,7 +162,7 @@ foreach ($folder in $remote_root_list.Name) {
 
 Write-Host -ForegroundColor Green " DONE"
 
-# blocco del singolo job di migrazione
+# backup job block
 $RoboCopyBlock = {
     param($final_path, $prefix)
     $filename = $final_path.Replace('\','-')
@@ -182,7 +177,7 @@ $RoboCopyBlock = {
     robocopy @cmd_args
 }
 
-# lancio i job di migrazione in parallelo
+# launch multithreaded backup jobs
 $Time = [System.Diagnostics.Stopwatch]::StartNew()
 foreach ($folder in $backup_list.Keys) {
     Write-Host -NoNewline -ForegroundColor Cyan "$folder"
@@ -192,9 +187,9 @@ foreach ($folder in $backup_list.Keys) {
 
 Start-Sleep 10
 
-# blocco per disegnare la progress bar
+# progress bar
 $form_bar = New-Object System.Windows.Forms.Form
-$form_bar.Text = "TRASFERIMENTO DATI"
+$form_bar.Text = "TRANSFER RATE"
 $form_bar.Size = New-Object System.Drawing.Size(600,200)
 $form_bar.StartPosition = "manual"
 $form_bar.Location = '1320,840'
@@ -214,10 +209,10 @@ $form_bar.Topmost = $true
 $form_bar.Show() | out-null
 $form_bar.Focus() | out-null
 
-# Attendo che i job vengano completati mostrando un progress
+# Waiting for jobs completed
 While (Get-Job -State "Running") {
     Clear-Host
-    Write-Host -ForegroundColor Yellow "*** TRASFERIMENTO DATI IN CORSO ***"
+    Write-Host -ForegroundColor Yellow "*** BACKUP ***"
     
     $total_bytes = 0
     $trasferred_bytes = 0
@@ -253,7 +248,7 @@ While (Get-Job -State "Running") {
     [int32]$progress = $percent
     $CurrentTime = $Time.Elapsed
     $estimated = [int]((($CurrentTime.TotalSeconds/$percent) * (100 - $percent)) / 60)
-    $label.Text = "Avanzamento totale: $formattato% - $estimated minuti alla fine"
+    $label.Text = "Progress: $formattato% - $estimated mins to end"
     if ($progress -ge 100) {
         $bar.Value = 100
     } else {
@@ -266,12 +261,12 @@ While (Get-Job -State "Running") {
 
 $form_bar.Close()
 
-$joblog = Get-Job | Receive-Job # Recupero l'output dai job
+$joblog = Get-Job | Receive-Job # get job output
 Remove-Job * # Cleanup
 
-# controllo dimensioni
+# Size check
 Write-Host " "
-Write-Host -NoNewline "Controllo dimensioni..."
+Write-Host -NoNewline "Size check..."
 foreach ($folder in $backup_list.Keys) {
     $source = 'C:\' + $folder
     $source_size = $backup_list[$folder]
@@ -282,21 +277,21 @@ foreach ($folder in $backup_list.Keys) {
     $dest_size = $Matches[1]
 
     $foldername = $folder.Replace('\','-')                      
-    if ($dest_size -lt $source_size) { # la copia NON e' andata a buon fine
+    if ($dest_size -lt $source_size) { # backup job failed
         Clear-Host
         $diff = $source_size - $dest_size
         Write-Host "PATH.........: $folder`nSOURCE SIZE..: $source_size bytes`nDEST SIZE....: $dest_size bytes`nDIFF SIZE....: $diff bytes"
     
-        $whatif = [System.Windows.MessageBox]::Show("La copia di $folder non e' andata a buon fine.`nRilanciare la copia?",'ERRORE','YesNo','Error')
+        $whatif = [System.Windows.MessageBox]::Show("Copy of $folder failed.`nRelaunch backup job?",'ERROR','YesNo','Error')
         if ($whatif -eq "Yes") {
             $opts = ("/E", "/Z", "/NP", "/W:5")
             $cmd_args = ($source, $dest, $opts)    
-            Write-Host -ForegroundColor Yellow "RETRY: copia di $folder in corso..."
+            Write-Host -ForegroundColor Yellow "RETRY: copy of $folder in progress..."
             Start-Sleep 3
             robocopy @cmd_args
-            $whatif = [System.Windows.MessageBox]::Show("La copia di $folder e' andata a buon fine?",'CONFERMA','YesNo','Info')                
+            $whatif = [System.Windows.MessageBox]::Show("Backup of $folder is ok?",'CONFIRM','YesNo','Info')                
             if ($whatif -eq "No") {
-                [System.Windows.MessageBox]::Show("Copiare $folder manualmente",'CONFERMA','Ok','Info') > $null
+                [System.Windows.MessageBox]::Show("Backup $folder manually",'CONFIRM','Ok','Info') > $null
             }
         }
     }    
@@ -304,34 +299,25 @@ foreach ($folder in $backup_list.Keys) {
 $ErrorActionPreference= 'Inquire'
 Write-Host -ForegroundColor Green " DONE"
 
-# check attributi su cartelle nascoste
+# check folder attributes
 Write-Host " "
-Write-Host -NoNewline "Check attributi..."
+Write-Host -NoNewline "Check attributes..."
 foreach ($folder in $backup_list.Keys) {
     $dest = $copiasu + '\' + $folder
     attrib -s -h $dest
 }
 Write-Host -ForegroundColor Green " DONE"
 
-# Copia dei file nella cartella Users
-Write-Host -NoNewline "Copia files in C:\Users\$env:USERNAME..."
+# file backup from Users folder
+Write-Host -NoNewline "Copying files in C:\Users\$env:USERNAME..."
 $userfiles = Get-ChildItem "C:\Users\$env:USERNAME" -Attributes A
 foreach ($afile in $userfiles) {
     Copy-Item "C:\Users\$env:USERNAME\$afile" -Destination "$copiasu\Users\$env:USERNAME" -Force > $null
 }
 Write-Host -ForegroundColor Green " DONE"
 
-# Copia forzata dei file di Sticky Notes
-$source = "C:\Users\$env:USERNAME\AppData\Local\Packages\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe\LocalState"
-$dest = $copiasu + "\Users\$env:USERNAME\AppData\Local\Packages\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe"
-if (Test-Path $source_path) {
-    Write-Host -NoNewline "Trasferimento Sticky Notes..."
-    Copy-Item $source -Destination $dest -Force -Recurse > $null
-    Write-Host -ForegroundColor Green " DONE"
-}
-
-# pulizia temporanei
-$answ = [System.Windows.MessageBox]::Show("Copia dati conclusa. Cancellare i file di log?",'FINE','YesNo','Info')
+# cleaning temporary
+$answ = [System.Windows.MessageBox]::Show("Backup finished. Delete log files?",'END','YesNo','Info')
 if ($answ -eq "Yes") {
     Remove-Item "C:\TEMPSOFTWARE" -Recurse -Force
 }

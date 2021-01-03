@@ -3,7 +3,7 @@ Name......: OSversion.ps1
 Version...: 19.05.1
 Author....: Dario CORRADA
 
-Questo script accede ad Active Directory crea una lista di computer con le versioni dell'OS
+This script list OS informations of computers belonging to an OU
 #>
 
 # header 
@@ -16,7 +16,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# Importo il modulo di Active Directory
+# import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
 
 $form = New-Object System.Windows.Forms.Form
@@ -29,7 +29,7 @@ $form.Font = $font
 $label = New-Object System.Windows.Forms.Label
 $label.Location = New-Object System.Drawing.Point(10,20)
 $label.Size = New-Object System.Drawing.Size(500,30)
-$label.Text = "Inserire la OU su cui cercare i computer:"
+$label.Text = "Insert OU:"
 $form.Controls.Add($label)
     
 $textBox = New-Object System.Windows.Forms.TextBox
@@ -52,13 +52,13 @@ $result = $form.ShowDialog()
 
 $ou2find = $textBox.Text
 
-Write-host "Recupero la lista delle OU disponibili..."
+Write-host "Retrieve available OU..."
 $ou_available = Get-ADOrganizationalUnit -Filter *
 
 $obj = Get-ADDomain
 $suffix = ',' + $obj.DistinguishedName
 if ($ou_available.Name -contains $ou2find) {
-    Write-Host "Ricerca computer appartenenti a [$ou2find]"
+    Write-Host "Search computers belonging to [$ou2find]"
     $string = "OU=" + $ou2find + $suffix
     $ErrorActionPreference= 'SilentlyContinue'
     $computer_list = Get-ADComputer -Filter * -SearchBase $string
@@ -68,7 +68,7 @@ if ($ou_available.Name -contains $ou2find) {
         $computer_list = Get-ADComputer -Filter * -SearchBase $string
     }
 } else {
-    Write-Host -ForegroundColor Red "OU sconosciuta"
+    Write-Host -ForegroundColor Red "OU unknown"
 }
 
 [System.Reflection.Assembly]::LoadWithPartialName(“System.windows.forms”)
