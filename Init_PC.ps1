@@ -1,15 +1,15 @@
 <#
-Name......: Inizializza_PC.ps1
+Name......: Init_PC.ps1
 Version...: 20.12.3
 Author....: Dario CORRADA
 
-Questo script inizializza un PC da assegnare:
-* installa Chrome, AcrobatDC e 7Zip;
-* crea un'utenza locale con privilegi di admin;
-* rinomina il PC usando il suo seriale;
+Questo script finalize fresh OS installations:
+* install Chrome, AcrobatDC, 7Zip;
+* create a local account with admin privileges;
+* set hostname according to the serial number.
 #>
 
-# faccio in modo di elevare l'esecuzione dello script con privilegi di admin
+# elevated script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 if ($testadmin -eq $false) {
@@ -17,9 +17,9 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# recupero il percorso di installazione
+# get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Inizializza_PC\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Init_PC\.ps1$" > $null
 $workdir = $matches[1]
 
 # header 
@@ -31,10 +31,10 @@ $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# download e installazione software
-# modificare i path dei download per scaricare software aggiornato
+# fetch and install additional softwares
+# modify download paths according to updated software versions
 $tmppath = "C:\TEMPSOFTWARE"
 New-Item -ItemType directory -Path $tmppath > $null
 Write-Host -NoNewline "Download software..."
@@ -44,7 +44,7 @@ $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/Acrobat
 $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
 Write-Host -ForegroundColor Green " DONE"
 
-Write-Host -NoNewline "Installazione software..."
+Write-Host -NoNewline "Install software..."
 Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
 Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
 Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
@@ -53,8 +53,8 @@ Write-Host -ForegroundColor Green " DONE"
 Remove-Item $tmppath -Recurse -Force
 
 
-# creazione utenza locale
-$answ = [System.Windows.MessageBox]::Show("Creare utenza locale?",'ACCOUNT','YesNo','Info')
+# creating local account
+$answ = [System.Windows.MessageBox]::Show("Create local account?",'ACCOUNT','YesNo','Info')
 if ($answ -eq "Yes") {
     
     $form = FormBase -w 520 -h 220 -text "ACCOUNT"
@@ -64,7 +64,7 @@ if ($answ -eq "Yes") {
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Point(10,20)
     $label.Size = New-Object System.Drawing.Size(500,30)
-    $label.Text = "Nome utente:"
+    $label.Text = "Username:"
     $form.Controls.Add($label)
 
     $textBox = New-Object System.Windows.Forms.TextBox
@@ -90,7 +90,7 @@ if ($answ -eq "Yes") {
     Try {
         New-LocalUser -Name $username -Password $pwd -PasswordNeverExpires -AccountNeverExpires -Description "utente locale"
         Add-LocalGroupMember -Group "Administrators" -Member $username
-        Write-Host -ForegroundColor Green "Account locale creato"
+        Write-Host -ForegroundColor Green "Local account created"
         $ErrorActionPreference= 'Inquire'
     }
     Catch {
@@ -100,7 +100,7 @@ if ($answ -eq "Yes") {
     }    
 }
 
-# rinomino il PC
+# changing hostname
 $serial = Get-WmiObject win32_bios
 $hostname = $serial.SerialNumber
 $answ = [System.Windows.MessageBox]::Show("Il PC e' dislocato a Torino?",'LOCAZIONE','YesNo','Info')
@@ -113,7 +113,7 @@ Write-Host $hostname -ForegroundColor Cyan
 $ErrorActionPreference= 'Stop'
 Try {
     Rename-Computer -NewName $hostname
-    Write-Host "PC rinominato" -ForegroundColor Green
+    Write-Host "PC renamed" -ForegroundColor Green
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
@@ -123,10 +123,7 @@ Catch {
 }  
 
 # reboot
-$answ = [System.Windows.MessageBox]::Show("Riavvio computer?",'REBOOT','YesNo','Info')
+$answ = [System.Windows.MessageBox]::Show("Reboot computer?",'REBOOT','YesNo','Info')
 if ($answ -eq "Yes") {    
     Restart-Computer
 }
-
-
-

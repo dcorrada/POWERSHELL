@@ -1,15 +1,9 @@
 <#
 Name......: Grep-Replace.ps1
 Version...: 20.2.1
-
 Author....: Dario CORRADA
 
-Questo script cerca ricorsivamente nei file .ps1 di una cartella una stringa specifica e la sostituisce
-
-+++ UPDATES +++
-
-[2019-10-08  CORRADA] 
-Vedi GIT
+This script recursively look for .ps1 files, grep and replace a string inside them
 #>
 
 # header
@@ -22,20 +16,20 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 $workdir = Get-Location
-Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# chiedo il percoso da cercare
+# asking search path
 [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms")
 $foldername = New-Object System.Windows.Forms.FolderBrowserDialog
 $foldername.RootFolder = "MyComputer"
 $foldername.ShowDialog() > $null
 
-# chiedo la chiave di ricerca e la stringa da sostituire
-$form_EXP = FormBase -w 350 -h 200 -text "TROVA E SOSTITUISCI"
+# define search and replace strings
+$form_EXP = FormBase -w 350 -h 200 -text "GREP AND REPLACE"
 $searchlabel = New-Object System.Windows.Forms.Label
 $searchlabel.Location = New-Object System.Drawing.Point(10,20)
 $searchlabel.Size = New-Object System.Drawing.Size(170,30)
-$searchlabel.Text = "Cerca:"
+$searchlabel.Text = "Search:"
 $form_EXP.Controls.Add($searchlabel)
 $searchBox = New-Object System.Windows.Forms.TextBox
 $searchBox.Location = New-Object System.Drawing.Point(180,20)
@@ -44,7 +38,7 @@ $form_EXP.Controls.Add($searchBox)
 $replacelabel = New-Object System.Windows.Forms.Label
 $replacelabel.Location = New-Object System.Drawing.Point(10,50)
 $replacelabel.Size = New-Object System.Drawing.Size(170,30)
-$replacelabel.Text = "Sostituisci (vuoto Cerca solo):"
+$replacelabel.Text = "Replace (empty = only Search):"
 $form_EXP.Controls.Add($replacelabel)
 $replaceBox = New-Object System.Windows.Forms.TextBox
 $replaceBox.Location = New-Object System.Drawing.Point(180,50)
@@ -72,5 +66,3 @@ foreach ($infile in $filelist) {
     }
 }
 Pause
-
-

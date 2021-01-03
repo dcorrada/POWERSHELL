@@ -3,7 +3,7 @@ Name......: List_all_computers.ps1
 Version...: 19.08.1
 Author....: Dario CORRADA
 
-Questo script accede ad Active Directory ed estrae in un file CSV l'elenco di tutti computer presenti
+This script retrieve a list of all computers belonging to a domain and save it in a CSV file
 #>
 
 # header 
@@ -13,20 +13,20 @@ Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 
-# Importo il modulo di Active Directory
+# import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
 
-# recupero la lista di tutti i computer
-Write-Host "Recupero la lista di tutti i computer..."
+# retrieve computer list
+Write-Host "Retrieve computer list..."
 $computer_list = Get-ADComputer -Filter * -Property *
-Write-Host -ForegroundColor Green "Trovati" $computer_list.Count "computer"
+Write-Host -ForegroundColor Green "Found" $computer_list.Count "computer"
 
 $rawdata = @{}
 $i = 1
 foreach ($computer_name in $computer_list.Name) {
     
     Clear-Host
-    Write-Host "Registrazione" $i "di" $computer_list.Count
+    Write-Host "Retrieving" $i "of" $computer_list.Count
 
     $infopc = Get-ADComputer -Identity $computer_name -Properties *
     $infopc.CanonicalName -match "/(.+)/$computer_name$" > $null

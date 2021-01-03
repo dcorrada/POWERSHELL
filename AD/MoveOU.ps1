@@ -3,7 +3,7 @@ Name......: SpostamentoOU.ps1
 Version...: 19.04.1
 Author....: Dario CORRADA
 
-Questo script accede ad Active Directory e sposta una lista di computer da una OU specificata ad un'altra
+This script read a computer list from a file, and move these computer from a OU to another
 #>
 
 
@@ -17,15 +17,18 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 $workdir = Get-Location
-Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
+$workdir -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AD$" > $null
+$repopath = $matches[1]
+Import-Module -Name "$repopath\Modules\Forms.psm1"
 
-# Controllo accesso
+
+# get AD credentials
 $AD_login = LoginWindow
 
-# Importo il modulo di Active Directory
+# Import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
 
-# recupero la lista dei PC
+# retrieve computer list
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms')
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
@@ -34,7 +37,7 @@ $OpenFileDialog.ShowDialog() | Out-Null
 $file_path = $OpenFileDialog.filename
 $computer_list = Get-Content $file_path
 
-# Recupero la lista delle OU disponibili
+# retrieve available OUs
 $ou_available = Get-ADOrganizationalUnit -Filter *
 $ou_list = @()
 foreach ($item in $ou_available) {
@@ -42,7 +45,7 @@ foreach ($item in $ou_available) {
 }
 
 $source_dest = @()
-foreach ($item in ('OU SORGENTE', 'OU DESTINAZIONE')) {
+foreach ($item in ('OU SOURCE', 'OU DESTINATION')) {
     $formlist = FormBase -w 400 -h 200 -text $item
     $DropDown = new-object System.Windows.Forms.ComboBox
     $DropDown.Location = new-object System.Drawing.Size(10,60)
@@ -54,7 +57,7 @@ foreach ($item in ('OU SORGENTE', 'OU DESTINAZIONE')) {
     $DropDownLabel = new-object System.Windows.Forms.Label
     $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
     $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
-    $DropDownLabel.Text = "Scegliere OU"
+    $DropDownLabel.Text = "Select OU"
     $formlist.Controls.Add($DropDownLabel)
     OKButton -form $formlist -x 100 -y 100 -text "Ok"
     $formlist.Add_Shown({$DropDown.Select()})

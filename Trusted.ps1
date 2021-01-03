@@ -3,7 +3,7 @@ Name......: Trusted.ps1
 Version...: 20.12.1
 Author....: Dario CORRADA
 
-Questo script serve per trustare domini e ip locali
+This script trusts internet domains or local IPs
 #>
 
 # header 
@@ -16,23 +16,23 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 $workdir = Get-Location
-Import-Module -Name "$workdir\Moduli_PowerShell\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# scelta rete
-$form_modalita = FormBase -w 300 -h 200 -text "RETE"
-$internet = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Dominio internet"
-$intranet  = RadioButton -form $form_modalita -checked $false -x 30 -y 60 -text "IP locale"
+# dialog box
+$form_modalita = FormBase -w 300 -h 200 -text "NETWORK"
+$internet = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Internet domain"
+$intranet  = RadioButton -form $form_modalita -checked $false -x 30 -y 60 -text "Local IP"
 OKButton -form $form_modalita -x 90 -y 120 -text "Ok"
 $result = $form_modalita.ShowDialog()
 
 if ($result -eq "OK") {
     if ($internet.Checked) {
-        # nome dominio
+        # internet domain
         $form_EXP = FormBase -w 300 -h 200 -text "TRUSTED"
         $label = New-Object System.Windows.Forms.Label
         $label.Location = New-Object System.Drawing.Point(10,20)
         $label.Size = New-Object System.Drawing.Size(250,30)
-        $label.Text = "Inserire il dominio del sito da aggiungere:"
+        $label.Text = "Insert trusted domain name:"
         $form_EXP.Controls.Add($label)
         $textBox = New-Object System.Windows.Forms.TextBox
         $textBox.Location = New-Object System.Drawing.Point(10,50)
@@ -49,12 +49,12 @@ if ($result -eq "OK") {
         New-ItemProperty $regPath -Name http -Value 2 -Force
         New-ItemProperty $regPath -Name https -Value 2 -Force
     } elseif ($intranet.Checked) {
-        # nome dominio
+        # local IP
         $form_EXP = FormBase -w 300 -h 200 -text "TRUSTED"
         $label = New-Object System.Windows.Forms.Label
         $label.Location = New-Object System.Drawing.Point(10,20)
         $label.Size = New-Object System.Drawing.Size(250,30)
-        $label.Text = "Inserire l'indirizzo IP locale da aggiungere:"
+        $label.Text = "Insert trusted local IP:"
         $form_EXP.Controls.Add($label)
         $textBox = New-Object System.Windows.Forms.TextBox
         $textBox.Location = New-Object System.Drawing.Point(10,50)

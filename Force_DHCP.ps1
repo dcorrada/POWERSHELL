@@ -1,9 +1,9 @@
 <#
-Name......: forza_DHCP.ps1
+Name......: Force_DHCP.ps1
 Version...: 20.1.1
 Author....: Dario CORRADA
 
-Questo script serve per riconfigurare i settaggi di rete su DHCP
+This script reconfigure network settings to DHCP
 #>
 
 # header 
@@ -13,20 +13,20 @@ Write-Host "ExecutionPolicy Bypass" -fore Green
 $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 
-# configuro il DHCP
+# setting DHCP profile
 $dhcp_check = Get-NetIPInterface
 foreach ($item in $dhcp_check) {
     if (($item.InterfaceAlias -eq 'Ethernet') -and ($item.AddressFamily -eq 'IPv4')) {
         if ($item.Dhcp -eq 'Disabled') {
-            Write-Host "Abilito il DHCP"
+            Write-Host "Enabling DHCP"
             Set-NetIPInterface -InterfaceAlias 'Ethernet' -Dhcp Enabled -Confirm:$false
         }
     }
 }
 
-# Configuro il DNS
+# setting DNS
 Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ResetServerAddresses 
 Set-DnsClientGlobalSetting -SuffixSearchList ''   
 
-# ripulisco la cache dal DNS
+# clear DNS cache
 Clear-DnsClientCache

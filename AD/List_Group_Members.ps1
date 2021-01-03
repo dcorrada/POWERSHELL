@@ -3,7 +3,7 @@ Name......: List_Group_Members.ps1
 Version...: 19.10.1
 Author....: Dario CORRADA
 
-Questo script serve elenca tutti i membri appartenenti ad un Gruppo di Active Directory
+This script list all members of an Active Directory Group
 #>
 
 # header 
@@ -16,15 +16,15 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# Importo il modulo di Active Directory
+# import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
 
-# recupero l'elenco dei gruppi in AD
+# retrieve AD groups list
 $ADgroups = Get-ADGroup -Filter *
 $sorted = $ADgroups.Name | Sort-Object
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "LISTA GRUPPI"
+$form.Text = "GROUPS LIST"
 $form.Size = New-Object System.Drawing.Size(400,230)
 $form.StartPosition = 'CenterScreen'
 
@@ -41,7 +41,7 @@ $Form.Controls.Add($DropDown)
 $DropDownLabel = new-object System.Windows.Forms.Label
 $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
 $DropDownLabel.size = new-object System.Drawing.Size(280,30) 
-$DropDownLabel.Text = "Selezionare il gruppo"
+$DropDownLabel.Text = "Select group"
 $Form.Controls.Add($DropDownLabel)
     
 $OKButton = New-Object System.Windows.Forms.Button
@@ -59,7 +59,7 @@ $result = $form.ShowDialog()
 
 $groupname = $DropDown.Text
 
-# recupero la lista dei membri del gruppo
+# retrieve members list of selected group
 $ADmembers = Get-ADGroupMember -id $groupname -Recursive 
 
 
