@@ -4,6 +4,9 @@ Version...: 20.1.2
 Author....: Dario CORRADA
 
 This script prepare source PC for data migration
+
+NOTE: in older versions of robocopy the stdout slughtly differs, causing malfunction of the script. 
+In case replace all occurrences of "Byte:\s+(\d+)\s+\d+" to "Bytes :\s+(\d+)\s+\d+"
 #>
 
 # setting script execution policy
