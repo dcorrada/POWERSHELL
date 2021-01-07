@@ -75,16 +75,20 @@ if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
 Write-Host -NoNewline "`n`nChecking Office version... "
 $record = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall |
           Get-ItemProperty | Where-Object {$_.DisplayName -match 'Office' } | Select-Object -Property DisplayName, UninstallString
-$OfficeVer = '15'
+$OfficeVer = 'null'
 foreach ($elem in $record) {
     if ($elem -match 'Office 16') {
         $OfficeVer = '16'
+    } elseif ($elem -match 'Office 15') {
+        $OfficeVer = '15'
     }
 }
 if ($OfficeVer -eq '16') {
     Write-Host -ForegroundColor Cyan "Office 365 installed"
-} else {
+} elseif ($OfficeVer -eq '15') {
     Write-Host -ForegroundColor Cyan "Office 2013 installed"
+} else {
+    Write-Host -ForegroundColor Cyan "No recent version of Office installed"
 }
 
 # control panel
