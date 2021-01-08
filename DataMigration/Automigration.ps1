@@ -125,42 +125,46 @@ $pcname = $logcontent[3]
 
 # configuring Office
 if ($config_sw.Checked -eq $true) {
-    Write-Host -ForegroundColor Yellow "`n*** Configuring Office ***"
+    if ($OfficeVer -ne 'null') {
+        Write-Host -ForegroundColor Yellow "`n*** Configuring Office ***"
 
-    # Autoconfig silent of Outlook
-    Write-Host -NoNewline "Configuring Outlook..."
-    if ($OfficeVer -eq '15') {
-        $regPath = 'HKCU:\Software\Microsoft\Office\15.0\Outlook\AutoDiscover'
-    } elseif ($OfficeVer -eq '16') {
-        $regPath = 'HKCU:\Software\Microsoft\Office\16.0\Outlook\AutoDiscover'
-    }
-    New-Item $regPath -Force | Out-Null
-    New-ItemProperty $regPath -Name ZeroConfigExchange -Value 1 -Force  | Out-Null    
-    Start-Sleep 5
-    Start-Process outlook
-    Start-Sleep 20
-    Write-Host -ForegroundColor Green " DONE"
+        # Autoconfig silent of Outlook
+        Write-Host -NoNewline "Configuring Outlook..."
+        if ($OfficeVer -eq '15') {
+            $regPath = 'HKCU:\Software\Microsoft\Office\15.0\Outlook\AutoDiscover'
+        } elseif ($OfficeVer -eq '16') {
+            $regPath = 'HKCU:\Software\Microsoft\Office\16.0\Outlook\AutoDiscover'
+        }
+        New-Item $regPath -Force | Out-Null
+        New-ItemProperty $regPath -Name ZeroConfigExchange -Value 1 -Force  | Out-Null    
+        Start-Sleep 5
+        Start-Process outlook
+        Start-Sleep 20
+        Write-Host -ForegroundColor Green " DONE"
 
-    # Autoconfig silent of Office LanguagePack
-    [System.Windows.MessageBox]::Show("Setting Office language [it-IT]...",'CONFIGURAZIONE SW','Ok','Info') > $null
-    Write-Host -NoNewline "Settaggio lingua Office..."
+        # Autoconfig silent of Office LanguagePack
+        [System.Windows.MessageBox]::Show("Setting Office language [it-IT]...",'CONFIGURAZIONE SW','Ok','Info') > $null
+        Write-Host -NoNewline "Settaggio lingua Office..."
 
-    if ($OfficeVer -eq '15') {
-        $regPath = 'HKCU:\Software\Microsoft\Office\15.0\Common\LanguageResources'
-        Set-ItemProperty $regPath -Name UILanguage -Value 1040 -Force
-        Set-ItemProperty $regPath -Name HelpLanguage -Value 1040 -Force
-        Set-ItemProperty $regPath -Name UIFallback -Value {1040;0;1033} -Force
-        Set-ItemProperty $regPath -Name HelpFallback -Value {1040;0;1033} -Force
-        New-ItemProperty $regPath -Name FollowSystemUI -Value Off -Force  | Out-Null
-    } elseif ($OfficeVer -eq '16') {
-        $regPath = 'HKCU:\Software\Microsoft\Office\16.0\Common\LanguageResources'
-        Set-ItemProperty $regPath -Name UILanguageTag -Value "it-IT" -Force
-        Set-ItemProperty $regPath -Name HelpLanguageTag -Value "it-IT" -Force
-        Set-ItemProperty $regPath -Name UIFallbackLanguages -Value "it-it;x-none;en-us" -Force
-        Set-ItemProperty $regPath -Name HelpFallbackLanguages -Value "it-it;x-none;en-us" -Force
-        New-ItemProperty $regPath -Name FollowSystemUI -Value Off -Force  | Out-Null
-    }
-    Write-Host -ForegroundColor Green " DONE"
+        if ($OfficeVer -eq '15') {
+            $regPath = 'HKCU:\Software\Microsoft\Office\15.0\Common\LanguageResources'
+            Set-ItemProperty $regPath -Name UILanguage -Value 1040 -Force
+            Set-ItemProperty $regPath -Name HelpLanguage -Value 1040 -Force
+            Set-ItemProperty $regPath -Name UIFallback -Value {1040;0;1033} -Force
+            Set-ItemProperty $regPath -Name HelpFallback -Value {1040;0;1033} -Force
+            New-ItemProperty $regPath -Name FollowSystemUI -Value Off -Force  | Out-Null
+        } elseif ($OfficeVer -eq '16') {
+            $regPath = 'HKCU:\Software\Microsoft\Office\16.0\Common\LanguageResources'
+            Set-ItemProperty $regPath -Name UILanguageTag -Value "it-IT" -Force
+            Set-ItemProperty $regPath -Name HelpLanguageTag -Value "it-IT" -Force
+            Set-ItemProperty $regPath -Name UIFallbackLanguages -Value "it-it;x-none;en-us" -Force
+            Set-ItemProperty $regPath -Name HelpFallbackLanguages -Value "it-it;x-none;en-us" -Force
+            New-ItemProperty $regPath -Name FollowSystemUI -Value Off -Force  | Out-Null
+        }
+        Write-Host -ForegroundColor Green " DONE"
+    } else {
+        [System.Windows.MessageBox]::Show("No recent version of Office installed. Skipping...",'INFO','Ok','Info') > $null
+    }     
 }
 
 # performing data migration
