@@ -51,6 +51,11 @@ $result = $form_PWD.ShowDialog()
 [reflection.assembly]::LoadWithPartialName("System.DirectoryServices.AccountManagement") > $null
 $principalContext = [System.DirectoryServices.AccountManagement.PrincipalContext]::new([System.DirectoryServices.AccountManagement.ContextType]'Machine',$env:COMPUTERNAME)
 
-$principalContext.ValidateCredentials($textBox.Text,$MaskedTextBox.Text)
+
+if ($principalContext.ValidateCredentials($textBox.Text,$MaskedTextBox.Text)) {
+    Write-Host -ForegroundColor Green "ACCESS GRANTED!"
+} else {
+    Write-Host -ForegroundColor Red "ACCESS DENIED!"
+}
 
 Pause
