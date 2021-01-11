@@ -80,15 +80,15 @@ $company = $textBox1.Text
 $copyright = $textBox2.Text
 $version = $textBox3.Text
 
-[System.Reflection.Assembly]::LoadWithPartialName(�System.windows.forms�)
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms')
 $OpenFileDialog = New-Object System.Windows.Forms.SaveFileDialog
 $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
-$OpenFileDialog.filter = �Executable (*.exe)| *.exe�
+$OpenFileDialog.filter = 'Executable (*.exe)| *.exe'
 $OpenFileDialog.filename = $filename
 $OpenFileDialog.ShowDialog() | Out-Null
 $exefile = $OpenFileDialog.filename
 
-$cmd = "C:\Users\$env:USERNAME\OneDrive - AGM Solutions\POWERSHELL\PS2EXE\ps2exe.ps1"
+$cmd = "C:\Users\dario.corrada\Dropbox\SCRIPT\POWERSHELL\PS2EXE\ps2exe.ps1"
 & $cmd -inputFile $ps1file -outputFile $exefile -verbose -company $company -copyright $copyright -version $version -noConfigfile
 
 
