@@ -36,7 +36,7 @@ Add-Type -AssemblyName PresentationFramework
 # temporary working directory
 $tmppath = 'C:\TEMPSOFTWARE'
 if (!(Test-Path $tmppath)) {
-   # New-Item -ItemType directory -Path $tmppath > $null
+   New-Item -ItemType directory -Path $tmppath > $null
 }
 
 # import module for dialog boxes
