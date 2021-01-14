@@ -14,7 +14,7 @@ if ($answ -eq "Yes") {
     # dialog box
     $formail = New-Object System.Windows.Forms.Form
     $formail.Text = "CONFIG"
-    $formail.Size = "500,300"
+    $formail.Size = "500,270"
     $formail.StartPosition = 'CenterScreen'
     $formail.Topmost = $true
     $address = New-Object System.Windows.Forms.Label
@@ -59,8 +59,15 @@ if ($answ -eq "Yes") {
     $portbox.Text = '587'
     $formail.Add_Shown({$portbox.Select()})
     $formail.Controls.Add($portbox)
+    $sslbox = New-Object System.Windows.Forms.CheckBox
+    $sslbox.Location = New-Object System.Drawing.Point(130,140)
+    $sslbox.Size = New-Object System.Drawing.Size(300,20)
+    $sslbox.Text = "TLS/SSL authentication"
+    $sslbox.Checked = $true
+    $formail.Add_Shown({$sslbox.Select()})
+    $formail.Controls.Add($sslbox)
     $OKButton = New-Object System.Windows.Forms.Button
-    $OKButton.Location = "150,160"
+    $OKButton.Location = "150,180"
     $OKButton.Size = '100,30'
     $OKButton.Text = "Ok"
     $OKButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
@@ -80,14 +87,14 @@ if ($answ -eq "Yes") {
     # sending email
     $ErrorActionPreference= 'Stop'
     Try {
-        Send-MailMessage    -From $addressbox.Text `
-                            -To $addressbox.Text `
-                            -Subject $subject `
-                            -Body $body `
-                            -SmtpServer $smtpbox.Text `
-                            -UseSsl `
-                            -Port $portbox.Text `
-                            -Credential $credential
+        $SMTPClient = New-Object Net.Mail.SmtpClient($smtpbox.Text, $portbox.Text)
+        if ($sslbox.Checked) {
+            $SMTPClient.EnableSsl = $true
+        }
+        $SMTPClient.Credentials = New-Object System.Net.NetworkCredential($addressbox.Text, $passwdbox.Text);
+        $SMTPClient.Send($addressbox.Text, $addressbox.Text, $subject, $body)
+
+
         $ErrorActionPreference= 'Inquire'
     }
     Catch {
