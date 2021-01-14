@@ -1,4 +1,8 @@
-# script per mandare mail
+# example script to send mail
+#
+# NOTE: for Gmail sending, enter in the security options of your Google account and
+# turn off two-factor authentication and allow access to insecure apps
+
 
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
@@ -8,6 +12,9 @@ Add-Type -AssemblyName PresentationFramework
 # import modules
 $workdir = Get-Location
 Import-Module -Name "$workdir\Modules\Forms.psm1"
+
+# force to use Tls1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $answ = [System.Windows.MessageBox]::Show("Configure for sending mail alerts?",'ALERTS','YesNo','Info')
 if ($answ -eq "Yes") {    
