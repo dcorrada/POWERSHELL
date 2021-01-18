@@ -82,11 +82,6 @@ if ($answ -eq "Yes") {
     $formail.Controls.Add($OKButton)
     $result = $formail.ShowDialog()
 
-    # setting credentials
-    $usr = $addressbox.Text
-    $pwd = ConvertTo-SecureString $passwdbox.Text -AsPlainText -Force
-    $credential = New-Object System.Management.Automation.PSCredential($usr, $pwd)
-
     # define email content
     $subject = 'TestMail.ps1'
     $body = "Questa mail è stata mandata da uno script PowerShell"
