@@ -34,13 +34,13 @@ Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # fetch and install additional softwares
-# modify download paths according to updated software versions
+# modify download paths according to updated software versions (updated on 2021/01/18)
 $tmppath = "C:\TEMPSOFTWARE"
 New-Item -ItemType directory -Path $tmppath > $null
 Write-Host -NoNewline "Download software..."
 $download = New-Object net.webclient
 $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
-$download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1502320053/AcroRdrDC1502320053_en_US.exe", "$tmppath\AcroReadDC.exe")
+$download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
 $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
 Write-Host -ForegroundColor Green " DONE"
 
