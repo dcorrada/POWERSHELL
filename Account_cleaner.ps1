@@ -63,6 +63,9 @@ foreach ($box in $boxes) {
 
         Write-Host "Removing $theuser..."
 
+        # remove local account
+        Remove-LocalUser -Name $theuser
+
         # search and remove keys
         $record = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
             Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
