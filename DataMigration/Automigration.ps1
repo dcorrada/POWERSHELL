@@ -575,7 +575,7 @@ if ($sendlog.Checked -eq $true) {
     }
 }
 
-# pulizia temporanei
+# cleaning temporary
 $answ = [System.Windows.MessageBox]::Show("Clear temporary files?",'TEMPUS','YesNo','Info')
 if ($answ -eq "Yes") {
     Remove-Item "C:\TEMPSOFTWARE" -Recurse -Force
