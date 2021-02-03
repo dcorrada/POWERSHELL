@@ -16,11 +16,6 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# get working directory
-$fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Office365_Offline\.ps1$" > $null
-$workdir = $matches[1]
-
 # header 
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
@@ -30,7 +25,6 @@ $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # temporary working directory
 $tmppath = 'C:\ODT'
