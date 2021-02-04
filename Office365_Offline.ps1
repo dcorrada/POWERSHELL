@@ -45,7 +45,7 @@ Remove-Item "C:\ODT\Deploy.exe" -Recurse -Force
 '    <Product ID="O365BusinessRetail">' | Out-File "C:\ODT\installOfficeBusRet64.xml" -Encoding ASCII -Append
 '      <Language ID="it-it" />' | Out-File "C:\ODT\installOfficeBusRet64.xml" -Encoding ASCII -Append
 '    </Product>' | Out-File "C:\ODT\installOfficeBusRet64.xml" -Encoding ASCII -Append
-'  </Add>' | Out-File "C:\ODT\installOfficeBusRet64.xml" -Encoding ASCII -Appends
+'  </Add>' | Out-File "C:\ODT\installOfficeBusRet64.xml" -Encoding ASCII -Append
 '</Configuration>' | Out-File "C:\ODT\installOfficeBusRet64.xml" -Encoding ASCII -Append
 
 # download Office
