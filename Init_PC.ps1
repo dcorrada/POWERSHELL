@@ -57,7 +57,7 @@ Remove-Item $tmppath -Recurse -Force
 $answ = [System.Windows.MessageBox]::Show("Create local account?",'ACCOUNT','YesNo','Info')
 if ($answ -eq "Yes") {
     
-    $form = FormBase -w 520 -h 220 -text "ACCOUNT"
+    $form = FormBase -w 520 -h 270 -text "ACCOUNT"
     $font = New-Object System.Drawing.Font("Arial", 12)
     $form.Font = $font
 
@@ -67,18 +67,31 @@ if ($answ -eq "Yes") {
     $label.Text = "Username:"
     $form.Controls.Add($label)
 
-    $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.Location = New-Object System.Drawing.Point(10,60)
-    $textBox.Size = New-Object System.Drawing.Size(450,30)
-    $form.Controls.Add($textBox)
+    $usrname = New-Object System.Windows.Forms.TextBox
+    $usrname.Location = New-Object System.Drawing.Point(10,60)
+    $usrname.Size = New-Object System.Drawing.Size(450,30)
+    $form.Controls.Add($usrname)
+
+    $label2 = New-Object System.Windows.Forms.Label
+    $label2.Location = New-Object System.Drawing.Point(10,100)
+    $label2.Size = New-Object System.Drawing.Size(500,30)
+    $label2.Text = "Fullname:"
+    $form.Controls.Add($label2)
+
+    $fullname = New-Object System.Windows.Forms.TextBox
+    $fullname.Location = New-Object System.Drawing.Point(10,140)
+    $fullname.Size = New-Object System.Drawing.Size(450,30)
+    $form.Controls.Add($fullname)
+
     $OKButton = New-Object System.Windows.Forms.Button
 
-    OKButton -form $form -x 200 -y 110 -text "Ok"
+    OKButton -form $form -x 200 -y 190 -text "Ok"
 
     $form.Topmost = $true
     $result = $form.ShowDialog()
 
-    $username = $textBox.Text
+    $username = $usrname.Text
+    $completo = $fullname.Text
     $passwd = "Password1"
     Write-Host "Username...: " -NoNewline
     Write-Host $username -ForegroundColor Cyan
@@ -88,7 +101,7 @@ if ($answ -eq "Yes") {
     
     $ErrorActionPreference= 'Stop'
     Try {
-        New-LocalUser -Name $username -Password $pwd -PasswordNeverExpires -AccountNeverExpires -Description "utente locale"
+        New-LocalUser -Name $username -Password $pwd -FullName $completo -PasswordNeverExpires -AccountNeverExpires -Description "utente locale"
         Add-LocalGroupMember -Group "Administrators" -Member $username
         Write-Host -ForegroundColor Green "Local account created"
         $ErrorActionPreference= 'Inquire'

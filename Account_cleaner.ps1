@@ -57,11 +57,19 @@ $vpos += 20
 OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
 $result = $form_panel.ShowDialog()
 
+# get a list of local users
+$locales = Get-LocalUser
+
 foreach ($box in $boxes) {
     if ($box.Checked -eq $true) {
         $theuser = $box.Text
 
         Write-Host "Removing $theuser..."
+
+        # remove local account
+        if ($locales.Name -contains $theuser) {
+            Remove-LocalUser -Name $theuser
+        }
 
         # search and remove keys
         $record = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
