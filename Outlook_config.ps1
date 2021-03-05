@@ -36,14 +36,17 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # function for killing Outlook instances
 function OutlookKiller {
-    $ErrorActionPreference= 'Stop'
-    Try {
-        $outproc = Get-Process outlook
-        Stop-Process -ID $outproc.Id -Force
-        Start-Sleep 2
-    }
-    Catch { 
-        [System.Windows.MessageBox]::Show("Check out that all Oulook processes have been closed before go ahead",'TASK MANAGER','Ok','Warning') > $null
+    $ErrorActionPreference= 'SilentlyContinue'
+    $outproc = Get-Process outlook
+    if ($outproc -ne $null) {
+        $ErrorActionPreference= 'Stop'
+        Try {
+            Stop-Process -ID $outproc.Id -Force
+            Start-Sleep 2
+        }
+        Catch { 
+            [System.Windows.MessageBox]::Show("Check out that all Oulook processes have been closed before go ahead",'TASK MANAGER','Ok','Warning') > $null
+        }
     }
     $ErrorActionPreference= 'Inquire'
 }
@@ -91,31 +94,49 @@ OutlookKiller
 if ($import.Checked) {
     Write-Host -ForegroundColor Cyan "*** IMPORTING OUTLOOK CONFIGURATION ***"
 
-<#
-# attach archivi di outlook
-Write-Host "Caricamento archivi di Outlook"
-[string[]]$pst_file_list = Get-Content -Path "C:\Optional Software\PST_files.log"
-if ($pst_file_list.count -gt 0) {
-    Add-Type -AssemblyName "Microsoft.Office.Interop.Outlook"
+    # load Outlook account(s)
+    if (Test-Path "$outlook_workdir\accounts.reg"  -PathType Leaf) {
+        Write-Host -ForegroundColor Yellow "`nLoading Outlook account(s)"
+        Start-Process "$outlook_workdir\accounts.reg" -Wait
+        [System.Windows.MessageBox]::Show("Check if Outlook is correctly configured and close it",'OUTLOOK','Ok','Info') | Out-Null
+        Start-Process outlook -Wait
+    }
 
-    if ($OfficeVer -eq '16') {
-         # con Office 365 bisogna lanciare l'istanza di creazione dell'oggetto due volte, ignorando l'errore iniziale
+    # load Outlook layout
+    if (Test-Path "$outlook_workdir\Outlook.xml"  -PathType Leaf) {
+        Write-Host -ForegroundColor Yellow "`nRestoring Outlook layout"
+        if (Test-Path "C:\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook\Outlook.xml" -PathType Leaf) {
+            Remove-Item "C:\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook\Outlook.xml" -Force
+        }
+        $outlook_aspect = "C:\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook\Outlook.xml"
+        Copy-Item -Path "$outlook_workdir\Outlook.xml" -Destination "C:\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook"
+    }
+
+    # attaching PST files
+    Write-Host -ForegroundColor Yellow "`nAttaching Outlook PST(s)"
+    $pst_file_list = Get-ChildItem -Path $outlook_workdir -Filter "*.pst" -ErrorAction SilentlyContinue -Force
+    if ($pst_file_list.Count -gt 0) {
         $ErrorActionPreference = 'SilentlyContinue'
-        $outlook = New-Object -comObject Outlook.Application
+        $outlook = New-Object -ComObject Outlook.Application
+        $ErrorActionPreference= 'Inquire'
+        $ErrorActionPreference= 'Stop' 
+        Try {
+            $outlook = New-Object -ComObject outlook.application
+            $namespace = $outlook.GetNameSpace("MAPI")
+            foreach ($pst_file in $pst_file_list) {
+                Copy-Item -Path $pst_file.FullName -Destination "C:\Users\$env:USERNAME\Documents"
+                $infile = "C:\Users\$env:USERNAME\Documents\$pst_file"
+                $namespace.AddStore($infile)
+                Write-Host "$pst_file attached"
+            }
+            OutlookKiller            
+        }
+        Catch {
+            Write-Output "`nError: $($error[0].ToString())"
+            [System.Windows.MessageBox]::Show("Unable to attach PST list to Outlook",'ERROR','Ok','Error')
+        }
         $ErrorActionPreference= 'Inquire'
     }
-    $outlook = New-Object -ComObject outlook.application
-    $namespace = $outlook.GetNameSpace("MAPI")
-    foreach ($pst_file in $pst_file_list) {
-        $namespace.AddStore($pst_file)
-        Write-Host -ForegroundColor Green $pst_file
-    }
-} else {
-    Write-Host -ForegroundColor Cyan "Nessun archivio trovato"
-}
-Remove-Item "C:\Optional Software\PST_files.log" -Force
-Start-Sleep 5
-#>
 
 } elseif ($export.Checked) {
     Write-Host -ForegroundColor Cyan "*** EXPORTING OUTLOOK CONFIGURATION ***"
@@ -149,5 +170,26 @@ Start-Sleep 5
     # retrieving Outlook accounts
     # see https://turbolab.it/windows-10/come-estrarre-profilo-posta-microsoft-outlook-registro-configurazione-1944 
     Write-Host -ForegroundColor Yellow "`nBackup Outlook account(s)"
-    
+    OutlookKiller
+    $ErrorActionPreference= 'Stop'  
+    Try {
+        # firstly detach all PSTs...
+        $outlook = New-Object -comObject Outlook.Application
+        $namespace = $outlook.getNamespace("MAPI")
+        foreach ($PSTtoDelete in $pstlist) {
+            $PST = $namespace.Stores | ? {$_.FilePath -eq $PSTtoDelete}
+            $PSTRoot = $PST.GetRootFolder()
+            $PSTFolder = $namespace.Folders.Item($PSTRoot.Name)
+            $namespace.GetType().InvokeMember('RemoveStore',[System.Reflection.BindingFlags]::InvokeMethod,$null,$namespace,($PSTFolder))
+        }
+        # ...then export profile
+        Reg export "HKCU\Software\Microsoft\Office\16.0\Outlook\Profiles" "$outlook_workdir\accounts.reg" /y
+    }
+    Catch {
+        Write-Output "`nError: $($error[0].ToString())"
+        [System.Windows.MessageBox]::Show("Extracting Outlook profile failed",'ERROR','Ok','Error')
+    }
 }
+
+# clean any pending Outlook instance
+OutlookKiller
