@@ -3,7 +3,8 @@
 *** DANGER *** DON'T RUN THIS SCRIPT! IT HAS NOT BEEN COMPLETELY TESTED AND YOUR MAILS COULD BE LOST
 
 Questo script sposta le mail in arrivo, inviate e archiviate verso un file PST di backup
-Vedi templato su https://community.idera.com/database-tools/powershell/ask_the_experts/f/powershell_for_exchange-24/22427/move-mail-to-a-pst 
+
+Per cmdlets MAPI Outlook vedi https://docs.microsoft.com/en-us/archive/msdn-magazine/2013/march/powershell-managing-an-outlook-mailbox-with-powershell
 #>
 
 # elevated script execution with admin privileges
