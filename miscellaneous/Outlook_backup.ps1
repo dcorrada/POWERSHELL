@@ -1,10 +1,5 @@
 <#
-
-*** DANGER *** DON'T RUN THIS SCRIPT! IT HAS NOT BEEN COMPLETELY TESTED AND YOUR MAILS COULD BE LOST
-
 Questo script sposta le mail in arrivo, inviate e archiviate verso un file PST di backup
-
-Per cmdlets MAPI Outlook vedi https://docs.microsoft.com/en-us/archive/msdn-magazine/2013/march/powershell-managing-an-outlook-mailbox-with-powershell
 #>
 
 # elevated script execution with admin privileges
@@ -64,8 +59,8 @@ $namespace = $outlook.GetNameSpace("MAPI")
 $namespace.Folders | Select Name 
 
 # lista delle cartelle dell'account di posta e del PST
-$namespace.Folders["dario.corrada@agmsolutions.net"].Folders | Select Name 
-$namespace.Folders["Archivio_Posta"].Folders | Select Name 
+$namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders | Select Name 
+$namespace.Folders.Item('Archivio_Posta').Folders | Select Name 
 
 #>
 
@@ -79,15 +74,16 @@ $SourceDest['Posta inviata'] = 'Inviata'
 foreach ($from_folder in $SourceDest.Keys) {
     $to_folder = $SourceDest[$from_folder]
     Write-Host -ForegroundColor Yellow "`nDA [$from_folder] A [$to_folder]"
-    $Source = $namespace.Folders['dario.corrada@agmsolutions.net'].Folders[$from_folder]
-    $Dest = $namespace.Folders['Archivio_Posta'].Folders[$to_folder]
+    $Source = $namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder")
+    $Dest = $namespace.Folders.Item('Archivio_Posta').Folders.Item("$to_folder")
     $Messages = $Source.Items
     foreach ($msg in $Messages) {
         Write-Host "Backup di <$($msg.Subject)>"
-        [void]$msg.Move($Dest)
+        $result = $msg.Move($Dest)
     }
 }
 
 # chiudo Outlook in modalita' admin e lo riavvio il client
+$outlook.Quit() # non sono sicuro che questo serva
 OutlookKiller
 Start-Process outlook
