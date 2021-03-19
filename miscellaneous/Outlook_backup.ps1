@@ -74,6 +74,16 @@ $SourceDest['Posta inviata'] = 'Inviata'
 foreach ($from_folder in $SourceDest.Keys) {
     $to_folder = $SourceDest[$from_folder]
     Write-Host -ForegroundColor Yellow "`nDA [$from_folder] A [$to_folder]"
+    
+    # ciclo nuovo, da testare
+    while ($namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder").Items.Count -gt 0) {
+        $subject = $namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder").Items[1].Subject
+        Write-Host "Backup di <$subject>"
+        $namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder").Items[1].Move($namespace.Folders.Item('Archivio_Posta').Folders.Item("$to_folder"))
+        Start-Sleep 3
+    }
+
+    <# ciclo vecchio, non funzionante
     $Source = $namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder")
     $Dest = $namespace.Folders.Item('Archivio_Posta').Folders.Item("$to_folder")
     $Messages = $Source.Items
@@ -81,9 +91,15 @@ foreach ($from_folder in $SourceDest.Keys) {
         Write-Host "Backup di <$($msg.Subject)>"
         $result = $msg.Move($Dest)
     }
+    #>
+
 }
 
+# esco da Outlook e sgancio l'oggetto COM
+$Outlook.Quit()
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
+Start-Sleep 5
+
 # chiudo Outlook in modalita' admin e lo riavvio il client
-$outlook.Quit() # non sono sicuro che questo serva
 OutlookKiller
 Start-Process outlook
