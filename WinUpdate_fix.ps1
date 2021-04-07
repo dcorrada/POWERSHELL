@@ -14,6 +14,16 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
+# header 
+$ErrorActionPreference= 'SilentlyContinue'
+Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+Write-Host "ExecutionPolicy Bypass" -fore Green
+$ErrorActionPreference= 'Inquire'
+$WarningPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+
 # stopping services
 net stop wuauserv /y
 net stop bits /y
