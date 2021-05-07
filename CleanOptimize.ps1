@@ -1,6 +1,6 @@
 ﻿<#
 Name......: CleanOptimize.ps1
-Version...: 19.12.1
+Version...: 21.05.1
 Author....: Dario CORRADA
 
 This script runs a disk cleanup on volume C: and optimize it
@@ -37,7 +37,14 @@ Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1' -Wait
 $answ = [System.Windows.MessageBox]::Show("Defrag Volume C:?",'OPTIMIZE','YesNo','Info')
 if ($answ -eq "Yes") {
     # see https://docs.microsoft.com/en-us/powershell/module/storage/optimize-volume?view=windowsserver2019-ps
-    Optimize-Volume -DriveLetter C -Defrag -Verbose
+    $issd = Get-PhysicalDisk
+    if ($issd.MediaType -eq 'SSD') {
+        Write-Host "Found SSD drive"
+        Optimize-Volume -DriveLetter C -ReTrim -Verbose
+    } else {
+        Write-Host "Found HDD drive"
+        Optimize-Volume -DriveLetter C -Defrag -Verbose
+    }  
 }
 
 # reboot
