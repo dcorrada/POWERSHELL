@@ -34,7 +34,7 @@ Start-Process -FilePath CleanMgr.exe -ArgumentList '/d c: sageset:1' -Wait
 Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1' -Wait
 
 # Optimize
-$answ = [System.Windows.MessageBox]::Show("Defrag Volume C:?",'OPTIMIZE','YesNo','Info')
+$answ = [System.Windows.MessageBox]::Show("Optimize Volume C:?",'OPTIMIZE','YesNo','Info')
 if ($answ -eq "Yes") {
     # see https://docs.microsoft.com/en-us/powershell/module/storage/optimize-volume?view=windowsserver2019-ps
     $issd = Get-PhysicalDisk
