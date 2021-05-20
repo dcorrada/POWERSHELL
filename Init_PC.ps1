@@ -3,8 +3,8 @@ Name......: Init_PC.ps1
 Version...: 20.12.3
 Author....: Dario CORRADA
 
-Questo script finalize fresh OS installations:
-* install Chrome, AcrobatDC, 7Zip;
+This script finalize fresh OS installations:
+* install Chrome, AcrobatDC, 7Zip, Supremo;
 * create a local account with admin privileges;
 * set hostname according to the serial number.
 #>
