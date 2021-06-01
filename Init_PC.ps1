@@ -43,12 +43,14 @@ $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_insta
 $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
 $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
 $download.Downloadfile("https://www.supremocontrol.com/download.aspx?file=Supremo.exe&id_sw=7&ws=supremocontrol.com", "$env:PUBLIC\Desktop\Supremo.exe")
+$download.Downloadfile("https://packages.wazuh.com/4.x/windows/wazuh-agent-4.1.5-1.msi", "$tmppath\wazuh-agent.msi")
 Write-Host -ForegroundColor Green " DONE"
 
 Write-Host -NoNewline "Install software..."
 Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
 Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
 Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
+Start-Process -FilePath "$tmppath\wazuh-agent.msi" -ArgumentList '/q','WAZUH_MANAGER="109.168.85.241"','WAZUH_REGISTRATION_SERVER="109.168.85.241"' -Wait
 Write-Host -ForegroundColor Green " DONE"
 
 Remove-Item $tmppath -Recurse -Force
