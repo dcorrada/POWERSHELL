@@ -32,18 +32,9 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 $answ = [System.Windows.MessageBox]::Show("Are you looking for an AD user?",'ACCOUNT','YesNo','Info')
 if ($answ -eq "Yes") {
-    # import Active Directory module
-    $ErrorActionPreference= 'Stop'
-    try {
-        Import-Module ActiveDirectory
-    } catch {
-        Install-Module ActiveDirectory -Confirm:$False -Force
-        Import-Module ActiveDirectory
-    }
-    $ErrorActionPreference= 'Inquire'
 
     # dialog form
-    $form = FormBase -w 520 -h 200 -text "ACCOUNT"
+    $form = FormBase -w 520 -h 270 -text "ACCOUNT"
     $font = New-Object System.Drawing.Font("Arial", 12)
     $form.Font = $font
     $label = New-Object System.Windows.Forms.Label
@@ -55,27 +46,40 @@ if ($answ -eq "Yes") {
     $usrname.Location = New-Object System.Drawing.Point(10,60)
     $usrname.Size = New-Object System.Drawing.Size(450,30)
     $form.Controls.Add($usrname)
+    $label2 = New-Object System.Windows.Forms.Label
+    $label2.Location = New-Object System.Drawing.Point(10,100)
+    $label2.Size = New-Object System.Drawing.Size(500,30)
+    $label2.Text = "Fullname:"
+    $form.Controls.Add($label2)
+    $passwd = New-Object System.Windows.Forms.MaskedTextBox
+    $passwd.PasswordChar = '*'
+    $passwd.Location = New-Object System.Drawing.Point(10,140)
+    $passwd.Size = New-Object System.Drawing.Size(450,30)
+    $form.Controls.Add($passwd)
     $OKButton = New-Object System.Windows.Forms.Button
-    OKButton -form $form -x 200 -y 100 -text "Ok"
+    OKButton -form $form -x 200 -y 190 -text "Ok"
     $form.Topmost = $true
     $result = $form.ShowDialog()
 
-    # searching user
+    # add domain prefix to username
     $username = $usrname.Text
-    try {
-        $usrinfo = Get-ADUser -Identity $username
-    }
-    catch {
-        [System.Windows.MessageBox]::Show("User not found",'ACCOUNT','Ok','Warning')
-    }
+    $thiscomputer = Get-WmiObject -Class Win32_ComputerSystem
+    $fullname = $thiscomputer.Domain + '\' + $username
 
-    # granting local admin privileges
-    if ($usrinfo) {
+    # test user
+    [reflection.assembly]::LoadWithPartialName("System.DirectoryServices.AccountManagement") > $null
+    $principalContext = [System.DirectoryServices.AccountManagement.PrincipalContext]::new([System.DirectoryServices.AccountManagement.ContextType]'Machine',$env:COMPUTERNAME)
+    if ($principalContext.ValidateCredentials($fullname,$passwd.Text)) {
+        Write-Host -ForegroundColor Green "User OK"
+        
+        # granting local admin privileges
         try {
             Add-LocalGroupMember -Group "Administrators" -Member "AGM\$username"
         }
         catch {
             [System.Windows.MessageBox]::Show("Cannot granting admin privilege to $username",'ACCOUNT','Ok','Error')
         }
+    } else {
+        [System.Windows.MessageBox]::Show("Invalid credentials for $username",'ACCOUNT','Ok','Error')
     }
 }
