@@ -137,7 +137,6 @@ $exclude_list = (
     "AppData",
     "Links",
     "OneDrive",
-    "OneDrive - AGM Solutions",
     "Saved Games",
     "Searches",
     "3D Objects",
