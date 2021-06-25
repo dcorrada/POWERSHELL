@@ -190,8 +190,7 @@ Start-Sleep 10
 $form_bar = New-Object System.Windows.Forms.Form
 $form_bar.Text = "TRANSFER RATE"
 $form_bar.Size = New-Object System.Drawing.Size(600,200)
-$form_bar.StartPosition = "manual"
-$form_bar.Location = '1320,840'
+$form_bar.StartPosition = 'CenterScreen'
 $font = New-Object System.Drawing.Font("Arial", 12)
 $form_bar.Font = $font
 $label = New-Object System.Windows.Forms.Label
@@ -255,6 +254,7 @@ While (Get-Job -State "Running") {
     }
     $form_bar.Refresh()
     Write-Host " "
+    Write-Host -ForegroundColor Yellow  "TOTAL PROGRESS: $formattato% - $estimated mins to end"
     Start-Sleep 5
 }
 
