@@ -74,7 +74,7 @@ Write-Host -NoNewline "Searching paths to backup..."
 $backup_list = @{} # variable in which I will add paths to backup
 
 # backup paths list; empty folders are excluded from backup    
-[string[]]$allow_list = Get-Content -Path "$repopath\Backup_Dati\allow_list.log"
+[string[]]$allow_list = Get-Content -Path "$repopath\Data_Backup\allow_list.log"
 $allow_list = $allow_list -replace ('\$username', $env:USERNAME)             
 foreach ($folder in $allow_list) {
     $full_path = 'C:\' + $folder
@@ -91,7 +91,7 @@ foreach ($folder in $allow_list) {
 }
 
 # paths excluded from backup;
-[string[]]$exclude_list = Get-Content -Path "$repopath\Backup_Dati\exclude_list.log"
+[string[]]$exclude_list = Get-Content -Path "$repopath\Data_Backup\exclude_list.log"
 $root_path = 'C:\'
 $remote_root_list = Get-ChildItem $root_path -Attributes D
 $elenco = @();
@@ -191,6 +191,10 @@ $form_bar = New-Object System.Windows.Forms.Form
 $form_bar.Text = "TRANSFER RATE"
 $form_bar.Size = New-Object System.Drawing.Size(600,200)
 $form_bar.StartPosition = 'CenterScreen'
+$form_bar.Topmost = $true
+$form_bar.MinimizeBox = $false
+$form_bar.MaximizeBox = $false
+$form_bar.FormBorderStyle = 'FixedSingle'
 $font = New-Object System.Drawing.Font("Arial", 12)
 $form_bar.Font = $font
 $label = New-Object System.Windows.Forms.Label
@@ -203,9 +207,7 @@ $bar.Location = New-Object System.Drawing.Point(20,70)
 $bar.Maximum = 101
 $bar.Size = New-Object System.Drawing.Size(550,30)
 $form_bar.Controls.Add($bar)
-$form_bar.Topmost = $true
 $form_bar.Show() | out-null
-$form_bar.Focus() | out-null
 
 # Waiting for jobs completed
 While (Get-Job -State "Running") {
@@ -252,10 +254,13 @@ While (Get-Job -State "Running") {
     } else {
         $bar.Value = $progress
     }
-    $form_bar.Refresh()
+
+    # refreshing the progress bar
+    [System.Windows.Forms.Application]::DoEvents()
+
     Write-Host " "
     Write-Host -ForegroundColor Yellow  "TOTAL PROGRESS: $formattato% - $estimated mins to end"
-    Start-Sleep 5
+    Start-Sleep -Milliseconds 200
 }
 
 $form_bar.Close()
