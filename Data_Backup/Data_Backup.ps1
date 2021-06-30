@@ -52,6 +52,7 @@ if (Test-Path $copiasu) {
     Exit
 }
 
+<#
 # copying Chrome bookmarks
 $bookmarks = "C:\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default\Bookmarks"
 if (Test-Path $bookmarks -PathType Leaf) {
@@ -60,7 +61,9 @@ if (Test-Path $bookmarks -PathType Leaf) {
     Copy-Item $bookmarks -Destination "$copiasu\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default" > $null
     Write-Host -ForegroundColor Green " DONE"
 }
+#>
 
+<#
 # copying Outlook layout
 $outlook_aspect = "C:\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook\Outlook.xml"
 if (Test-Path $outlook_aspect -PathType Leaf) {
@@ -69,12 +72,21 @@ if (Test-Path $outlook_aspect -PathType Leaf) {
     Copy-Item $outlook_aspect -Destination "$copiasu\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook" > $null
     Write-Host -ForegroundColor Green " DONE"
 }
+#>
 
 Write-Host -NoNewline "Searching paths to backup..."
 $backup_list = @{} # variable in which I will add paths to backup
 
-# backup paths list; empty folders are excluded from backup    
-[string[]]$allow_list = Get-Content -Path "$repopath\Data_Backup\allow_list.log"
+# load allow list file
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
+$OpenFileDialog.filter = 'Allowed paths list file | *.*'
+$OpenFileDialog.ShowDialog() | Out-Null
+$allowfile = $OpenFileDialog.filename
+
+# backup paths list
+[string[]]$allow_list = Get-Content -Path $allowfile
 $allow_list = $allow_list -replace ('\$username', $env:USERNAME)             
 foreach ($folder in $allow_list) {
     $full_path = 'C:\' + $folder
@@ -83,41 +95,40 @@ foreach ($folder in $allow_list) {
         $output = [system.String]::Join(" ", $output)
         $output -match "Byte:\s+(\d+)\s+\d+" > $null
         $size = $Matches[1]
-        if ($size -gt 1KB) {
-            $backup_list[$folder] = $size
-            Write-Host -NoNewline "."
-        }
+        $backup_list[$folder] = $size
+        Write-Host -NoNewline "."
     }
 }
 
+# load exclude list file
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
+$OpenFileDialog.filter = 'Excluded paths list file | *.*'
+$OpenFileDialog.ShowDialog() | Out-Null
+$excludefile = $OpenFileDialog.filename
+
 # paths excluded from backup;
-[string[]]$exclude_list = Get-Content -Path "$repopath\Data_Backup\exclude_list.log"
+[string[]]$exclude_list = Get-Content -Path $excludefile
+$exclude_list = $exclude_list -replace ('\$username', $env:USERNAME)  
+$elenco = @();
 $root_path = 'C:\'
 $remote_root_list = Get-ChildItem $root_path -Attributes D
-$elenco = @();
 foreach ($folder in $remote_root_list.Name) {
     if (!($exclude_list -contains $folder)) {
         $elenco += $folder
     }
 }
-$string = [system.String]::Join("`r`n", $elenco)
-$form_folders = FormBase -w 400 -h 275 -text "FOLDER LIST IN C:\"
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(350,30)
-$label.Text = "Delete folders you don't want to backup:"
-$form_folders.Controls.Add($label)
-$textBox = New-Object System.Windows.Forms.TextBox
-$textBox.Multiline = $true
-$textBox.Scrollbars = "Vertical"
-$textBox.Location = New-Object System.Drawing.Point(10,50)
-$textBox.Size = New-Object System.Drawing.Size(350,100)
-$textBox.Text = $string
-$form_folders.Controls.Add($textBox)
-OKButton -form $form_folders -x 100 -y 175 -text "Ok"
-$form_folders.Add_Shown({$textBox.Select()})
-$result = $form_folders.ShowDialog()
-$elenco = $textBox.Text.Split("`r`n")   
+$root_path = 'C:\Users\' + $env:USERNAME
+$remote_root_list = Get-ChildItem $root_path -Attributes D
+foreach ($folder in $remote_root_list.Name) {
+    $folder = 'Users\' + $env:USERNAME + '\' + $folder
+    if (!($exclude_list -contains $folder)) {
+        $elenco += $folder
+    }
+}
+
+$root_path = 'C:\'
 foreach ($folder in $elenco) {
     if (!($folder -eq "")) {
         if (!($exclude_list -contains $folder)) {
@@ -129,33 +140,6 @@ foreach ($folder in $elenco) {
             $backup_list[$folder] = $size
             Write-Host -NoNewline "."
         }
-    }
-}
-
-# folders list to backup from C:\Users\username
-$exclude_list = (
-    "AppData",
-    "Links",
-    "OneDrive",
-    "Saved Games",
-    "Searches",
-    "3D Objects",
-    ".cisco",
-    ".config",
-    "Dropbox"
-)
-$root_path = "C:\Users\$env:USERNAME\"
-$remote_root_list = Get-ChildItem $root_path -Attributes D
-foreach ($folder in $remote_root_list.Name) {
-    if (!($exclude_list -contains $folder)) {
-        $full_path = $root_path + $folder
-        $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-        $output = [system.String]::Join(" ", $output)
-        $output -match "Byte:\s+(\d+)\s+\d+" > $null
-        $size = $Matches[1]
-        $full_path = "Users\$env:USERNAME\$folder"
-        $backup_list[$full_path] = $size
-        Write-Host -NoNewline "."
     }
 }
 

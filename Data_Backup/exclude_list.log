@@ -14,7 +14,14 @@ SWSetup
 Temp
 TEMPSOFTWARE
 Tmp
+Windows10Upgrade
 Users
+Users\$username\AppData
+Users\$username\Links
+Users\$username\OneDrive
+Users\$username\Saved Games
+Users\$username\Searches
+Users\$username\3D Objects
+Users\$username\Dropbox
 Windows
 Windows.old
-Windows10Upgrade
