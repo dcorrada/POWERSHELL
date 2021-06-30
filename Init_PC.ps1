@@ -42,6 +42,7 @@ $download = New-Object net.webclient
 $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
 $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
 $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
+$download.Downloadfile("https://go.skype.com/windows.desktop.download", "$tmppath\Skype.exe")
 $download.Downloadfile("https://www.supremocontrol.com/download.aspx?file=Supremo.exe&id_sw=7&ws=supremocontrol.com", "$env:PUBLIC\Desktop\Supremo.exe")
 Write-Host -ForegroundColor Green " DONE"
 
@@ -49,7 +50,20 @@ Write-Host -NoNewline "Install software..."
 Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
 Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
 Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
+Start-Process -FilePath "$tmppath\Skype.exe" -Wait
 Write-Host -ForegroundColor Green " DONE"
+
+# remove Skype startup
+New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | Out-Null
+$startups = Get-CimInstance Win32_StartupCommand | Select-Object Name,Location
+foreach ($startup in $startups){
+    if ($startup.Name -eq 'Skype for Desktop'){
+        $number = ($startup.Location).IndexOf("\")
+        $location = ($startup.Location).Insert("$number",":")
+        Write-Output "Disabling $($startup.Name) from $location)"
+        Remove-ItemProperty -Path "$location" -Name "$($startup.name)" 
+    }
+}
 
 Remove-Item $tmppath -Recurse -Force
 
