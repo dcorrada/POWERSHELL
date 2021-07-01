@@ -98,8 +98,13 @@ $form_panel.Controls.Add($label)
 $vpos = 50
 $boxes = @()
 foreach ($elem in $userlist) {
-    $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem
-    $vpos += 30
+    if ($elem.Name -eq $env:USERNAME) {
+        $boxes += CheckBox -form $form_panel -checked $true -enabled $false -x 20 -y $vpos -text $elem.Name
+        $vpos += 30
+    } else {
+        $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem.Name
+        $vpos += 30
+    }
 }
 $vpos += 20
 OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
@@ -217,9 +222,10 @@ if ($answ -eq "No") {
 }
 
 # backup job block
+Write-Host " "
 $RoboCopyBlock = {
     param($final_path, $prefix)
-    $filename = $final_path.Replace('\','-')
+    $filename = $final_path -replace ('\\','-')
     if (Test-Path "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" -PathType Leaf) {
         Remove-Item  "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" -Force
     }
@@ -343,7 +349,7 @@ foreach ($folder in $backup_list.Keys) {
     $output -match "Byte:\s+(\d+)\s+\d+" > $null
     $dest_size = $Matches[1]
 
-    $foldername = $folder.Replace('\','-')                      
+    $foldername = $folder -replace ('\\','-')                      
     if ($dest_size -lt $source_size) { # backup job failed
         Clear-Host
         $diff = $source_size - $dest_size

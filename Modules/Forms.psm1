@@ -14,12 +14,13 @@ function FormBase {
 Export-ModuleMember -Function FormBase
 
 function RadioButton {
-    param ($form, $checked, $x, $y, $text)
+    param ($form, $checked, $enabled = $true, $x, $y, $text)
 
     $obj = New-Object System.Windows.Forms.RadioButton
     $obj.Location = "$x,$y"
     $obj.Size = '300,30'
     $obj.Checked = $checked
+    $obj.Enabled = $enabled
     $obj.Text = $text
     $form.Controls.Add($obj)
 
@@ -28,12 +29,13 @@ function RadioButton {
 Export-ModuleMember -Function RadioButton
 
 function CheckBox {
-    param ($form, $checked, $x, $y, $text)
+    param ($form, $checked, $enabled = $true, $x, $y, $text)
 
     $obj = New-Object System.Windows.Forms.CheckBox
     $obj.Location = "$x,$y"
     $obj.Size = '350,30'
     $obj.Checked = $checked
+    $obj.Enabled = $enabled
     $obj.Text = $text
     $form.Controls.Add($obj)
 
