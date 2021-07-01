@@ -216,18 +216,6 @@ if ($answ -eq "No") {
     Exit
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 # backup job block
 $RoboCopyBlock = {
     param($final_path, $prefix)
@@ -251,8 +239,9 @@ foreach ($folder in $backup_list.Keys) {
     Write-Host -ForegroundColor Green " JOB STARTED"
 }
 
-Start-Sleep 10
+Start-Sleep 2
 
+<# 
 # progress bar
 $form_bar = New-Object System.Windows.Forms.Form
 $form_bar.Text = "TRANSFER RATE"
@@ -275,6 +264,7 @@ $bar.Maximum = 101
 $bar.Size = New-Object System.Drawing.Size(550,30)
 $form_bar.Controls.Add($bar)
 $form_bar.Show() | out-null
+#>
 
 # Waiting for jobs completed
 While (Get-Job -State "Running") {
@@ -311,10 +301,15 @@ While (Get-Job -State "Running") {
     }
     
     $percent = ($trasferred_bytes / $total_bytes)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
     $formattato = '{0:0.0}' -f $percent
     [int32]$progress = $percent
     $CurrentTime = $Time.Elapsed
     $estimated = [int]((($CurrentTime.TotalSeconds/$percent) * (100 - $percent)) / 60)
+
+    <# 
     $label.Text = "Progress: $formattato% - $estimated mins to end"
     if ($progress -ge 100) {
         $bar.Value = 100
@@ -324,13 +319,14 @@ While (Get-Job -State "Running") {
 
     # refreshing the progress bar
     [System.Windows.Forms.Application]::DoEvents()
+    #>
 
     Write-Host " "
     Write-Host -ForegroundColor Yellow  "TOTAL PROGRESS: $formattato% - $estimated mins to end"
-    Start-Sleep -Milliseconds 200
+    Start-Sleep 5
 }
 
-$form_bar.Close()
+# $form_bar.Close()
 
 $joblog = Get-Job | Receive-Job # get job output
 Remove-Job * # Cleanup
