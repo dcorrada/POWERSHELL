@@ -49,7 +49,7 @@ if ($answ -eq "Yes") {
     $label2 = New-Object System.Windows.Forms.Label
     $label2.Location = New-Object System.Drawing.Point(10,100)
     $label2.Size = New-Object System.Drawing.Size(500,30)
-    $label2.Text = "Fullname:"
+    $label2.Text = "Password:"
     $form.Controls.Add($label2)
     $passwd = New-Object System.Windows.Forms.MaskedTextBox
     $passwd.PasswordChar = '*'
