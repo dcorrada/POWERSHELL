@@ -31,7 +31,7 @@ Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$repopath\Modules\Forms.psm1"
 
 # temporary directory
-$tmppath = 'C:\TEMPSOFTWARE'
+$tmppath = 'C:\DATABACKUP_LOGS'
 if (!(Test-Path $tmppath)) {
     New-Item -ItemType directory -Path $tmppath > $null
 }
@@ -68,6 +68,10 @@ $copiasu = $OpenFileDialog.FileName
 # warn login on remote path (for shared folders)
 if ($copiasu -match "^\\\\") {
     [System.Windows.MessageBox]::Show("Access on $copiasu with your credentials, then click Ok to continue",'WARNING','Ok','Warning')
+}
+
+if (!($copiasu -match "\\$")) {
+    $copiasu = $copiasu + '\'
 }
 
 # create destination folder
@@ -226,13 +230,13 @@ Write-Host " "
 $RoboCopyBlock = {
     param($final_path, $prefix)
     $filename = $final_path -replace ('\\','-')
-    if (Test-Path "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" -PathType Leaf) {
-        Remove-Item  "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" -Force
+    if (Test-Path "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" -PathType Leaf) {
+        Remove-Item  "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" -Force
     }
-    New-Item -ItemType file "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" > $null
+    New-Item -ItemType file "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" > $null
     $source = 'C:\' + $final_path
     $dest = $prefix + '\' + $final_path
-    $opts = ("/E", "/Z", "/NP", "/W:5", "/R:5", "/V", "/LOG+:C:\TEMPSOFTWARE\ROBOCOPY_$filename.log")
+    $opts = ("/E", "/Z", "/NP", "/W:5", "/R:5", "/V", "/LOG+:C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log")
     $cmd_args = ($source, $dest, $opts)
     robocopy @cmd_args
 }
@@ -382,15 +386,17 @@ foreach ($folder in $backup_list.Keys) {
 Write-Host -ForegroundColor Green " DONE"
 
 # file backup from Users folder
-Write-Host -NoNewline "Copying files in C:\Users\$env:USERNAME..."
-$userfiles = Get-ChildItem "C:\Users\$env:USERNAME" -Attributes A
-foreach ($afile in $userfiles) {
-    Copy-Item "C:\Users\$env:USERNAME\$afile" -Destination "$copiasu\Users\$env:USERNAME" -Force > $null
+foreach ($usr in $usrlist) {
+    Write-Host -NoNewline "Copying files in C:\Users\$usr..."
+    $userfiles = Get-ChildItem "C:\Users\$usr" -Attributes A
+    foreach ($afile in $userfiles) {
+        Copy-Item "C:\Users\$usr\$afile" -Destination "$copiasu\Users\$usr" -Force > $null
+    }
+    Write-Host -ForegroundColor Green " DONE"
 }
-Write-Host -ForegroundColor Green " DONE"
 
 # cleaning temporary
 $answ = [System.Windows.MessageBox]::Show("Backup finished. Delete log files?",'END','YesNo','Info')
 if ($answ -eq "Yes") {
-    Remove-Item "C:\TEMPSOFTWARE" -Recurse -Force
+    Remove-Item "C:\DATABACKUP_LOGS" -Recurse -Force
 }
