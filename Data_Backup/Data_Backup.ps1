@@ -31,147 +31,212 @@ Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$repopath\Modules\Forms.psm1"
 
 # temporary directory
-$tmppath = 'C:\TEMPSOFTWARE'
+$tmppath = 'C:\DATABACKUP_LOGS'
 if (!(Test-Path $tmppath)) {
     New-Item -ItemType directory -Path $tmppath > $null
 }
 
-$copiasu = Read-Host "Insert destination path"
+# select destination path
+$AssemblyFullName = 'System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
+$Assembly = [System.Reflection.Assembly]::Load($AssemblyFullName)
+$OpenFileDialog = [System.Windows.Forms.OpenFileDialog]::new()
+$OpenFileDialog.AddExtension = $false
+$OpenFileDialog.CheckFileExists = $false
+$OpenFileDialog.DereferenceLinks = $true
+$OpenFileDialog.Filter = "Folders|`n"
+$OpenFileDialog.Multiselect = $false
+$OpenFileDialog.Title = "Select destination path"
+$OpenFileDialogType = $OpenFileDialog.GetType()
+$FileDialogInterfaceType = $Assembly.GetType('System.Windows.Forms.FileDialogNative+IFileDialog')
+$IFileDialog = $OpenFileDialogType.GetMethod('CreateVistaDialog',@('NonPublic','Public','Static','Instance')).Invoke($OpenFileDialog,$null)
+$OpenFileDialogType.GetMethod('OnBeforeVistaDialog',@('NonPublic','Public','Static','Instance')).Invoke($OpenFileDialog,$IFileDialog)
+[uint32]$PickFoldersOption = $Assembly.GetType('System.Windows.Forms.FileDialogNative+FOS').GetField('FOS_PICKFOLDERS').GetValue($null)
+$FolderOptions = $OpenFileDialogType.GetMethod('get_Options',@('NonPublic','Public','Static','Instance')).Invoke($OpenFileDialog,$null) -bor $PickFoldersOption
+$FileDialogInterfaceType.GetMethod('SetOptions',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$FolderOptions)
+$VistaDialogEvent = [System.Activator]::CreateInstance($AssemblyFullName,'System.Windows.Forms.FileDialog+VistaDialogEvents',$false,0,$null,$OpenFileDialog,$null,$null).Unwrap()
+[uint32]$AdviceCookie = 0
+$AdvisoryParameters = @($VistaDialogEvent,$AdviceCookie)
+$AdviseResult = $FileDialogInterfaceType.GetMethod('Advise',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$AdvisoryParameters)
+$AdviceCookie = $AdvisoryParameters[1]
+$Result = $FileDialogInterfaceType.GetMethod('Show',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,[System.IntPtr]::Zero)
+$FileDialogInterfaceType.GetMethod('Unadvise',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$AdviceCookie)
+if ($Result -eq [System.Windows.Forms.DialogResult]::OK) {
+    $FileDialogInterfaceType.GetMethod('GetResult',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$null)
+}
+$copiasu = $OpenFileDialog.FileName
 
-# login on remote path (for shared folders)
+# warn login on remote path (for shared folders)
 if ($copiasu -match "^\\\\") {
     [System.Windows.MessageBox]::Show("Access on $copiasu with your credentials, then click Ok to continue",'WARNING','Ok','Warning')
 }
 
-# check destination path
-if (Test-Path $copiasu) {
-    $copiasu = $copiasu + "\$env:USERNAME"
+if (!($copiasu -match "\\$")) {
+    $copiasu = $copiasu + '\'
+}
+
+# create destination folder
+try {
+    $copiasu = $copiasu + 'BACKUP_of_' + $env:USERNAME + '_on_' + (Get-Date -Format "yyyy-MM-dd_HH.mm")
     New-Item -ItemType directory -Path $copiasu > $null
-} else {
-    [System.Windows.MessageBox]::Show("$copiasu not found",'ERROR','Ok','Error') > $null
+}
+catch {
+    [System.Windows.MessageBox]::Show("Unable to create $copiasu",'ERROR','Ok','Error') > $null
     Exit
 }
 
-# copying Chrome bookmarks
-$bookmarks = "C:\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default\Bookmarks"
-if (Test-Path $bookmarks -PathType Leaf) {
-    Write-Host -NoNewline "Copying Chrome bookmarks..."
-    New-Item -ItemType directory -Path "$copiasu\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default" > $null
-    Copy-Item $bookmarks -Destination "$copiasu\Users\$env:USERNAME\AppData\Local\Google\Chrome\User Data\Default" > $null
-    Write-Host -ForegroundColor Green " DONE"
-}
-
-# copying Outlook layout
-$outlook_aspect = "C:\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook\Outlook.xml"
-if (Test-Path $outlook_aspect -PathType Leaf) {
-    Write-Host -NoNewline "Copying Outlook layout..."
-    New-Item -ItemType directory -Path "$copiasu\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook" > $null
-    Copy-Item $outlook_aspect -Destination "$copiasu\Users\$env:USERNAME\AppData\Roaming\Microsoft\Outlook" > $null
-    Write-Host -ForegroundColor Green " DONE"
-}
-
 Write-Host -NoNewline "Searching paths to backup..."
-$backup_list = @{} # variable in which I will add paths to backup
-
-# backup paths list; empty folders are excluded from backup    
-[string[]]$allow_list = Get-Content -Path "$repopath\Backup_Dati\allow_list.log"
-$allow_list = $allow_list -replace ('\$username', $env:USERNAME)             
-foreach ($folder in $allow_list) {
-    $full_path = 'C:\' + $folder
-    if (Test-Path $full_path) {
-        $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-        $output = [system.String]::Join(" ", $output)
-        $output -match "Byte:\s+(\d+)\s+\d+" > $null
-        $size = $Matches[1]
-        if ($size -gt 1KB) {
-            $backup_list[$folder] = $size
-            Write-Host -NoNewline "."
-        }
-    }
-}
-
-# paths excluded from backup;
-[string[]]$exclude_list = Get-Content -Path "$repopath\Backup_Dati\exclude_list.log"
+$backup_list = @{} # variable in which will added paths to backup
+$usrlist = @()
 $root_path = 'C:\'
-$remote_root_list = Get-ChildItem $root_path -Attributes D
-$elenco = @();
-foreach ($folder in $remote_root_list.Name) {
-    if (!($exclude_list -contains $folder)) {
-        $elenco += $folder
-    }
-}
-$string = [system.String]::Join("`r`n", $elenco)
-$form_folders = FormBase -w 400 -h 275 -text "FOLDER LIST IN C:\"
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+
+# select user profiles
+$userlist = Get-ChildItem C:\Users
+$hsize = 200 + (30 * $userlist.Count)
+$form_panel = FormBase -w 300 -h $hsize -text "USER FOLDERS"
 $label = New-Object System.Windows.Forms.Label
 $label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(350,30)
-$label.Text = "Delete folders you don't want to backup:"
-$form_folders.Controls.Add($label)
-$textBox = New-Object System.Windows.Forms.TextBox
-$textBox.Multiline = $true
-$textBox.Scrollbars = "Vertical"
-$textBox.Location = New-Object System.Drawing.Point(10,50)
-$textBox.Size = New-Object System.Drawing.Size(350,100)
-$textBox.Text = $string
-$form_folders.Controls.Add($textBox)
-OKButton -form $form_folders -x 100 -y 175 -text "Ok"
-$form_folders.Add_Shown({$textBox.Select()})
-$result = $form_folders.ShowDialog()
-$elenco = $textBox.Text.Split("`r`n")   
-foreach ($folder in $elenco) {
-    if (!($folder -eq "")) {
-        if (!($exclude_list -contains $folder)) {
-            $full_path = $root_path + $folder
+$label.Size = New-Object System.Drawing.Size(200,30)
+$label.Text = "Select users to backup:"
+$form_panel.Controls.Add($label)
+$vpos = 50
+$boxes = @()
+foreach ($elem in $userlist) {
+    if ($elem.Name -eq $env:USERNAME) {
+        $boxes += CheckBox -form $form_panel -checked $true -enabled $false -x 20 -y $vpos -text $elem.Name
+        $vpos += 30
+    } else {
+        $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem.Name
+        $vpos += 30
+    }
+}
+$vpos += 20
+OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
+$result = $form_panel.ShowDialog()
+foreach ($box in $boxes) {
+    if ($box.Checked -eq $true) {
+        $usrname = $box.Text
+        $usrlist += "$usrname"
+    }
+}
+
+# load exclude list file
+$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$OpenFileDialog.Title = "Select excluded path list file"
+$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
+$OpenFileDialog.filter = 'Plain text file | *.*'
+$OpenFileDialog.ShowDialog() | Out-Null
+$excludefile = $OpenFileDialog.filename
+
+# load allow list file
+$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$OpenFileDialog.Title = "Select allowed path list file"
+$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
+$OpenFileDialog.filter = 'Plain text file | *.*'
+$OpenFileDialog.ShowDialog() | Out-Null
+$allowfile = $OpenFileDialog.filename
+
+# adding specific allowed paths
+[string[]]$allow_list = Get-Content -Path $allowfile
+foreach ($item in $allow_list) {
+    if ($item -match '\$username') {
+        foreach ($usr in $usrlist) {
+            $replaced = $item -replace ('\$username', $usr)            
+            $full_path = $root_path + $replaced
+            if (Test-Path $full_path) {
+                $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
+                $output = [system.String]::Join(" ", $output)
+                $output -match "Byte:\s+(\d+)\s+\d+" > $null
+                $size = $Matches[1]
+                $backup_list[$replaced] = $size
+                Write-Host -NoNewline "."
+            }
+        }
+    } else {
+        $full_path = $root_path + $item
+        if (Test-Path $full_path) {
             $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
             $output = [system.String]::Join(" ", $output)
             $output -match "Byte:\s+(\d+)\s+\d+" > $null
             $size = $Matches[1]
-            $backup_list[$folder] = $size
+            $backup_list[$item] = $size
             Write-Host -NoNewline "."
         }
     }
 }
 
-# folders list to backup from C:\Users\username
-$exclude_list = (
-    "AppData",
-    "Links",
-    "OneDrive",
-    "Saved Games",
-    "Searches",
-    "3D Objects",
-    ".cisco",
-    ".config",
-    "Dropbox"
-)
-$root_path = "C:\Users\$env:USERNAME\"
-$remote_root_list = Get-ChildItem $root_path -Attributes D
-foreach ($folder in $remote_root_list.Name) {
-    if (!($exclude_list -contains $folder)) {
-        $full_path = $root_path + $folder
+# adding default paths
+[string[]]$exclude_list = Get-Content -Path $excludefile
+$exclude_list += 'Users' # users' folders will be evaluated one by one
+# adding root paths
+$rooted = Get-ChildItem $root_path -Attributes D
+foreach ($candidate in $rooted) {
+    $decision = $true
+    foreach ($item in $exclude_list) {
+        if ($item -eq $candidate) {
+            $decision = $false
+        }
+    }
+    if ($decision) {
+        $full_path = $root_path + $candidate
         $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
         $output = [system.String]::Join(" ", $output)
         $output -match "Byte:\s+(\d+)\s+\d+" > $null
         $size = $Matches[1]
-        $full_path = "Users\$env:USERNAME\$folder"
-        $backup_list[$full_path] = $size
+        $backup_list[$candidate] = $size
         Write-Host -NoNewline "."
     }
+}
+# adding users' folders
+foreach ($usr in $usrlist) {
+    $root_usr = $root_path + 'Users\' + $usr + '\'
+    $rooted = Get-ChildItem $root_usr -Attributes D
+    $exclude_usrlist = $exclude_list -replace ('\$username', $usr)
+    foreach ($candidate in $rooted) {
+        $candidate = 'Users\' + $usr + '\' + $candidate
+        $decision = $true
+        foreach ($item in $exclude_usrlist) {
+            if ($item -eq $candidate) {
+                $decision = $false
+            }
+        }
+        if ($decision) {
+            $full_path = $root_path + $candidate
+            $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
+            $output = [system.String]::Join(" ", $output)
+            $output -match "Byte:\s+(\d+)\s+\d+" > $null
+            $size = $Matches[1]
+            $backup_list[$candidate] = $size
+            Write-Host -NoNewline "."
+        }
+    }  
 }
 
 Write-Host -ForegroundColor Green " DONE"
 
+Write-Host -ForegroundColor Yellow "`nThe following paths will be backupped onto [ $copiasu ]"
+foreach ($item in ($backup_list.Keys | Sort-Object)) {
+    $string = $root_path + $item
+    Write-Host "$string"
+}
+
+$answ = [System.Windows.MessageBox]::Show("Do you want to proceed?",'PROCEED','YesNo','Info')
+if ($answ -eq "No") {    
+    Exit
+}
+
 # backup job block
+Write-Host " "
 $RoboCopyBlock = {
     param($final_path, $prefix)
-    $filename = $final_path.Replace('\','-')
-    if (Test-Path "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" -PathType Leaf) {
-        Remove-Item  "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" -Force
+    $filename = $final_path -replace ('\\','-')
+    if (Test-Path "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" -PathType Leaf) {
+        Remove-Item  "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" -Force
     }
-    New-Item -ItemType file "C:\TEMPSOFTWARE\ROBOCOPY_$filename.log" > $null
+    New-Item -ItemType file "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" > $null
     $source = 'C:\' + $final_path
     $dest = $prefix + '\' + $final_path
-    $opts = ("/E", "/Z", "/NP", "/W:5", "/R:5", "/V", "/LOG+:C:\TEMPSOFTWARE\ROBOCOPY_$filename.log")
+    $opts = ("/E", "/Z", "/NP", "/W:5", "/R:5", "/V", "/LOG+:C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log")
     $cmd_args = ($source, $dest, $opts)
     robocopy @cmd_args
 }
@@ -184,13 +249,18 @@ foreach ($folder in $backup_list.Keys) {
     Write-Host -ForegroundColor Green " JOB STARTED"
 }
 
-Start-Sleep 10
+Start-Sleep 2
 
+<# 
 # progress bar
 $form_bar = New-Object System.Windows.Forms.Form
 $form_bar.Text = "TRANSFER RATE"
 $form_bar.Size = New-Object System.Drawing.Size(600,200)
 $form_bar.StartPosition = 'CenterScreen'
+$form_bar.Topmost = $true
+$form_bar.MinimizeBox = $false
+$form_bar.MaximizeBox = $false
+$form_bar.FormBorderStyle = 'FixedSingle'
 $font = New-Object System.Drawing.Font("Arial", 12)
 $form_bar.Font = $font
 $label = New-Object System.Windows.Forms.Label
@@ -203,9 +273,8 @@ $bar.Location = New-Object System.Drawing.Point(20,70)
 $bar.Maximum = 101
 $bar.Size = New-Object System.Drawing.Size(550,30)
 $form_bar.Controls.Add($bar)
-$form_bar.Topmost = $true
 $form_bar.Show() | out-null
-$form_bar.Focus() | out-null
+#>
 
 # Waiting for jobs completed
 While (Get-Job -State "Running") {
@@ -242,23 +311,32 @@ While (Get-Job -State "Running") {
     }
     
     $percent = ($trasferred_bytes / $total_bytes)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
     $formattato = '{0:0.0}' -f $percent
     [int32]$progress = $percent
     $CurrentTime = $Time.Elapsed
     $estimated = [int]((($CurrentTime.TotalSeconds/$percent) * (100 - $percent)) / 60)
+
+    <# 
     $label.Text = "Progress: $formattato% - $estimated mins to end"
     if ($progress -ge 100) {
         $bar.Value = 100
     } else {
         $bar.Value = $progress
     }
-    $form_bar.Refresh()
+
+    # refreshing the progress bar
+    [System.Windows.Forms.Application]::DoEvents()
+    #>
+
     Write-Host " "
     Write-Host -ForegroundColor Yellow  "TOTAL PROGRESS: $formattato% - $estimated mins to end"
     Start-Sleep 5
 }
 
-$form_bar.Close()
+# $form_bar.Close()
 
 $joblog = Get-Job | Receive-Job # get job output
 Remove-Job * # Cleanup
@@ -275,7 +353,7 @@ foreach ($folder in $backup_list.Keys) {
     $output -match "Byte:\s+(\d+)\s+\d+" > $null
     $dest_size = $Matches[1]
 
-    $foldername = $folder.Replace('\','-')                      
+    $foldername = $folder -replace ('\\','-')                      
     if ($dest_size -lt $source_size) { # backup job failed
         Clear-Host
         $diff = $source_size - $dest_size
@@ -308,15 +386,17 @@ foreach ($folder in $backup_list.Keys) {
 Write-Host -ForegroundColor Green " DONE"
 
 # file backup from Users folder
-Write-Host -NoNewline "Copying files in C:\Users\$env:USERNAME..."
-$userfiles = Get-ChildItem "C:\Users\$env:USERNAME" -Attributes A
-foreach ($afile in $userfiles) {
-    Copy-Item "C:\Users\$env:USERNAME\$afile" -Destination "$copiasu\Users\$env:USERNAME" -Force > $null
+foreach ($usr in $usrlist) {
+    Write-Host -NoNewline "Copying files in C:\Users\$usr..."
+    $userfiles = Get-ChildItem "C:\Users\$usr" -Attributes A
+    foreach ($afile in $userfiles) {
+        Copy-Item "C:\Users\$usr\$afile" -Destination "$copiasu\Users\$usr" -Force > $null
+    }
+    Write-Host -ForegroundColor Green " DONE"
 }
-Write-Host -ForegroundColor Green " DONE"
 
 # cleaning temporary
 $answ = [System.Windows.MessageBox]::Show("Backup finished. Delete log files?",'END','YesNo','Info')
 if ($answ -eq "Yes") {
-    Remove-Item "C:\TEMPSOFTWARE" -Recurse -Force
+    Remove-Item "C:\DATABACKUP_LOGS" -Recurse -Force
 }
