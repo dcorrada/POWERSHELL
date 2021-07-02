@@ -76,8 +76,10 @@ if (!($copiasu -match "\\$")) {
 
 # create destination folder
 try {
-    $copiasu = $copiasu + 'BACKUP_of_' + $env:USERNAME + '_on_' + (Get-Date -Format "yyyy-MM-dd_HH.mm")
-    New-Item -ItemType directory -Path $copiasu > $null
+    $copiasu = $copiasu + $env:USERNAME + '_on_' + $env:COMPUTERNAME
+    if (!(Test-Path $copiasu)) {
+        New-Item -ItemType directory -Path $copiasu > $null
+    }
 }
 catch {
     [System.Windows.MessageBox]::Show("Unable to create $copiasu",'ERROR','Ok','Error') > $null
@@ -236,7 +238,9 @@ $RoboCopyBlock = {
     New-Item -ItemType file "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" > $null
     $source = 'C:\' + $final_path
     $dest = $prefix + '\' + $final_path
-    $opts = ("/E", "/Z", "/NP", "/W:5", "/R:5", "/V", "/LOG+:C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log")
+
+    # for the options see https://superuser.com/questions/814102/robocopy-command-to-do-an-incremental-backup
+    $opts = ("/Z", "/NP", "/MIR", "/FFT", "/XJD", "/W:10", "/R:5", "/V", "/LOG+:C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log")
     $cmd_args = ($source, $dest, $opts)
     robocopy @cmd_args
 }
