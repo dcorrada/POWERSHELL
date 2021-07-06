@@ -240,7 +240,7 @@ $RoboCopyBlock = {
     $dest = $prefix + '\' + $final_path
 
     # for the options see https://superuser.com/questions/814102/robocopy-command-to-do-an-incremental-backup
-    $opts = ("/Z", "/NP", "/MIR", "/FFT", "/XJD", "/W:10", "/R:5", "/V", "/LOG+:C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log")
+    $opts = ("/E", "/Z", "/NP", "/MIR", "/XJ", "/W:10", "/R:5", "/V", "/LOG+:C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log")
     $cmd_args = ($source, $dest, $opts)
     robocopy @cmd_args
 }
