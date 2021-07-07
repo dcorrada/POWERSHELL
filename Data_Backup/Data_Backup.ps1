@@ -32,9 +32,11 @@ Import-Module -Name "$repopath\Modules\Forms.psm1"
 
 # temporary directory
 $tmppath = 'C:\DATABACKUP_LOGS'
-if (!(Test-Path $tmppath)) {
-    New-Item -ItemType directory -Path $tmppath > $null
+if (Test-Path $tmppath) {
+    Remove-Item "$tmppath" -Recurse -Force
+    Start-Sleep 2
 }
+New-Item -ItemType directory -Path $tmppath > $null
 
 # select destination path
 $AssemblyFullName = 'System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
@@ -74,19 +76,7 @@ if (!($copiasu -match "\\$")) {
     $copiasu = $copiasu + '\'
 }
 
-# create destination folder
-try {
-    $copiasu = $copiasu + $env:USERNAME + '_on_' + $env:COMPUTERNAME
-    if (!(Test-Path $copiasu)) {
-        New-Item -ItemType directory -Path $copiasu > $null
-    }
-}
-catch {
-    [System.Windows.MessageBox]::Show("Unable to create $copiasu",'ERROR','Ok','Error') > $null
-    Exit
-}
-
-Write-Host -NoNewline "Searching paths to backup..."
+Write-Host -NoNewline "Checking paths to backup..."
 $backup_list = @{} # variable in which will added paths to backup
 $usrlist = @()
 $root_path = 'C:\'
@@ -146,24 +136,30 @@ foreach ($item in $allow_list) {
             $replaced = $item -replace ('\$username', $usr)            
             $full_path = $root_path + $replaced
             if (Test-Path $full_path) {
-                $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-                $output = [system.String]::Join(" ", $output)
-                $output -match "Byte:\s+(\d+)\s+\d+" > $null
-                $size = $Matches[1]
-                $backup_list[$replaced] = $size
+                $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
+                $StagingLogPath = $tmppath + '\test.log'
+                $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
+                Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+                $StagingContent = Get-Content -Path $StagingLogPath
+                $TotalFileCount = $StagingContent.Count
+                $backup_list[$replaced] = $TotalFileCount
+                Remove-Item $StagingLogPath -Force
                 Write-Host -NoNewline "."
             }
         }
     } else {
         $full_path = $root_path + $item
         if (Test-Path $full_path) {
-            $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-            $output = [system.String]::Join(" ", $output)
-            $output -match "Byte:\s+(\d+)\s+\d+" > $null
-            $size = $Matches[1]
-            $backup_list[$item] = $size
-            Write-Host -NoNewline "."
-        }
+                $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
+                $StagingLogPath = $tmppath + '\test.log'
+                $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
+                Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+                $StagingContent = Get-Content -Path $StagingLogPath
+                $TotalFileCount = $StagingContent.Count
+                $backup_list[$item] = $TotalFileCount
+                Remove-Item $StagingLogPath -Force
+                Write-Host -NoNewline "."
+        }        
     }
 }
 
@@ -181,14 +177,18 @@ foreach ($candidate in $rooted) {
     }
     if ($decision) {
         $full_path = $root_path + $candidate
-        $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-        $output = [system.String]::Join(" ", $output)
-        $output -match "Byte:\s+(\d+)\s+\d+" > $null
-        $size = $Matches[1]
-        $backup_list[$candidate] = $size
+        $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
+        $StagingLogPath = $tmppath + '\test.log'
+        $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
+        Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+        $StagingContent = Get-Content -Path $StagingLogPath
+        $TotalFileCount = $StagingContent.Count
+        $backup_list[$candidate] = $TotalFileCount
+        Remove-Item $StagingLogPath -Force
         Write-Host -NoNewline "."
     }
 }
+
 # adding users' folders
 foreach ($usr in $usrlist) {
     $root_usr = $root_path + 'Users\' + $usr + '\'
@@ -204,11 +204,14 @@ foreach ($usr in $usrlist) {
         }
         if ($decision) {
             $full_path = $root_path + $candidate
-            $output = robocopy $full_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-            $output = [system.String]::Join(" ", $output)
-            $output -match "Byte:\s+(\d+)\s+\d+" > $null
-            $size = $Matches[1]
-            $backup_list[$candidate] = $size
+            $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
+            $StagingLogPath = $tmppath + '\test.log'
+            $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
+            Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+            $StagingContent = Get-Content -Path $StagingLogPath
+            $TotalFileCount = $StagingContent.Count
+            $backup_list[$candidate] = $TotalFileCount
+            Remove-Item $StagingLogPath -Force
             Write-Host -NoNewline "."
         }
     }  
@@ -216,44 +219,56 @@ foreach ($usr in $usrlist) {
 
 Write-Host -ForegroundColor Green " DONE"
 
-Write-Host -ForegroundColor Yellow "`nThe following paths will be backupped onto [ $copiasu ]"
+Write-Host -ForegroundColor Yellow "`nThe following paths will be backupped onto [$copiasu]`n"
+$TotalFileToBackup = 0
 foreach ($item in ($backup_list.Keys | Sort-Object)) {
     $string = $root_path + $item
-    Write-Host "$string"
+    $files = $backup_list[$item]
+    $TotalFileToBackup += $files
+    Write-Host -NoNewline "$string "
+    Write-Host -ForegroundColor Cyan "$files file(s) to backup"
 }
+Write-Host -ForegroundColor Yellow "`nTOTAL $TotalFileToBackup file(s) to backup"
 
 $answ = [System.Windows.MessageBox]::Show("Do you want to proceed?",'PROCEED','YesNo','Info')
 if ($answ -eq "No") {    
     Exit
 }
 
+# create destination folder
+try {
+    $copiasu = $copiasu + $env:USERNAME + '_on_' + $env:COMPUTERNAME
+    if (!(Test-Path $copiasu)) {
+        New-Item -ItemType directory -Path $copiasu > $null
+    }
+}
+catch {
+    [System.Windows.MessageBox]::Show("Unable to create $copiasu",'ERROR','Ok','Error') > $null
+    Exit
+}
+
 # backup job block
 Write-Host " "
 $RoboCopyBlock = {
-    param($final_path, $prefix)
+    param($final_path, $prefix, $logpath)
     $filename = $final_path -replace ('\\','-')
-    if (Test-Path "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" -PathType Leaf) {
-        Remove-Item  "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" -Force
+    if (Test-Path "$logpath\ROBOCOPY_$filename.log" -PathType Leaf) {
+        Remove-Item  "$logpath\ROBOCOPY_$filename.log" -Force
     }
-    New-Item -ItemType file "C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log" > $null
+    New-Item -ItemType file "$logpath\ROBOCOPY_$filename.log" > $null
     $source = 'C:\' + $final_path
     $dest = $prefix + '\' + $final_path
 
     # for the options see https://superuser.com/questions/814102/robocopy-command-to-do-an-incremental-backup
-    $opts = ("/E", "/Z", "/NP", "/MIR", "/XJ", "/W:10", "/R:5", "/V", "/LOG+:C:\DATABACKUP_LOGS\ROBOCOPY_$filename.log")
+    $opts = ("/E", "/XJ", "/R:5", "/W:10", "/NP", "/NDL", "/NC", "/NJH", "/Z", "/MIR", "/LOG+:$logpath\ROBOCOPY_$filename.log")
     $cmd_args = ($source, $dest, $opts)
     robocopy @cmd_args
 }
 
 # launch multithreaded backup jobs
-$Time = [System.Diagnostics.Stopwatch]::StartNew()
 foreach ($folder in $backup_list.Keys) {
-    Write-Host -NoNewline -ForegroundColor Cyan "$folder"
-    Start-Job $RoboCopyBlock -Name $folder -ArgumentList $folder, $copiasu > $null
-    Write-Host -ForegroundColor Green " JOB STARTED"
+    Start-Job $RoboCopyBlock -Name $folder -ArgumentList $folder, $copiasu, $tmppath > $null
 }
-
-Start-Sleep 2
 
 <# 
 # progress bar
@@ -285,58 +300,52 @@ While (Get-Job -State "Running") {
     Clear-Host
     Write-Host -ForegroundColor Yellow "*** BACKUP ***"
     
-    $total_bytes = 0
-    $trasferred_bytes = 0
-      
-    foreach ($folder in $backup_list.Keys) {
-        Write-Host -NoNewline "C:\$folder "
-        $source_path = 'C:\' + $folder
-        $source_size = $backup_list[$folder]
-        $dest_path = $copiasu + '\' + $folder
-        $output = robocopy $dest_path c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-        $output = [system.String]::Join(" ", $output)
-        $output -match "Byte:\s+(\d+)\s+\d+" > $null
-        $dest_size = $Matches[1]
-            
-        $total_bytes += $source_size
-        $trasferred_bytes += $dest_size
-
-        if ($source_size -gt 1KB) {
-            $percent = ($dest_size / $source_size)*100
-        } else {
+    $directoryInfo = Get-ChildItem $tmppath | Measure-Object
+    if ($directoryInfo.count -eq 0) {
+        Write-Host -ForegroundColor Cyan "Waiting jobs to start..."
+    } else {
+        $TotalFilesCopied = 0
+        foreach ($item in ($backup_list.Keys | Sort-Object)) {
+            $full_path = "$root_path" + "$item"
+            $string = $item -replace ('\\','-')
+            $logfile = "$tmppath\ROBOCOPY_$string.log"
+            $FilesCopied = 0
+            $amount = $backup_list[$item]
+            if (Test-Path "$logfile" -PathType Leaf) {
+                Write-Host -NoNewline "[$full_path] "
+                $StagingContent = Get-Content -Path $logfile
+                $output = [system.String]::Join(" ", $StagingContent)
+                if ($output -match "-------------------------------------------------------------------------------") {
+                    $FilesCopied = $amount
+                    Write-Host -ForegroundColor Green "backupped!"
+                } else {
+                    $FilesCopied = $StagingContent.Count - 1
+                    Write-Host -ForegroundColor Cyan "$FilesCopied out of $amount file(s) copied" 
+                }
+            }      
+            $TotalFilesCopied += $FilesCopied
+        }
+        
+        $percent = ($TotalFilesCopied / $TotalFileToBackup)*100
+        if ($percent -gt 100) {
             $percent = 100
         }
-        if ($percent -lt 100) {
-            $formattato = '{0:0.0}' -f $percent
-            Write-Host -ForegroundColor Cyan "$formattato%"
+        $formattato = '{0:0.0}' -f $percent
+        [int32]$progress = $percent
+        Write-Host -ForegroundColor Yellow  "`nTOTAL PROGRESS: $formattato%"
+
+        <# 
+        $label.Text = "Progress: $formattato%"
+        if ($progress -ge 100) {
+            $bar.Value = 100
         } else {
-            Write-Host -ForegroundColor Green "100%"
+            $bar.Value = $progress
         }
-    }
-    
-    $percent = ($trasferred_bytes / $total_bytes)*100
-    if ($percent -gt 100) {
-        $percent = 100
-    }
-    $formattato = '{0:0.0}' -f $percent
-    [int32]$progress = $percent
-    $CurrentTime = $Time.Elapsed
-    $estimated = [int]((($CurrentTime.TotalSeconds/$percent) * (100 - $percent)) / 60)
 
-    <# 
-    $label.Text = "Progress: $formattato% - $estimated mins to end"
-    if ($progress -ge 100) {
-        $bar.Value = 100
-    } else {
-        $bar.Value = $progress
+        # refreshing the progress bar
+        [System.Windows.Forms.Application]::DoEvents()
+        #>        
     }
-
-    # refreshing the progress bar
-    [System.Windows.Forms.Application]::DoEvents()
-    #>
-
-    Write-Host " "
-    Write-Host -ForegroundColor Yellow  "TOTAL PROGRESS: $formattato% - $estimated mins to end"
     Start-Sleep 5
 }
 
@@ -349,15 +358,27 @@ Remove-Job * # Cleanup
 Write-Host " "
 Write-Host -NoNewline "Size check..."
 foreach ($folder in $backup_list.Keys) {
-    $source = 'C:\' + $folder
-    $source_size = $backup_list[$folder]
+    $source = $root_path + $folder
     $dest = $copiasu + '\' + $folder
-    $output = robocopy $dest c:\fakepath /L /XJ /R:0 /W:1 /NP /E /BYTES /NFL /NDL /NJH /MT:64
-    $output = [system.String]::Join(" ", $output)
+    $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH'
+    $StagingLogPath = $tmppath + '\test.log'
+
+    $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $source, $StagingLogPath, $CommonRobocopyParams
+    Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+    $StagingContent = Get-Content -Path $StagingLogPath
+    $output = [system.String]::Join(" ", $StagingContent)
+    $output -match "Byte:\s+(\d+)\s+\d+" > $null
+    $source_size = $Matches[1]
+    Remove-Item $StagingLogPath -Force
+
+    $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $dest, $StagingLogPath, $CommonRobocopyParams
+    Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+    $StagingContent = Get-Content -Path $StagingLogPath
+    $output = [system.String]::Join(" ", $StagingContent)
     $output -match "Byte:\s+(\d+)\s+\d+" > $null
     $dest_size = $Matches[1]
+    Remove-Item $StagingLogPath -Force
 
-    $foldername = $folder -replace ('\\','-')                      
     if ($dest_size -lt $source_size) { # backup job failed
         Clear-Host
         $diff = $source_size - $dest_size
@@ -402,5 +423,5 @@ foreach ($usr in $usrlist) {
 # cleaning temporary
 $answ = [System.Windows.MessageBox]::Show("Backup finished. Delete log files?",'END','YesNo','Info')
 if ($answ -eq "Yes") {
-    Remove-Item "C:\DATABACKUP_LOGS" -Recurse -Force
+    Remove-Item "$tmppath" -Recurse -Force
 }
