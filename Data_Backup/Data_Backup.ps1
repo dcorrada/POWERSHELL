@@ -1,6 +1,6 @@
 <#
 Name......: Data_Backup.ps1
-Version...: 20.12.1
+Version...: 21.07.1
 Author....: Dario CORRADA
 
 This script performs a complete user backup to an external disk or to a shared folder
@@ -379,11 +379,11 @@ foreach ($folder in $backup_list.Keys) {
     $dest_size = $Matches[1]
     Remove-Item $StagingLogPath -Force
 
+    Write-Host -NoNewline "[$folder] $source_size/$dest_size "
+
     if ($dest_size -lt $source_size) { # backup job failed
-        Clear-Host
-        $diff = $source_size - $dest_size
-        Write-Host "PATH.........: $folder`nSOURCE SIZE..: $source_size bytes`nDEST SIZE....: $dest_size bytes`nDIFF SIZE....: $diff bytes"
-    
+        Write-Host -ForegroundColor Red "DIFF"
+
         $whatif = [System.Windows.MessageBox]::Show("Copy of $folder failed.`nRelaunch backup job?",'ERROR','YesNo','Error')
         if ($whatif -eq "Yes") {
             $opts = ("/E", "/Z", "/NP", "/W:5")
@@ -396,6 +396,8 @@ foreach ($folder in $backup_list.Keys) {
                 [System.Windows.MessageBox]::Show("Backup $folder manually",'CONFIRM','Ok','Info') > $null
             }
         }
+    } else {
+        Write-Host -ForegroundColor Green "OK"
     }    
 }
 $ErrorActionPreference= 'Inquire'
