@@ -261,6 +261,9 @@ $RoboCopyBlock = {
 
     # for the options see https://superuser.com/questions/814102/robocopy-command-to-do-an-incremental-backup
     $opts = ("/E", "/XJ", "/R:5", "/W:10", "/NP", "/NDL", "/NC", "/NJH", "/Z", "/MIR", "/LOG+:$logpath\ROBOCOPY_$filename.log")
+    if ($prefix -match "^\\\\") {
+        $opts += '/COMPRESS'
+    }  
     $cmd_args = ($source, $dest, $opts)
     robocopy @cmd_args
 }
@@ -270,7 +273,6 @@ foreach ($folder in $backup_list.Keys) {
     Start-Job $RoboCopyBlock -Name $folder -ArgumentList $folder, $copiasu, $tmppath > $null
 }
 
-<# 
 # progress bar
 $form_bar = New-Object System.Windows.Forms.Form
 $form_bar.Text = "TRANSFER RATE"
@@ -293,7 +295,6 @@ $bar.Maximum = 101
 $bar.Size = New-Object System.Drawing.Size(550,30)
 $form_bar.Controls.Add($bar)
 $form_bar.Show() | out-null
-#>
 
 # Waiting for jobs completed
 While (Get-Job -State "Running") {
@@ -334,8 +335,7 @@ While (Get-Job -State "Running") {
         [int32]$progress = $percent
         Write-Host -ForegroundColor Yellow  "`nTOTAL PROGRESS: $formattato%"
 
-        <# 
-        $label.Text = "Progress: $formattato%"
+        $label.Text = "Progress: $formattato% - $TotalFilesCopied out of $TotalFileToBackup copied"
         if ($progress -ge 100) {
             $bar.Value = 100
         } else {
@@ -343,13 +343,12 @@ While (Get-Job -State "Running") {
         }
 
         # refreshing the progress bar
-        [System.Windows.Forms.Application]::DoEvents()
-        #>        
+        [System.Windows.Forms.Application]::DoEvents()    
     }
-    Start-Sleep 5
+    Start-Sleep -Milliseconds 500
 }
 
-# $form_bar.Close()
+$form_bar.Close()
 
 $joblog = Get-Job | Receive-Job # get job output
 Remove-Job * # Cleanup
