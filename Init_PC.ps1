@@ -44,6 +44,7 @@ $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/Acrobat
 $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
 $download.Downloadfile("https://go.skype.com/windows.desktop.download", "$tmppath\Skype.exe")
 $download.Downloadfile("https://download.ccleaner.com/spsetup132.exe", "$tmppath\Speccy.exe")
+$download.Downloadfile("https://www.revouninstaller.com/download-freeware-version.php", "$tmppath\Revo.exe")
 $download.Downloadfile("https://www.supremocontrol.com/download.aspx?file=Supremo.exe&id_sw=7&ws=supremocontrol.com", "$env:PUBLIC\Desktop\Supremo.exe")
 Write-Host -ForegroundColor Green " DONE"
 
@@ -52,6 +53,7 @@ Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
 Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
 Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
 Start-Process -FilePath "$tmppath\Speccy.exe" -Wait
+Start-Process -FilePath "$tmppath\Revo.exe" -Wait
 Start-Process -FilePath "$tmppath\Skype.exe" -Wait
 Write-Host -ForegroundColor Green " DONE"
 
