@@ -260,7 +260,7 @@ $RoboCopyBlock = {
     $dest = $prefix + '\' + $final_path
 
     # for the options see https://superuser.com/questions/814102/robocopy-command-to-do-an-incremental-backup
-    $opts = ("/E", "/XJ", "/R:5", "/W:10", "/NP", "/NDL", "/NC", "/NJH", "/Z", "/MIR", "/LOG+:$logpath\ROBOCOPY_$filename.log")
+    $opts = ("/E", "/XJ", "/R:5", "/W:10", "/NP", "/NDL", "/NC", "/NJH", "/ZB", "/MIR", "/LOG+:$logpath\ROBOCOPY_$filename.log")
     if ($prefix -match "^\\\\") {
         $opts += '/COMPRESS'
     }  
@@ -385,7 +385,7 @@ foreach ($folder in $backup_list.Keys) {
 
         $whatif = [System.Windows.MessageBox]::Show("Copy of $folder failed.`nRelaunch backup job?",'ERROR','YesNo','Error')
         if ($whatif -eq "Yes") {
-            $opts = ("/E", "/Z", "/NP", "/W:5")
+            $opts = ("/E", "/ZB", "/NP", "/W:5")
             $cmd_args = ($source, $dest, $opts)    
             Write-Host -ForegroundColor Yellow "RETRY: copy of $folder in progress..."
             Start-Sleep 3
