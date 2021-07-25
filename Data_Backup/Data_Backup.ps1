@@ -360,11 +360,13 @@ While (Get-Job -State "Running") {
             $amount = $backup_list[$item]
             if (Test-Path "$logfile" -PathType Leaf) {
                 $StagingContent = Get-Content -Path $logfile
+                $ErrorActionPreference= 'SilentlyContinue'
                 $output = [system.String]::Join(" ", $StagingContent)
+                $ErrorActionPreference= 'Inquire'
                 if ($output -match "-------------------------------------------------------------------------------") {
                     $FilesCopied = $amount
-                    # Write-Host -NoNewline "[$full_path] "
-                    # Write-Host -ForegroundColor Green "backupped!"
+                    Write-Host -NoNewline "[$full_path] "
+                    Write-Host -ForegroundColor Green "backupped!"
                 } else {
                     $FilesCopied = $StagingContent.Count - 1
                     Write-Host -NoNewline "[$full_path] "
@@ -412,7 +414,9 @@ foreach ($folder in $backup_list.Keys) {
     $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $source, $StagingLogPath, $CommonRobocopyParams
     Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
     $StagingContent = Get-Content -Path $StagingLogPath
+    $ErrorActionPreference= 'SilentlyContinue'
     $output = [system.String]::Join(" ", $StagingContent)
+    $ErrorActionPreference= 'Inquire'
     $output -match "Byte:\s+(\d+)\s+\d+" > $null
     $source_size = $Matches[1]
     Remove-Item $StagingLogPath -Force
@@ -420,7 +424,9 @@ foreach ($folder in $backup_list.Keys) {
     $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $dest, $StagingLogPath, $CommonRobocopyParams
     Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
     $StagingContent = Get-Content -Path $StagingLogPath
+    $ErrorActionPreference= 'SilentlyContinue'
     $output = [system.String]::Join(" ", $StagingContent)
+    $ErrorActionPreference= 'Inquire'
     $output -match "Byte:\s+(\d+)\s+\d+" > $null
     $dest_size = $Matches[1]
     Remove-Item $StagingLogPath -Force
