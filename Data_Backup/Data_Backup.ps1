@@ -200,6 +200,52 @@ foreach ($usr in $usrlist) {
         foreach ($item in $exclude_usrlist) {
             if ($item -eq $candidate) {
                 $decision = $false
+            } elseif ($candidate -eq 'AppData') { # such folder will be parsed specifically
+                $decision = $false
+            }
+        }
+        if ($decision) {
+            $full_path = $root_path + $candidate
+            $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
+            $StagingLogPath = $tmppath + '\test.log'
+            $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
+            Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+            $StagingContent = Get-Content -Path $StagingLogPath
+            $TotalFileCount = $StagingContent.Count
+            $backup_list[$candidate] = $TotalFileCount
+            Remove-Item $StagingLogPath -Force
+            Write-Host -NoNewline "."
+        }
+    }  
+}
+
+# adding users' AppData hidden folders
+foreach ($usr in $usrlist) {
+    # folders added by default
+    foreach ($item in ('LocalLow', 'Roaming')) {
+        $candidate = 'Users\' + $usr + '\AppData\' + $item
+        $full_path = $root_path + $candidate
+        $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
+        $StagingLogPath = $tmppath + '\test.log'
+        $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
+        Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+        $StagingContent = Get-Content -Path $StagingLogPath
+        $TotalFileCount = $StagingContent.Count
+        $backup_list[$candidate] = $TotalFileCount
+        Remove-Item $StagingLogPath -Force
+        Write-Host -NoNewline "."
+    }
+
+    # selected subfolders of AppData\Local
+    $root_usr = $root_path + 'Users\' + $usr + '\AppData\Local\'
+    $rooted = Get-ChildItem $root_usr -Attributes D
+    $exclude_usrlist = $exclude_list -replace ('\$username', $usr)
+    foreach ($candidate in $rooted) {
+        $candidate = 'Users\' + $usr + '\AppData\Local\' + $candidate
+        $decision = $true
+        foreach ($item in $exclude_usrlist) {
+            if ($item -eq $candidate) {
+                $decision = $false
             }
         }
         if ($decision) {
@@ -313,14 +359,15 @@ While (Get-Job -State "Running") {
             $FilesCopied = 0
             $amount = $backup_list[$item]
             if (Test-Path "$logfile" -PathType Leaf) {
-                Write-Host -NoNewline "[$full_path] "
                 $StagingContent = Get-Content -Path $logfile
                 $output = [system.String]::Join(" ", $StagingContent)
                 if ($output -match "-------------------------------------------------------------------------------") {
                     $FilesCopied = $amount
-                    Write-Host -ForegroundColor Green "backupped!"
+                    # Write-Host -NoNewline "[$full_path] "
+                    # Write-Host -ForegroundColor Green "backupped!"
                 } else {
                     $FilesCopied = $StagingContent.Count - 1
+                    Write-Host -NoNewline "[$full_path] "
                     Write-Host -ForegroundColor Cyan "$FilesCopied out of $amount file(s) copied" 
                 }
             }      
@@ -417,6 +464,13 @@ foreach ($usr in $usrlist) {
     $userfiles = Get-ChildItem "C:\Users\$usr" -Attributes A
     foreach ($afile in $userfiles) {
         Copy-Item "C:\Users\$usr\$afile" -Destination "$copiasu\Users\$usr" -Force > $null
+    }
+    Write-Host -ForegroundColor Green " DONE"
+
+    Write-Host -NoNewline "Copying files in C:\Users\$usr\AppData\Local..."
+    $userfiles = Get-ChildItem "C:\Users\$usr\AppData\Local" -Attributes A
+    foreach ($afile in $userfiles) {
+        Copy-Item "C:\Users\$usr\AppData\Local\$afile" -Destination "$copiasu\Users\$usr\AppData\Local" -Force > $null
     }
     Write-Host -ForegroundColor Green " DONE"
 }
