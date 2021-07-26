@@ -43,14 +43,23 @@ $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_insta
 $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
 $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
 $download.Downloadfile("https://go.skype.com/windows.desktop.download", "$tmppath\Skype.exe")
+$download.Downloadfile("https://download.ccleaner.com/spsetup132.exe", "$tmppath\Speccy.exe")
+$download.Downloadfile("https://www.revouninstaller.com/download-freeware-version.php", "$tmppath\Revo.exe")
 $download.Downloadfile("https://www.supremocontrol.com/download.aspx?file=Supremo.exe&id_sw=7&ws=supremocontrol.com", "$env:PUBLIC\Desktop\Supremo.exe")
+$download.Downloadfile("https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64", "$tmppath\Teams.exe")
 Write-Host -ForegroundColor Green " DONE"
 
 Write-Host -NoNewline "Install software..."
 Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
 Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
 Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
+Start-Process -FilePath "$tmppath\Speccy.exe" -Wait
+Start-Process -FilePath "$tmppath\Revo.exe" -Wait
 Start-Process -FilePath "$tmppath\Skype.exe" -Wait
+$answ = [System.Windows.MessageBox]::Show("Proceed to install MS Teams?",'INSTALL','YesNo','Info')
+if ($answ -eq "Yes") {    
+    Start-Process -FilePath "$tmppath\Teams.exe" -Wait
+}
 Write-Host -ForegroundColor Green " DONE"
 
 # remove Skype startup
