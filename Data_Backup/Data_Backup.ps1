@@ -351,6 +351,7 @@ While (Get-Job -State "Running") {
     if ($directoryInfo.count -eq 0) {
         Write-Host -ForegroundColor Cyan "Waiting jobs to start..."
     } else {
+        $ActiveJobs = 0
         $TotalFilesCopied = 0
         foreach ($item in ($backup_list.Keys | Sort-Object)) {
             $full_path = "$root_path" + "$item"
@@ -365,16 +366,24 @@ While (Get-Job -State "Running") {
                 $ErrorActionPreference= 'Inquire'
                 if ($output -match "-------------------------------------------------------------------------------") {
                     $FilesCopied = $amount
-                    Write-Host -NoNewline "[$full_path] "
-                    Write-Host -ForegroundColor Green "backupped!"
+                    # Write-Host -NoNewline "[$full_path] "
+                    # Write-Host -ForegroundColor Green "backupped!"
                 } else {
+                    $ActiveJobs ++
                     $FilesCopied = $StagingContent.Count - 1
                     Write-Host -NoNewline "[$full_path] "
-                    Write-Host -ForegroundColor Cyan "$FilesCopied out of $amount file(s) copied" 
+                    Write-Host -ForegroundColor Cyan "$FilesCopied out of $amount file(s) copied"
+                    $LastLine = Get-Content -Path $logfile -Tail 1
+                    $LastLine -match "\s+(.+)" > $null
+                    $CurrentFileCopying = $Matches[1]
+                    Write-Host -ForegroundColor Yellow ">>> $CurrentFileCopying `n"
                 }
-            }      
+            }
             $TotalFilesCopied += $FilesCopied
         }
+        if ($ActiveJobs -lt 1) {
+            Write-Host -ForegroundColor Cyan "Checking backup..."                
+        }      
         
         $percent = ($TotalFilesCopied / $TotalFileToBackup)*100
         if ($percent -gt 100) {
@@ -466,17 +475,18 @@ Write-Host -ForegroundColor Green " DONE"
 
 # file backup from Users folder
 foreach ($usr in $usrlist) {
-    Write-Host -NoNewline "Copying files in C:\Users\$usr..."
-    $userfiles = Get-ChildItem "C:\Users\$usr" -Attributes A
+    $prefix = $root_path + 'Users\' + $usr
+    Write-Host -NoNewline "Copying files in $prefix..."
+    $userfiles = Get-ChildItem "$prefix" -Attributes A
     foreach ($afile in $userfiles) {
-        Copy-Item "C:\Users\$usr\$afile" -Destination "$copiasu\Users\$usr" -Force > $null
+        Copy-Item "$prefix\$afile" -Destination "$copiasu\Users\$usr" -Force > $null
     }
     Write-Host -ForegroundColor Green " DONE"
 
-    Write-Host -NoNewline "Copying files in C:\Users\$usr\AppData\Local..."
-    $userfiles = Get-ChildItem "C:\Users\$usr\AppData\Local" -Attributes A
+    Write-Host -NoNewline "Copying files in $prefix\AppData\Local..."
+    $userfiles = Get-ChildItem "$prefix\AppData\Local" -Attributes A
     foreach ($afile in $userfiles) {
-        Copy-Item "C:\Users\$usr\AppData\Local\$afile" -Destination "$copiasu\Users\$usr\AppData\Local" -Force > $null
+        Copy-Item "$prefix\AppData\Local\$afile" -Destination "$copiasu\Users\$usr\AppData\Local" -Force > $null
     }
     Write-Host -ForegroundColor Green " DONE"
 }
