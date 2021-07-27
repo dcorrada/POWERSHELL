@@ -345,7 +345,7 @@ $form_bar.Show() | out-null
 # Waiting for jobs completed
 While (Get-Job -State "Running") {
     Clear-Host
-    Write-Host -ForegroundColor Yellow "*** BACKUP ***"
+    Write-Host -ForegroundColor Blue "*** BACKUP ***"
     
     $directoryInfo = Get-ChildItem $tmppath | Measure-Object
     if ($directoryInfo.count -eq 0) {
@@ -360,23 +360,35 @@ While (Get-Job -State "Running") {
             $FilesCopied = 0
             $amount = $backup_list[$item]
             if (Test-Path "$logfile" -PathType Leaf) {
-                $StagingContent = Get-Content -Path $logfile
+                $chomp = Get-Content -Path $logfile
+                foreach ($newline in $chomp) {
+                    $newline -match "(^\s+\d+)" > $null
+                    if ($Matches[1]) {
+                        $FilesCopied ++
+                        $Matches[1] = $null
+                    }
+                }
                 $ErrorActionPreference= 'SilentlyContinue'
-                $output = [system.String]::Join(" ", $StagingContent)
+                $output = [system.String]::Join(" ", $chomp)
                 $ErrorActionPreference= 'Inquire'
                 if ($output -match "-------------------------------------------------------------------------------") {
-                    $FilesCopied = $amount
+                    $donothing = 1
                     # Write-Host -NoNewline "[$full_path] "
                     # Write-Host -ForegroundColor Green "backupped!"
                 } else {
                     $ActiveJobs ++
-                    $FilesCopied = $StagingContent.Count - 1
+                    $FilesCopied = $FilesCopied - 1
                     Write-Host -NoNewline "[$full_path] "
                     Write-Host -ForegroundColor Cyan "$FilesCopied out of $amount file(s) copied"
                     $LastLine = Get-Content -Path $logfile -Tail 1
-                    $LastLine -match "\s+(.+)" > $null
-                    $CurrentFileCopying = $Matches[1]
-                    Write-Host -ForegroundColor Yellow ">>> $CurrentFileCopying `n"
+                    
+                    $Matches[1] = $null
+                    $LastLine -match "(^\s+\d+)" > $null
+                    if ($Matches[1]) {
+                        Write-Host -ForegroundColor Yellow ">>> $LastLine `n"
+                    } else {
+                        Write-Host -ForegroundColor Red "some error occurs, see $logfile `n"
+                    }
                 }
             }
             $TotalFilesCopied += $FilesCopied
