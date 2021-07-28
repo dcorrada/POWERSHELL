@@ -59,6 +59,7 @@ Start-Process -FilePath "$tmppath\Skype.exe" -Wait
 $answ = [System.Windows.MessageBox]::Show("Proceed to install MS Teams?",'INSTALL','YesNo','Info')
 if ($answ -eq "Yes") {    
     Start-Process -FilePath "$tmppath\Teams.exe" -Wait
+    $answ = [System.Windows.MessageBox]::Show("Close all MS Teams instances before proceed...",'WARNING','Ok','Warning')
 }
 Write-Host -ForegroundColor Green " DONE"
 
