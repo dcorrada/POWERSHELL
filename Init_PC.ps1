@@ -55,14 +55,15 @@ Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
 Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
 Start-Process -FilePath "$tmppath\Speccy.exe" -Wait
 Start-Process -FilePath "$tmppath\Revo.exe" -Wait
-Start-Process -FilePath "$tmppath\Skype.exe" -Wait
 $answ = [System.Windows.MessageBox]::Show("Close all Skype instances before proceed...",'WARNING','Ok','Warning')
+Start-Process -FilePath "$tmppath\Skype.exe" -Wait
 $answ = [System.Windows.MessageBox]::Show("Proceed to install MS Teams?",'INSTALL','YesNo','Info')
 if ($answ -eq "Yes") {    
     Start-Process -FilePath "$tmppath\Teams.exe" -Wait
     if (Test-Path "C:\Users\$env:USERNAME\Desktop\Microsoft Teams.lnk" -PathType Leaf) {
         Move-Item "C:\Users\$env:USERNAME\Desktop\Microsoft Teams.lnk" -Destination "C:\Users\Public\Desktop" -Force > $null
     }
+    Start-Sleep -Milliseconds 5000
     $answ = [System.Windows.MessageBox]::Show("Close all MS Teams instances before proceed...",'WARNING','Ok','Warning')
 }
 Write-Host -ForegroundColor Green " DONE"
