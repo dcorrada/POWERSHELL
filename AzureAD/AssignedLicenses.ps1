@@ -25,14 +25,27 @@ $ErrorActionPreference= 'Inquire'
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
 try {
-    Import-Module AzureAD
+    Import-Module MSOnline
 } catch {
-    Install-Module AzureAD -Confirm:$False -Force
-    Import-Module AzureAD
+    Install-Module MSOnline -Confirm:$False -Force
+    Import-Module MSOnline
 }
 $ErrorActionPreference= 'Inquire'
 
-# connect to AzureAD
+# connect to Tenant
+Connect-MsolService
+
+# retrieve all users that are licensed
+$Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" } | Sort-Object DisplayName
+
+Get-MsolAccountSku
+
+
+
+
+
+
+
 Connect-AzureAD
 
 # initialize dataframe for collecting data
