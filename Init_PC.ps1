@@ -121,11 +121,13 @@ if ($answ -eq "Yes") {
 
     $username = $usrname.Text
     $completo = $fullname.Text
-    $passwd = "Password1"
+    Add-Type -AssemblyName 'System.Web'
+    $passwd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
     Write-Host "Username...: " -NoNewline
     Write-Host $username -ForegroundColor Cyan
     Write-Host "Password...: " -NoNewline
     Write-Host $passwd -ForegroundColor Cyan
+    Pause
     $pwd = ConvertTo-SecureString $passwd -AsPlainText -Force
     
     $ErrorActionPreference= 'Stop'

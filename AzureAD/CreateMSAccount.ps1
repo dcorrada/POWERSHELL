@@ -123,7 +123,9 @@ $ErrorActionPreference= 'Stop'
 try {
     $domains = Get-MsolDomain
     $suffix = $domains[($domains.Count - 1)].Name
-    New-MsolUser -UserPrincipalName "$username@$suffix" -FirstName $firstname -LastName $lastname -DisplayName $completo -Password 'Password1' -PasswordNeverExpires $true -UsageLocation 'IT' -LicenseAssignment $assigned
+    Add-Type -AssemblyName 'System.Web'
+    $passwd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
+    New-MsolUser -UserPrincipalName "$username@$suffix" -FirstName $firstname -LastName $lastname -DisplayName $completo -Password $passwd -PasswordNeverExpires $true -UsageLocation 'IT' -LicenseAssignment $assigned
 }
 catch {
     Write-Output "`nError: $($error[0].ToString())"
@@ -134,5 +136,8 @@ $ErrorActionPreference= 'Inquire'
 
 Write-Host -ForegroundColor Green "ACCOUNT CREATED!"
 Write-Host -ForegroundColor Cyan "$completo <$username@$suffix>"
-Write-Host -ForegroundColor Cyan "$assigned"
+Write-Host -ForegroundColor Blue -NoNewline "Password: "
+Write-Host "$passwd"
+Write-Host -ForegroundColor Blue -NoNewline "License: "
+Write-Host "$assigned"
 Pause
