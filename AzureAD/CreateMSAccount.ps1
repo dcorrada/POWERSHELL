@@ -119,6 +119,7 @@ if ($result -eq "OK") {
 
 # create account
 ($firstname,$lastname) = $completo.Split(' ')
+$ErrorActionPreference= 'Stop'
 try {
     $domains = Get-MsolDomain
     $suffix = $domains[($domains.Count - 1)].Name
@@ -129,6 +130,7 @@ catch {
     Pause
     exit
 }
+$ErrorActionPreference= 'Inquire'
 
 Write-Host -ForegroundColor Green "ACCOUNT CREATED!"
 Write-Host -ForegroundColor Cyan "$completo <$username@$suffix>"
