@@ -55,8 +55,11 @@ Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
 Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
 Start-Process -FilePath "$tmppath\Speccy.exe" -Wait
 Start-Process -FilePath "$tmppath\Revo.exe" -Wait
-$answ = [System.Windows.MessageBox]::Show("After installation close all Skype instances to proceed...",'WARNING','Ok','Warning')
-Start-Process -FilePath "$tmppath\Skype.exe" -Wait
+$answ = [System.Windows.MessageBox]::Show("Proceed to install Skype?",'INSTALL','YesNo','Info')
+if ($answ -eq "Yes") {    
+    $answ = [System.Windows.MessageBox]::Show("After installation close all Skype instances to proceed...",'WARNING','Ok','Warning')
+    Start-Process -FilePath "$tmppath\Skype.exe" -Wait
+}
 $answ = [System.Windows.MessageBox]::Show("Proceed to install MS Teams?",'INSTALL','YesNo','Info')
 if ($answ -eq "Yes") {    
     Start-Process -FilePath "$tmppath\Teams.exe" -Wait

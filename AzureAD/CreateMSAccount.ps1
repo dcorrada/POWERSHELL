@@ -30,6 +30,11 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
+$answ = [System.Windows.MessageBox]::Show("Proceed to create Office 365 account?",'ACCOUNT','YesNo','Info')
+if ($answ -eq "No") {
+    Exit
+}
+
 # define username
 $form = FormBase -w 520 -h 270 -text "ACCOUNT"
 $font = New-Object System.Drawing.Font("Arial", 12)
