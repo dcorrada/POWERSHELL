@@ -128,9 +128,43 @@ $ErrorActionPreference= 'Stop'
 try {
     $domains = Get-MsolDomain
     $suffix = $domains[($domains.Count - 1)].Name
-    Add-Type -AssemblyName 'System.Web'
-    $passwd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
-    New-MsolUser -UserPrincipalName "$username@$suffix" -FirstName $firstname -LastName $lastname -DisplayName $completo -Password $passwd -PasswordNeverExpires $true -UsageLocation 'IT' -LicenseAssignment $assigned
+    $form_pswd = FormBase -w 450 -h 230 -text "CREATE PASSWORD"
+    $personal = RadioButton -form $form_pswd -checked $true -x 30 -y 20 -text "Set your own password"
+    $randomic  = RadioButton -form $form_pswd -checked $false -x 30 -y 50 -text "Generate random password"
+    OKButton -form $form_pswd -x 90 -y 120 -text "Ok"
+    $result = $form_pswd.ShowDialog()
+    if ($result -eq "OK") {
+        if ($personal.Checked) {
+            $form = FormBase -w 520 -h 200 -text "PASSWORD"
+            $font = New-Object System.Drawing.Font("Arial", 12)
+            $form.Font = $font
+        
+            $label = New-Object System.Windows.Forms.Label
+            $label.Location = New-Object System.Drawing.Point(10,20)
+            $label.Size = New-Object System.Drawing.Size(500,30)
+            $label.Text = "Password:"
+            $form.Controls.Add($label)
+        
+            $usrname = New-Object System.Windows.Forms.TextBox
+            $usrname.Location = New-Object System.Drawing.Point(10,60)
+            $usrname.Size = New-Object System.Drawing.Size(450,30)
+            $usrname.PasswordChar = '*'
+            $form.Controls.Add($usrname)
+        
+            $OKButton = New-Object System.Windows.Forms.Button
+        
+            OKButton -form $form -x 200 -y 120 -text "Ok"
+        
+            $form.Topmost = $true
+            $result = $form.ShowDialog()
+
+            $thepasswd = $usrname.Text
+        } elseif ($randomic.Checked) {
+            Add-Type -AssemblyName 'System.Web'
+            $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
+        }
+    }
+    New-MsolUser -UserPrincipalName "$username@$suffix" -FirstName $firstname -LastName $lastname -DisplayName $completo -Password $thepasswd -PasswordNeverExpires $true -ForceChangePassword $false -UsageLocation 'IT' -LicenseAssignment $assigned
 }
 catch {
     Write-Output "`nError: $($error[0].ToString())"
@@ -142,7 +176,7 @@ $ErrorActionPreference= 'Inquire'
 Write-Host -ForegroundColor Green "ACCOUNT CREATED!"
 Write-Host -ForegroundColor Cyan "$completo <$username@$suffix>"
 Write-Host -ForegroundColor Blue -NoNewline "Password: "
-Write-Host "$passwd"
+Write-Host "$thepasswd"
 Write-Host -ForegroundColor Blue -NoNewline "License: "
 Write-Host "$assigned"
 Pause
