@@ -164,7 +164,7 @@ try {
             $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
         }
     }
-    New-MsolUser -UserPrincipalName "$username@$suffix" -FirstName $firstname -LastName $lastname -DisplayName $completo -Password $thepasswd -PasswordNeverExpires $true -ForceChangePassword $false -UsageLocation 'IT' -LicenseAssignment $assigned
+    New-MsolUser -UserPrincipalName "$username@$suffix" -FirstName $firstname -LastName $lastname -DisplayName $completo -Password $thepasswd -ForceChangePassword $false -UsageLocation 'IT' -LicenseAssignment $assigned
 }
 catch {
     Write-Output "`nError: $($error[0].ToString())"
