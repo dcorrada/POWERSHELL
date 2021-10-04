@@ -33,6 +33,14 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
+# looking for NuGet Package Provider
+try {
+    $pp = Get-PackageProvider -Name NuGet
+}
+catch {
+    Install-PackageProvider -Name NuGet -Force
+}
+
 # list of available updates
 # Get-Windowsupdate
 

@@ -35,6 +35,14 @@ if ($answ -eq "No") {
     Exit
 }
 
+# looking for NuGet Package Provider
+try {
+    $pp = Get-PackageProvider -Name NuGet
+}
+catch {
+    Install-PackageProvider -Name NuGet -Force
+}
+
 # define username
 $form = FormBase -w 520 -h 270 -text "ACCOUNT"
 $font = New-Object System.Drawing.Font("Arial", 12)
