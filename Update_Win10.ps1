@@ -24,6 +24,14 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
+# looking for NuGet Package Provider
+try {
+    $pp = Get-PackageProvider -Name NuGet
+}
+catch {
+    Install-PackageProvider -Name NuGet -Force
+}
+
 $ErrorActionPreference= 'Stop'
 try {
     Import-Module PSWindowsUpdate
@@ -32,14 +40,6 @@ try {
     Import-Module PSWindowsUpdate
 }
 $ErrorActionPreference= 'Inquire'
-
-# looking for NuGet Package Provider
-try {
-    $pp = Get-PackageProvider -Name NuGet
-}
-catch {
-    Install-PackageProvider -Name NuGet -Force
-}
 
 # list of available updates
 # Get-Windowsupdate
