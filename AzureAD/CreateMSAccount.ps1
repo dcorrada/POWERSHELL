@@ -40,7 +40,7 @@ try {
     $pp = Get-PackageProvider -Name NuGet
 }
 catch {
-    Install-PackageProvider -Name NuGet -Force
+    Install-PackageProvider -Name NuGet -Confirm:$False -MinimumVersion "2.8.5.216" -Force
 }
 
 # define username
