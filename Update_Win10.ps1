@@ -29,7 +29,7 @@ try {
     $pp = Get-PackageProvider -Name NuGet
 }
 catch {
-    Install-PackageProvider -Name NuGet -Confirm:$False -MinimumVersion "2.8.5.216" -Force
+    Install-PackageProvider -Name NuGet -Confirm:$True -MinimumVersion "2.8.5.216" -Force
 }
 
 $ErrorActionPreference= 'Stop'
