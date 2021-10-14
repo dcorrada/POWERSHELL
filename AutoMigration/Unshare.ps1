@@ -22,5 +22,3 @@ if ($testadmin -eq $false) {
 }
 
 Remove-SmbShare -Name "C" -Force
-
-Remove-Item "C:\TEMPSOFTWARE" -Recurse -Force
