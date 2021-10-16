@@ -149,37 +149,51 @@ netsh wlan export profile key=clear folder="$tmppath\wifi_profiles" > $null
 Write-Host -ForegroundColor Green " DONE"
 
 # setting current user as local admin
-Write-Host -NoNewline -ForegroundColor Yellow "`nSetting user(s) as local admin..."
+Write-Host -ForegroundColor Yellow "`nSetting user(s) as local admin..."
 $ErrorActionPreference = 'Stop'
 foreach ($usr in $usrlist) {
+    Write-Host -NoNewline "[$usr]"
     try {
         Add-LocalGroupMember -Group "Administrators" -Member $usr
+        Write-Host -ForegroundColor Green " DONE"
     }
     catch {
-        Write-Output "`nError: $($error[0].ToString())"
-        $error[0].FullyQualifiedErrorId # !!! TODO !!! verificare se utente è già localadmin
-        Pause
-        exit
+        $alright = $error[0].FullyQualifiedErrorId -match "MemberExists"
+        if ($alright) {
+            # ignore error if the user is already localadmin
+            Write-Host -ForegroundColor Green " DONE"
+        } else {
+            Write-Host -ForegroundColor Red " FAILED"
+            Write-Host -ForegroundColor Red "$($error[0].ToString())"
+            Pause
+        }
     }
 }
 $ErrorActionPreference = 'Inquire'
-Write-Host -ForegroundColor Green " DONE"
 
 # sharing C: volume
 Write-Host -NoNewline -ForegroundColor Yellow "`nSharing C: volume..."
-$usrstring = [system.String]::Join(",", $usrlist)
-<# chunck for AD accounts
+<# chunck for (individual) AD accounts
 $usrstring = $env:UserDomain + '\' + $usrlist[0]
 for ($i = 1; $i -lt $usrlist.Count; $i++) {
     $usrstring += ',' + $env:UserDomain + '\' + $usrlist[$i]
 }
-#>
-# !!! ERRORE !!! Non è stato effettuato alcun mapping tra nomi di account e ID di sicurezza (SID)
 New-SmbShare –Name "C" –Path "C:\" -FullAccess $usrstring
-Write-Host -ForegroundColor Green " DONE"
+#>
+$ErrorActionPreference = 'Stop'
+try {
+    New-SmbShare –Name "C" –Path "C:\" -FullAccess "Administrators"
+    Write-Host -ForegroundColor Green " DONE"
+}
+catch {
+    Write-Host -ForegroundColor Red " FAILED"
+    Write-Host -ForegroundColor Red "$($error[0].ToString())"
+    Pause
+}
+$ErrorActionPreference = 'Inquire'
 
 # summary
 New-Item -ItemType file "$tmppath\LocalAdmin-Cshared.log" > $null
-("[HOSTNAME] " + $env:computername) | Out-File "$tmppath\LocalAdmin-Cshared.log" -Encoding ASCII -Append
+("*** hostname: " + $env:computername + " ***") | Out-File "$tmppath\LocalAdmin-Cshared.log" -Encoding ASCII -Append
 Get-NetIPConfiguration | Out-File "$tmppath\LocalAdmin-Cshared.log" -Encoding ASCII -Append
 notepad "$tmppath\LocalAdmin-Cshared.log"
