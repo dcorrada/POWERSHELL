@@ -148,6 +148,17 @@ New-Item -ItemType directory -Path "$tmppath\wifi_profiles" > $null
 netsh wlan export profile key=clear folder="$tmppath\wifi_profiles" > $null
 Write-Host -ForegroundColor Green " DONE"
 
+# shared paths
+Write-Host -ForegroundColor Yellow "`nRetrieving shared paths..."
+$drives = Get-PSDrive
+foreach ($mounted in $drives) {
+    if ($mounted.DisplayRoot -match "^\\") {
+        New-Item -ItemType file "$tmppath\NetworkDrives.log" > $null
+        $string = $mounted.Name + ":;" + $mounted.DisplayRoot
+        $string | Out-File "$tmppath\NetworkDrives.log" -Encoding ASCII -Append
+    }
+}
+
 # setting current user as local admin
 Write-Host -ForegroundColor Yellow "`nSetting user(s) as local admin..."
 $ErrorActionPreference = 'Stop'
