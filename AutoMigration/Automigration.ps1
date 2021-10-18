@@ -439,6 +439,7 @@ if ($BitLocker_services.Checked -eq $true) {
         } else {
             Enable-BitLocker -MountPoint "C:" -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector
         }
+        Add-BitLockerKeyProtector -MountPoint "C:" -RecoveryPasswordProtector
         Write-Host "Wait..."
         Start-Sleep 5
     }
