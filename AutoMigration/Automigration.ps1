@@ -34,7 +34,6 @@ Import-Module -Name "$repopath\Modules\Forms.psm1"
 $tmppath = 'C:\AUTOMIGRATION'
 if (!(Test-Path $tmppath)) {
     New-Item -ItemType directory -Path $tmppath > $null
-    New-Item -ItemType file "$tmppath\Automigration.log" > $null
 }
 
 # checking source computer
@@ -188,14 +187,14 @@ if ($migrazione_dati.Checked -eq $true) {
     # backup job block
     Write-Host " "
     $RoboCopyBlock = {
-        param($final_path, $pathat, $logpath)
+        param($final_path, $pathfrom, $pathto, $logpath)
         $filename = $final_path -replace ('\\','-')
         if (Test-Path "$logpath\ROBOCOPY_$filename.log" -PathType Leaf) {
             Remove-Item  "$logpath\ROBOCOPY_$filename.log" -Force
         }
         New-Item -ItemType file "$logpath\ROBOCOPY_$filename.log" > $null
-        $source = 'C:\' + $final_path
-        $dest = $pathat + '\' + $final_path
+        $source = $pathfrom + $final_path
+        $dest = $pathto + '\' + $final_path
 
         # for the options see https://superuser.com/questions/814102/robocopy-command-to-do-an-incremental-backup
         $opts = ("/E", "/XJ", "/R:5", "/W:10", "/NP", "/NDL", "/NC", "/NJH", "/ZB", "/MIR", "/LOG+:$logpath\ROBOCOPY_$filename.log")
@@ -208,7 +207,7 @@ if ($migrazione_dati.Checked -eq $true) {
 
     # launch multithreaded backup jobs
     foreach ($folder in $backup_list.Keys) {
-        Start-Job $RoboCopyBlock -Name $folder -ArgumentList $folder, $copiasu, $tmppath > $null
+        Start-Job $RoboCopyBlock -Name $folder -ArgumentList $folder, $root_path, $copiasu, $tmppath > $null
     }
 
     # progress bar

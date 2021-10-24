@@ -10,5 +10,5 @@ In order to perform data migration do the following steps:
 4) Once data migration has terminated, on the source computer disable sharing on the volume C: (Unshare.ps1) 
 
 TODO:
-* support for Virtula Machines
+* support for virtual machines
 * support for domain users

@@ -1,0 +1,13 @@
+*** BUG NOTI DA RISOLVERE ***
+
+--- LocalAdmin-Cshared.ps1 ---
+Lo share sul volume C: dovrebbe essere consentito a chiunque, almeno in  questa
+versione in cui gli script sono testati per la rete locale in WORKGROUP.
+Alla riga 196 il parametro settato come -FullAccess "Administrators" non rende
+accessibile il disco nemmeno ai local admins.
+
+--- Automigration.ps1 ---
+Non e' stato implementato il controllo delle sorgenti durante il backup.
+Di conseguenza lo stato di avanzamento non e' definito e lo script va in crash.
+In pratica le variabili $amount (riga 252) e $TotalFileToBackup (riga 291) non
+sono inizializzate e definite correttamente.
