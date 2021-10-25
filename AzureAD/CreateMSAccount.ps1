@@ -121,7 +121,7 @@ if ($result -eq "OK") {
     if ($optbasic.Checked) {
         Write-Host -ForegroundColor Blue "Proceed to assign Basic license..."
         $assigned = $label_basic
-    } elseif ($consulenti.Checked) {
+    } elseif ($optstandard.Checked) {
         Write-Host -ForegroundColor Blue "Proceed to assign Standard license..."
         $assigned = $label_standard
     } else {
