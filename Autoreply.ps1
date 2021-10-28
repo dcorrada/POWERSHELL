@@ -98,7 +98,7 @@ $message = @'
 <p>currently I am out of office.</p>
 <p>I will be available from monday to friday, 09:00-16:00. Preferably, I will reply to your email in such period.</p>
 <p>Please note: my MS Teams is in sleep mode. I may not read your messages.</p>
-<p>For any support request you should send an email to <a href="mailto:helpdesk@agmsolutions.net">helpdesk@agmsolutions.net</a></p>
+<p>For any support request you should send an email to <a href="mailto:dario.corrada@gmail.com">dario.corrada@gmail.com</a></p>
 <p>Kind regards</p>
 </div> </body> </html>
 '@
