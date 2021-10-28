@@ -24,6 +24,14 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
+# looking for NuGet Package Provider
+try {
+    $pp = Get-PackageProvider -Name NuGet
+}
+catch {
+    Install-PackageProvider -Name NuGet -Confirm:$True -MinimumVersion "2.8.5.216" -Force
+}
+
 $ErrorActionPreference= 'Stop'
 try {
     Import-Module PSWindowsUpdate
