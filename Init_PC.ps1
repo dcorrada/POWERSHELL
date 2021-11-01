@@ -38,7 +38,7 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 $tmppath = "C:\TEMPSOFTWARE"
 New-Item -ItemType directory -Path $tmppath > $null
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 375 -text "SOFTWARES"
+$form_panel = FormBase -w 350 -h 425 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Revo Uninstaller"
@@ -48,8 +48,9 @@ $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Teams"
 $swlist['Teams'].Checked = $false
-$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 280 -text "Ok"
+$swlist['WinDirStat'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "WinDirStat"
+$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "7ZIP"
+OKButton -form $form_panel -x 100 -y 310 -text "Ok"
 $result = $form_panel.ShowDialog()
 
 $download = New-Object net.webclient
@@ -104,6 +105,13 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\Teams.exe" -Wait
+            Write-Host -ForegroundColor Green " DONE"
+        } elseif ($item -eq 'WinDirStat') {
+            Write-Host -NoNewline "Download software..."
+            $download.Downloadfile("https://www.fosshub.com/WinDirStat.html?dwl=windirstat1_1_2_setup.exe", "$tmppath\WinDirStat.exe")
+            Write-Host -ForegroundColor Green " DONE"
+            Write-Host -NoNewline "Install software..."
+            Start-Process -FilePath "$tmppath\WinDirStat.exe" -Wait
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq '7ZIP') {
             Write-Host -NoNewline "Download software..."
