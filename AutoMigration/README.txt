@@ -8,7 +8,3 @@ In order to perform data migration do the following steps:
 3) On the destination computer launch Automigration.ps1
 
 4) Once data migration has terminated, on the source computer disable sharing on the volume C: (Unshare.ps1) 
-
-TODO:
-* support for virtual machines
-* support for domain users

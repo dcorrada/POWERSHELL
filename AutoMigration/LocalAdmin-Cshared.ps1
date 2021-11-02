@@ -48,7 +48,7 @@ $form_panel = FormBase -w 300 -h $hsize -text "USER FOLDERS"
 $label = New-Object System.Windows.Forms.Label
 $label.Location = New-Object System.Drawing.Point(10,20)
 $label.Size = New-Object System.Drawing.Size(200,30)
-$label.Text = "Select users to backup:"
+$label.Text = "Select users to migrate:"
 $form_panel.Controls.Add($label)
 $vpos = 50
 $boxes = @()
@@ -184,24 +184,24 @@ $ErrorActionPreference = 'Inquire'
 
 # sharing C: volume
 Write-Host -NoNewline -ForegroundColor Yellow "`nSharing C: volume..."
-<# chunck for (individual) AD accounts
-$usrstring = $env:UserDomain + '\' + $usrlist[0]
-for ($i = 1; $i -lt $usrlist.Count; $i++) {
-    $usrstring += ',' + $env:UserDomain + '\' + $usrlist[$i]
+$answ = [System.Windows.MessageBox]::Show("This PC is joined to a domain?",'DOMAIN','YesNo','Info')
+if ($answ -eq "Yes") {
+    $ErrorActionPreference = 'Stop'
+    try {
+        $fulluser = $env:UserDomain + "\" + $env:UserName
+        New-SmbShare –Name "C" –Path "C:\" -FullAccess $fulluser
+        Write-Host -ForegroundColor Green " DONE"
+    }
+    catch {
+        Write-Host -ForegroundColor Red " FAILED"
+        Write-Host -ForegroundColor Red "$($error[0].ToString())"
+        Pause
+    }
+    $ErrorActionPreference = 'Inquire'
+} else {
+    $answ = [System.Windows.MessageBox]::Show("Please manually share the C: volume...",'SHARE','Ok','Info')
 }
-New-SmbShare –Name "C" –Path "C:\" -FullAccess $usrstring
-#>
-$ErrorActionPreference = 'Stop'
-try {
-    New-SmbShare –Name "C" –Path "C:\" -FullAccess "Administrators"
-    Write-Host -ForegroundColor Green " DONE"
-}
-catch {
-    Write-Host -ForegroundColor Red " FAILED"
-    Write-Host -ForegroundColor Red "$($error[0].ToString())"
-    Pause
-}
-$ErrorActionPreference = 'Inquire'
+
 
 # summary
 New-Item -ItemType file "$tmppath\LocalAdmin-Cshared.log" > $null
