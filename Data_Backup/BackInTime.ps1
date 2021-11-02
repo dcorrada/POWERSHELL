@@ -368,6 +368,7 @@ foreach ($folder in $pathlist.Keys) {
 $ErrorActionPreference= 'Inquire'
 Write-Host -ForegroundColor Green " DONE"
 
+$answ = [System.Windows.MessageBox]::Show("Remember to grant privileges for other users' paths than yours",'GRANT','Ok','Warning')
 <#
 *** COMMENTED OUT ***
 takeown command seems doesn't work with local account, needs further checks
