@@ -108,7 +108,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'WinDirStat') {
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://www.fosshub.com/WinDirStat.html?dwl=windirstat1_1_2_setup.exe", "$tmppath\WinDirStat.exe")
+            $download.Downloadfile("https://prdownloads.sourceforge.net/windirstat/windirstat1_1_2_setup.exe", "$tmppath\WinDirStat.exe")
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\WinDirStat.exe" -Wait
