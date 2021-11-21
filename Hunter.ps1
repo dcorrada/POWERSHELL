@@ -4,7 +4,7 @@ Version...: 21.11.1
 Author....: Dario CORRADA
 
 This script monitors for all the PIDs which belong to a named process.
-Whenever any PID die, this script take a snapshost of the processes list before and after the killing event.
+Whenever any PID die, this script take a snapshot of the processes list before and after the killing event (into two csv files).
 #>
 
 # elevated script execution with admin privileges
