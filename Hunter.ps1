@@ -122,7 +122,7 @@ while ($true) {
         # saving logs
         Write-Host -NoNewline "Getting process list snapshot... "
         $logfile = $logpath + '\' + $timestamp + '_BC.csv'
-        'PID;NAME;CMD;PATH;PARENT_PID;TIME' | Out-File $logfile -Encoding ASCII -Append
+        'PID;NAME;CMD;PATH;PARENT_PID;TIME' | Out-File $logfile -Encoding UTF8 -Append
         foreach ($item in ($deepcopy.Keys | Sort-Object)) {
             $new_record = @(
                 $parseddata[$item].PID,
@@ -133,10 +133,10 @@ while ($true) {
                 $parseddata[$item].Time
             )
             $new_string = [system.String]::Join(";", $new_record)
-            $new_string | Out-File $logfile -Encoding ASCII -Append
+            $new_string | Out-File $logfile -Encoding UTF8 -Append
         }
         $logfile = $logpath + '\' + $timestamp + '_AD.csv' 
-        'PID;NAME;CMD;PATH;PARENT_PID;TIME' | Out-File $logfile -Encoding ASCII -Append
+        'PID;NAME;CMD;PATH;PARENT_PID;TIME' | Out-File $logfile -Encoding UTF8 -Append
         foreach ($item in ($parseddata.Keys | Sort-Object)) {
             $new_record = @(
                 $parseddata[$item].PID,
@@ -147,42 +147,56 @@ while ($true) {
                 $parseddata[$item].Time
             )
             $new_string = [system.String]::Join(";", $new_record)
-            $new_string | Out-File $logfile -Encoding ASCII -Append
+            $new_string | Out-File $logfile -Encoding UTF8 -Append
         }
         Write-Host -ForegroundColor Green 'DONE'
 
         # get events log
         Write-Host -NoNewline "Retrieving events log... "
-        $StartTime = (Get-Date).AddMinutes(-5)
-        $rawdata = Get-WinEvent -ListLog *
+        $logtime = (Get-Date).AddMinutes(-15)
         $eventlogs.Clear()
-        foreach ($record in $rawdata) {
-            if ($record.LastWriteTime -gt $StartTime) {
-                $eventlogs[$record.GetHashCode()] = @{
-                    'LogType' = $record.LogType
+        $string = ''
+        $ErrorActionPreference= 'SilentlyContinue'
+        foreach ($logtype in ('System', 'Security','Application')) {
+            $rawdata = Get-WinEvent -FilterHashTable @{LogName=$logtype; StartTime=$logtime}
+            foreach ($record in $rawdata) {
+                $logkey = '[' + $record.LogName + ']_'
+                $logkey += Get-Date $record.TimeCreated -format "yyyy-MM-dd_HH-mm-ss-fff"
+                $record.Message -match "^(.*)\r+" > $null
+                if ($matches[1]) {
+                    $string = $matches[1]
+                    $matches[1] = $null
+                } else {
+                    $record.Message -match "^(.*)\n+" > $null
+                    if ($matches[1]) {
+                        $string = $matches[1]
+                        $matches[1] = $null
+                    } else {
+                        $string = $record.Message
+                    }
+                }
+                $eventlogs[$logkey] = @{
                     'Name' = $record.LogName
-                    'Provider' = $record.OwningProviderName
-                    'Path' = $record.LogFilePath
-                    'Mode' = $record.LogMode
-                    'Time' = $record.LastWriteTime
+                    'Time' = Get-Date $record.TimeCreated -format "yyyy-MM-dd_HH-mm-ss"
+                    'Id' = $record.Id
+                    'Message' = $string
+                    'Type' = $record.LevelDisplayName
                 }
             }
         }
+        $ErrorActionPreference= 'Inquire'
         $logfile = $logpath + '\' + $timestamp + '_EventLogs.csv' 
-        'ID;LOGTYPE;NAME;PROVIDER;PATH;MODE;TIME' | Out-File $logfile -Encoding ASCII -Append
+        'ID;LOGTYPE;NAME;TIME;MESSAGE' | Out-File $logfile -Encoding UTF8 -Append
         foreach ($item in ($eventlogs.Keys | Sort-Object)) {
             $new_record = @(
-                $item,
-                $eventlogs[$item].LogType,
+                $eventlogs[$item].Id,
+                $eventlogs[$item].Type,
                 $eventlogs[$item].Name,
-                $eventlogs[$item].Provider,
-                $eventlogs[$item].Path,
-                $eventlogs[$item].Mode,
-                $eventlogs[$item].Time
-                
+                $eventlogs[$item].Time,
+                $eventlogs[$item].Message  
             )
             $new_string = [system.String]::Join(";", $new_record)
-            $new_string | Out-File $logfile -Encoding ASCII -Append
+            $new_string | Out-File $logfile -Encoding UTF8 -Append
         }
         Write-Host -ForegroundColor Green 'DONE'
 
