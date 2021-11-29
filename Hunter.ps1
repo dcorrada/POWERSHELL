@@ -157,7 +157,7 @@ while ($true) {
         $eventlogs.Clear()
         $string = ''
         $ErrorActionPreference= 'SilentlyContinue'
-        foreach ($logtype in ('System', 'Security','Application')) {
+        foreach ($logtype in ('System', 'Security','Application','OAlerts','Setup')) {
             $rawdata = Get-WinEvent -FilterHashTable @{LogName=$logtype; StartTime=$logtime}
             foreach ($record in $rawdata) {
                 $logkey = '[' + $record.LogName + ']_'
