@@ -47,7 +47,6 @@ $swlist['Skype'].Checked = $false
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Teams"
-$swlist['Teams'].Checked = $false
 $swlist['WinDirStat'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "WinDirStat"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 310 -text "Ok"
@@ -101,11 +100,9 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'Teams') {
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64", "$tmppath\Teams.exe")
+            $download.Downloadfile("https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64", "C:\Users\Public\Desktop\Teams_Installer.exe")
             Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\Teams.exe" -Wait
-            Write-Host -ForegroundColor Green " DONE"
+            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'WinDirStat') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("https://prdownloads.sourceforge.net/windirstat/windirstat1_1_2_setup.exe", "$tmppath\WinDirStat.exe")
