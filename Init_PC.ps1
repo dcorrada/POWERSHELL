@@ -105,7 +105,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'WinDirStat') {
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://prdownloads.sourceforge.net/windirstat/windirstat1_1_2_setup.exe", "$tmppath\WinDirStat.exe")
+            $download.Downloadfile("https://www.fosshub.com/WinDirStat.html?dwl=windirstat1_1_2_setup.exe", "$tmppath\WinDirStat.exe")
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\WinDirStat.exe" -Wait
