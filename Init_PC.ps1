@@ -94,7 +94,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq 'Supremo') {
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://www.agmsolutions.net/wp-content/uploads/assistenza/Assistenza_Remota.exe", "$env:PUBLIC\Desktop\Supremo.exe")
+            # $download.Downloadfile("https://www.agmsolutions.net/wp-content/uploads/assistenza/Assistenza_Remota.exe", "$env:PUBLIC\Desktop\Supremo.exe")
+            Invoke-WebRequest -Uri 'https://www.nanosystems.it/public/download/Supremo.exe' -OutFile "$env:PUBLIC\Desktop\Supremo.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Write-Host -ForegroundColor Green " DONE"
