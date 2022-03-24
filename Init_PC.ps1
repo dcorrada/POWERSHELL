@@ -120,16 +120,16 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'WinDirStat') {
             Write-Host -NoNewline "Download software..."
-            #$download.Downloadfile("https://windirstat.mirror.wearetriple.com//wds_current_setup.exe", "$tmppath\WinDirStat.exe")
-            Invoke-WebRequest -Uri 'https://windirstat.mirror.wearetriple.com//wds_current_setup.exe' -OutFile "$tmppath\WinDirStat.exe"
+            $download.Downloadfile("https://windirstat.mirror.wearetriple.com//wds_current_setup.exe", "$tmppath\WinDirStat.exe")
+            #Invoke-WebRequest -Uri 'https://windirstat.mirror.wearetriple.com//wds_current_setup.exe' -OutFile "$tmppath\WinDirStat.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\WinDirStat.exe" -Wait
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq '7ZIP') {
             Write-Host -NoNewline "Download software..."
-            #$download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
-            Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z1900-x64.exe' -OutFile "$tmppath\7Zip.exe"
+            $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
+            #Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z1900-x64.exe' -OutFile "$tmppath\7Zip.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
