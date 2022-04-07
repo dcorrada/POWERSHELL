@@ -24,7 +24,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-Write-Host -ForegroundColor Blue "*** CCleaner ***`n`n"
+Write-Host -ForegroundColor Blue "*** CCleaner ***`n"
 
 # Download and install
 Write-Host -NoNewline 'Download and install... '
