@@ -65,6 +65,9 @@ Param(
 
 # creo una cartella temporanea e scarico gli script
 $tmppath = 'C:\MPPtemp'
+if (Test-Path $tmppath) {
+    Remove-Item -Path $tmppath -Recurse -Force > $null
+}
 New-Item -ItemType directory -Path $tmppath > $null
 New-Item -ItemType directory -Path "$tmppath\Modules" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
@@ -109,10 +112,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green "DONE`n"
         } elseif ($item -eq '02-Ccleaner') {
             PowerShell.exe "& ""$tmppath\Ccleaner_wrapper.ps1"
-            Pause
         } elseif ($item -eq '03-Malwarebytes') {
             PowerShell.exe "& ""$tmppath\Malwarebytes_wrapper.ps1"
-            Pause
         } elseif ($item -eq '04-Defrag') {
             Remove-Item -Path "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd" -Force
             New-Item -ItemType file -Path "$tmppath\STEP02.cmd" > $null
