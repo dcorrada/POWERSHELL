@@ -78,7 +78,7 @@ Import-Module -Name "$tmppath\Modules\Forms.psm1"
 
 # pannello di controllo
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 300 -text "CONTROL"
+$form_panel = FormBase -w 350 -h 300 -text "CONTROL PANEL"
 $swlist['01-Avira'] = CheckBox -form $form_panel -checked $false -x 20 -y 20 -text "Install Avira software updater"
 $swlist['02-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Ccleaner launcher"
 $swlist['03-Malwarebytes'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Malwarebytes launcher"
