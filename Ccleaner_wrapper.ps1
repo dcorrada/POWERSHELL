@@ -53,12 +53,8 @@ if ($apath) {
 # Ccleaner launch
 Write-Host -NoNewline 'Perform... '
 $thebin = $fullpath + '\Ccleaner.exe'
-Start-Process -Wait $thebin '/AUTO'
-$answ = [System.Windows.MessageBox]::Show("Perform registry cleaning?",'REGCLEAN','YesNo','Info')
-if ($answ -eq "Yes") {    
-    Start-Process $thebin '/REGISTRY'
-    [System.Windows.MessageBox]::Show("Click Ok to uninstall Ccleaner",'UNINSTALL','Ok','Warning') > $null
-}
+Start-Process $thebin
+[System.Windows.MessageBox]::Show("Click Ok to uninstall Ccleaner",'UNINSTALL','Ok','Warning') > $null
 Write-Host -ForegroundColor Green "DONE`n"
 
 # Uninstall
