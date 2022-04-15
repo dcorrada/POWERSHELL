@@ -105,6 +105,9 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -NoNewline 'Download and install... '
             $download = New-Object net.webclient
             $downbin = 'C:\Users\' + $env:USERNAME + '\Downloads\avira.exe'
+            if (Test-Path $downbin) {
+                    Remove-Item $downbin -Force            
+            }
             $download.DownloadFile('https://package.avira.com/download/connect-client-win/package/avira_it_swu_1897812318-1649253704__pswuws.exe', $downbin)
             #Invoke-WebRequest -Uri 'https://package.avira.com/download/connect-client-win/package/avira_it_swu_1897812318-1649253704__pswuws.exe' -OutFile $downbin
             Start-Process -Wait -FilePath $downbin
