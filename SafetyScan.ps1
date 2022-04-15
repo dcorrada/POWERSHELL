@@ -26,6 +26,48 @@ Add-Type -AssemblyName PresentationFramework
 
 Write-Host -ForegroundColor Blue "*** MS Safety Scanner ***`n"
 
+# function for checking if a proscess is alive
+function ProCheck {
+    param ($procid)
+    
+    Write-Host -NoNewline -ForegroundColor Gray "`nSCANNING (press Ctrl+X to abort)... "
+    [console]::TreatControlCAsInput = $true
+    $pidalive = $true
+    while ($pidalive -eq $true) {
+        # grace period
+        Start-Sleep -Milliseconds 500
+
+        # aborting scan
+        if ([console]::KeyAvailable) {
+            $keypressed = [system.console]::readkey($true)
+            if (($keypressed.modifiers -band [consolemodifiers]"control") -and ($keypressed.key -eq "X")) {
+                Stop-Process -Id $procid -Force
+                Start-Sleep 3
+                Write-Host -ForegroundColor Red 'ABORTED'
+                Break
+            }
+        }
+
+        # check if scan is alive
+        $pidalive = $false
+        $pids = Get-WmiObject Win32_Process | where commandline -NE $null 
+        foreach ($item in $pids) {
+            if ($item.ProcessID -eq $procid) {
+                $pidalive = $true
+            }
+        }
+    }
+    if ($pidalive -eq $false) {
+        Write-Host -ForegroundColor Green 'DONE'
+    }
+}
+
+# remove previous log file
+$logfile = 'C:\Windows\debug\msert.log'
+if (Test-Path $logfile) {
+    Remove-Item $logfile -Force    
+}
+
 # Download
 Write-Host -NoNewline 'Download... '
 $download = New-Object net.webclient
@@ -46,22 +88,24 @@ SYNOPSIS:
 /H      detect high and severe threats only
 #>
 # perform a quick scan
-Write-Host -NoNewline 'Perform... '
-Start-Process -Wait $downbin '/N /Q'
-Write-Host -ForegroundColor Green "DONE`n"
+Write-Host -NoNewline 'Perform QUICK scan... '
+$process = Start-Process $downbin '/N /Q' -PassThru
+Write-Host -ForegroundColor Green "STARTED"
+ProCheck $process.Id
 
 # log check
-notepad 'C:\Windows\debug\msert.log'
+Start-Process -Wait notepad $logfile
 
 # perform a full scan
 $answ = [System.Windows.MessageBox]::Show("Do you need a full scan?",'FULL-SCAN','YesNo','Info')
 if ($answ -eq "Yes") {    
-    Write-Host -NoNewline 'Perform... '
-    Start-Process -Wait $downbin '/F:Y /Q'
-    Write-Host -ForegroundColor Green "DONE`n"
+    Write-Host -NoNewline 'Perform FULL scan... '
+    $process = Start-Process $downbin  '/F:Y /Q' -PassThru
+    Write-Host -ForegroundColor Green "STARTED"
+    ProCheck $process.Id
 
     # log check
-    notepad 'C:\Windows\debug\msert.log'
+    notepad $logfile
 }
 
 
