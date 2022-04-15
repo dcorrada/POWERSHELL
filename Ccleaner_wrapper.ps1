@@ -30,6 +30,9 @@ Write-Host -ForegroundColor Blue "*** CCleaner ***`n"
 Write-Host -NoNewline 'Download and install... '
 $download = New-Object net.webclient
 $downbin = 'C:\Users\' + $env:USERNAME + '\Downloads\ccinstall.exe'
+if (Test-Path $downbin) {
+    Remove-Item $downbin -Force    
+}
 $download.DownloadFile('https://bits.avcdn.net/productfamily_CCLEANER/insttype_FREE/platform_WIN_PIR/installertype_ONLINE/build_RELEASE', $downbin)
 #Invoke-WebRequest -Uri 'https://bits.avcdn.net/productfamily_CCLEANER/insttype_FREE/platform_WIN_PIR/installertype_ONLINE/build_RELEASE' -OutFile $downbin
 Start-Process -Wait -FilePath $downbin '/S'
