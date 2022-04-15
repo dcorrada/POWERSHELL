@@ -75,28 +75,22 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Ccleaner
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Malwarebytes_wrapper.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Update_Win10.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'CleanOptimize.ps1' -DestinationPath $tmppath
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'SafetyScan.ps1' -DestinationPath $tmppath
 
 # importo le mia libreria grafica
 Import-Module -Name "$tmppath\Modules\Forms.psm1"
 
 # pannello di controllo
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 300 -text "CONTROL PANEL"
+$form_panel = FormBase -w 350 -h 330 -text "CONTROL PANEL"
 $swlist['01-Avira'] = CheckBox -form $form_panel -checked $false -x 20 -y 20 -text "Install Avira software updater"
 $swlist['02-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Ccleaner launcher"
 $swlist['03-Malwarebytes'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Malwarebytes launcher"
-$swlist['05-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Windows 10 updates"
-$swlist['04-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Storage cleaner"
-OKButton -form $form_panel -x 100 -y 190 -text "Ok"
+$swlist['04-MSERT'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "MS Safety Scanner"
+$swlist['06-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Windows 10 updates"
+$swlist['05-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "Storage cleaner"
+OKButton -form $form_panel -x 100 -y 220 -text "Ok"
 $result = $form_panel.ShowDialog()
-
-# creo un file batch per pulire i tempfile, che verra' lanciato al prossimo reboot
-New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
-@"
-rmdir /s /q "C:\MPPtemp"
-del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
-"@ | Out-File "$tmppath\STEP01.cmd" -Encoding ASCII -Append
-Copy-Item -Path "$tmppath\STEP01.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
@@ -114,19 +108,26 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             PowerShell.exe "& ""$tmppath\Ccleaner_wrapper.ps1"
         } elseif ($item -eq '03-Malwarebytes') {
             PowerShell.exe "& ""$tmppath\Malwarebytes_wrapper.ps1"
-        } elseif ($item -eq '04-Defrag') {
-            Remove-Item -Path "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd" -Force
-            New-Item -ItemType file -Path "$tmppath\STEP02.cmd" > $null
+        } elseif ($item -eq '04-MSERT') {
+            PowerShell.exe "& ""$tmppath\SafetyScan.ps1"
+        } elseif ($item -eq '05-Defrag') {
+            # creo un file batch, che verra' lanciato al prossimo reboot
+            New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
 @"
 PowerShell.exe "& "'$tmppath\CleanOptimize.ps1'
 pause
 rmdir /s /q "C:\MPPtemp"
-del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP02.cmd"
+del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
 "@ | Out-File "$tmppath\STEP02.cmd" -Encoding ASCII -Append
-            Copy-Item -Path "$tmppath\STEP02.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+            Copy-Item -Path "$tmppath\STEP01.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
             [System.Windows.MessageBox]::Show("Storage cleaner is planned for the next boot",'DEFRAG','Ok','Info') > $null
-        } elseif ($item -eq '05-Winupdate') {
+        } elseif ($item -eq '06-Winupdate') {
             PowerShell.exe "& ""$tmppath\Update_Win10.ps1"
         }
     }
+}
+
+# rimuovo la cartella temporanea
+if ($swlist['05-Defrag'].Checked -eq $false) {
+    Remove-Item 'C:\MPPtemp' -Recurse -Force
 }
