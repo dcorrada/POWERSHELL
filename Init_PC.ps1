@@ -38,7 +38,7 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 $tmppath = "C:\TEMPSOFTWARE"
 New-Item -ItemType directory -Path $tmppath > $null
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 425 -text "SOFTWARES"
+$form_panel = FormBase -w 350 -h 455 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Revo Uninstaller"
@@ -47,10 +47,11 @@ $swlist['Skype'].Checked = $false
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Teams"
-$swlist['Teams'].Checked = $false
-$swlist['WinDirStat'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "WinDirStat"
-$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 310 -text "Ok"
+$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "WatchGuard VPN"
+$swlist['WatchGuard'].Checked = $false
+$swlist['WinDirStat'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "WinDirStat"
+$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "7ZIP"
+OKButton -form $form_panel -x 100 -y 340 -text "Ok"
 $result = $form_panel.ShowDialog()
 
 $download = New-Object net.webclient
@@ -60,6 +61,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         if ($item -eq 'Acrobat Reader DC') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
+            #Invoke-WebRequest -Uri 'http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe' -OutFile "$tmppath\AcroReadDC.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
@@ -67,6 +69,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq 'Chrome') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
+            #Invoke-WebRequest -Uri 'http://dl.google.com/chrome/install/375.126/chrome_installer.exe' -OutFile "$tmppath\ChromeSetup.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
@@ -74,6 +77,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq 'Revo Uninstaller') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("https://www.revouninstaller.com/download-freeware-version.php", "$tmppath\Revo.exe")
+            #Invoke-WebRequest -Uri 'https://www.revouninstaller.com/download-freeware-version.php' -OutFile "$tmppath\Revo.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\Revo.exe" -Wait
@@ -81,6 +85,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq 'Skype') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("https://go.skype.com/windows.desktop.download", "$tmppath\Skype.exe")
+            #Invoke-WebRequest -Uri 'https://go.skype.com/windows.desktop.download' -OutFile "$tmppath\Skype.exe"
             Write-Host -ForegroundColor Green " DONE"
             $answ = [System.Windows.MessageBox]::Show("After installation close all Skype instances to proceed...",'WARNING','Ok','Warning')
             Write-Host -NoNewline "Install software..."
@@ -89,26 +94,34 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq 'Speccy') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("https://download.ccleaner.com/spsetup132.exe", "$tmppath\Speccy.exe")
+            #Invoke-WebRequest -Uri 'https://download.ccleaner.com/spsetup132.exe' -OutFile "$tmppath\Speccy.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\Speccy.exe" -Wait
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq 'Supremo') {
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://www.agmsolutions.net/wp-content/uploads/assistenza/Assistenza_Remota.exe", "$env:PUBLIC\Desktop\Supremo.exe")
+            #$download.Downloadfile("https://www.agmsolutions.net/wp-content/uploads/assistenza/Assistenza_Remota.exe", "$env:PUBLIC\Desktop\Supremo.exe")
+            Invoke-WebRequest -Uri 'https://www.nanosystems.it/public/download/Supremo.exe' -OutFile "$env:PUBLIC\Desktop\Supremo.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'Teams') {
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64", "$tmppath\Teams.exe")
+            $download.Downloadfile("https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64", "C:\Users\Public\Desktop\Teams_Installer.exe")
+            #Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64' -OutFile "C:\Users\Public\Desktop\Teams_Installer.exe"
             Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\Teams.exe" -Wait
+            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
+        } elseif ($item -eq 'WatchGuard') {
+            Write-Host -NoNewline "Download software..."
+            #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_7_2/WG-MVPN-SSL_12_7_2.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
+            $download.Downloadfile("https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_7_2/WG-MVPN-SSL_12_7_2.exe", "C:\Users\Public\Desktop\WatchGuard.exe")
             Write-Host -ForegroundColor Green " DONE"
+            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'WinDirStat') {
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://prdownloads.sourceforge.net/windirstat/windirstat1_1_2_setup.exe", "$tmppath\WinDirStat.exe")
+            $download.Downloadfile("https://windirstat.mirror.wearetriple.com//wds_current_setup.exe", "$tmppath\WinDirStat.exe")
+            #Invoke-WebRequest -Uri 'https://windirstat.mirror.wearetriple.com//wds_current_setup.exe' -OutFile "$tmppath\WinDirStat.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\WinDirStat.exe" -Wait
@@ -116,6 +129,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq '7ZIP') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
+            #Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z1900-x64.exe' -OutFile "$tmppath\7Zip.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\7Zip.exe" -Wait

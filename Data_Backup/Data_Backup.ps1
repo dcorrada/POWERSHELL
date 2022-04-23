@@ -221,44 +221,30 @@ foreach ($usr in $usrlist) {
 
 # adding users' AppData hidden folders
 foreach ($usr in $usrlist) {
-    # folders added by default
-    foreach ($item in ('LocalLow', 'Roaming')) {
-        $candidate = 'Users\' + $usr + '\AppData\' + $item
-        $full_path = $root_path + $candidate
-        $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
-        $StagingLogPath = $tmppath + '\test.log'
-        $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
-        Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
-        $StagingContent = Get-Content -Path $StagingLogPath
-        $TotalFileCount = $StagingContent.Count
-        $backup_list[$candidate] = $TotalFileCount
-        Remove-Item $StagingLogPath -Force
-        Write-Host -NoNewline "."
-    }
-
-    # selected subfolders of AppData\Local
-    $root_usr = $root_path + 'Users\' + $usr + '\AppData\Local\'
-    $rooted = Get-ChildItem $root_usr -Attributes D
-    $exclude_usrlist = $exclude_list -replace ('\$username', $usr)
-    foreach ($candidate in $rooted) {
-        $candidate = 'Users\' + $usr + '\AppData\Local\' + $candidate
-        $decision = $true
-        foreach ($item in $exclude_usrlist) {
-            if ($item -eq $candidate) {
-                $decision = $false
+    foreach ($subfolder in ('Local', 'LocalLow', 'Roaming')) {
+        $root_usr = $root_path + 'Users\' + $usr + '\AppData\' + $subfolder + '\'
+        $rooted = Get-ChildItem $root_usr -Attributes D
+        $exclude_usrlist = $exclude_list -replace ('\$username', $usr)
+        foreach ($candidate in $rooted) {
+            $candidate = 'Users\' + $usr + '\AppData\' + $subfolder + '\' + $candidate
+            $decision = $true
+            foreach ($item in $exclude_usrlist) {
+                if ($item -eq $candidate) {
+                    $decision = $false
+                }
             }
-        }
-        if ($decision) {
-            $full_path = $root_path + $candidate
-            $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
-            $StagingLogPath = $tmppath + '\test.log'
-            $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
-            Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
-            $StagingContent = Get-Content -Path $StagingLogPath
-            $TotalFileCount = $StagingContent.Count
-            $backup_list[$candidate] = $TotalFileCount
-            Remove-Item $StagingLogPath -Force
-            Write-Host -NoNewline "."
+            if ($decision) {
+                $full_path = $root_path + $candidate
+                $CommonRobocopyParams = '/E /XJ /R:0 /W:1 /MT:64 /NP /NDL /NC /BYTES /NJH /NJS'
+                $StagingLogPath = $tmppath + '\test.log'
+                $StagingArgumentList = '"{0}" c:\fakepath /LOG:"{1}" /L {2}' -f $full_path, $StagingLogPath, $CommonRobocopyParams
+                Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+                $StagingContent = Get-Content -Path $StagingLogPath
+                $TotalFileCount = $StagingContent.Count
+                $backup_list[$candidate] = $TotalFileCount
+                Remove-Item $StagingLogPath -Force
+                Write-Host -NoNewline "."
+            }
         }
     }  
 }
