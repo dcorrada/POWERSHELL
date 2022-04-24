@@ -163,3 +163,9 @@ catch {
     Exit
 }
 $ErrorActionPreference= 'Inquire'
+
+# summary
+$answ = [System.Windows.MessageBox]::Show("Your job has been accomplished.`nDo you want to see the log?","THAT'S ALL",'YesNo','Info')
+if ($answ -eq "Yes") {    
+    notepad $logfile
+}
