@@ -133,7 +133,7 @@ PowerShell.exe "& "'$tmppath\CleanOptimize.ps1'
 pause
 rmdir /s /q "C:\MPPtemp"
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
-"@ | Out-File "$tmppath\STEP02.cmd" -Encoding ASCII -Append
+"@ | Out-File "$tmppath\STEP01.cmd" -Encoding ASCII -Append
             Copy-Item -Path "$tmppath\STEP01.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
             [System.Windows.MessageBox]::Show("Storage cleaner is planned for the next boot",'DEFRAG','Ok','Info') > $null
         } elseif ($item -eq '06-Winupdate') {
