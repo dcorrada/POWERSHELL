@@ -1,6 +1,6 @@
 <#
 Name......: MPP.ps1
-Version...: 22.04.1
+Version...: 22.05.1
 Author....: Dario CORRADA
 
 Pipeline per manutenzione programmata
@@ -71,11 +71,29 @@ if (Test-Path $tmppath) {
 New-Item -ItemType directory -Path $tmppath > $null
 New-Item -ItemType directory -Path "$tmppath\Modules" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Avira_wrapper.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Ccleaner_wrapper.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Malwarebytes_wrapper.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Update_Win10.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'CleanOptimize.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'SafetyScan.ps1' -DestinationPath $tmppath
+
+# Informazioni
+$usrname = $env:USERNAME
+$hostname = $env:COMPUTERNAME
+$usrdir = $env:USERPROFILE
+$dom = $env:USERDNSDOMAIN
+$wifi = 'disconnected'
+$ether = 'disconnected'
+$netlist = Get-NetAdapter
+foreach ($item in $netlist) {
+    if (($item.Name -eq 'Ethernet') -and ($item.Status -eq 'Up')) {
+        $ether = (Get-NetIPConfiguration | Where-Object { $_.InterfaceAlias -eq 'Ethernet' }).IPv4Address.IPAddress
+    } elseif (($item.Name -eq 'Wi-Fi') -and ($item.Status -eq 'Up')) {
+        $ether = (Get-NetIPConfiguration | Where-Object { $_.InterfaceAlias -eq 'Wi-Fi' }).IPv4Address.IPAddress
+    }
+}
+[System.Windows.MessageBox]::Show("HOSTNAME:`t$hostname`nUSERNANE:`t$dom\$usrname`nUSERDIR:`t`t$usrdir`nWI-FI:`t`t$wifi`nLAN:`t`t$ether",'INFO','Ok','Info') > $null
 
 # importo le mia libreria grafica
 Import-Module -Name "$tmppath\Modules\Forms.psm1"
@@ -83,12 +101,12 @@ Import-Module -Name "$tmppath\Modules\Forms.psm1"
 # pannello di controllo
 $swlist = @{}
 $form_panel = FormBase -w 350 -h 330 -text "CONTROL PANEL"
-$swlist['01-Avira'] = CheckBox -form $form_panel -checked $false -x 20 -y 20 -text "Install Avira software updater"
-$swlist['02-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Ccleaner launcher"
-$swlist['03-Malwarebytes'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Malwarebytes launcher"
-$swlist['04-MSERT'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "MS Safety Scanner"
-$swlist['06-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Windows 10 updates"
-$swlist['05-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "Storage cleaner"
+$swlist['01-Avira'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "1. Avira software updater"
+$swlist['02-Malwarebytes'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "2. Malwarebytes launcher"
+$swlist['03-MSERT'] = CheckBox -form $form_panel -checked $false -x 20 -y 80 -text "3. MS Safety Scanner"
+$swlist['04-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "4. Ccleaner launcher"
+$swlist['06-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "5. Windows 10 updates"
+$swlist['05-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "6. Storage cleaner"
 OKButton -form $form_panel -x 100 -y 220 -text "Ok"
 $result = $form_panel.ShowDialog()
 
@@ -96,19 +114,12 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq '01-Avira') {
-            Write-Host -NoNewline 'Download and install... '
-            $download = New-Object net.webclient
-            $downbin = 'C:\Users\' + $env:USERNAME + '\Downloads\avira.exe'
-            $download.DownloadFile('https://package.avira.com/download/connect-client-win/package/avira_it_swu_1897812318-1649253704__pswuws.exe', $downbin)
-            #Invoke-WebRequest -Uri 'https://package.avira.com/download/connect-client-win/package/avira_it_swu_1897812318-1649253704__pswuws.exe' -OutFile $downbin
-            Start-Process -Wait -FilePath $downbin
-            Remove-Item $downbin -Force 
-            Write-Host -ForegroundColor Green "DONE`n"
-        } elseif ($item -eq '02-Ccleaner') {
+            PowerShell.exe "& ""$tmppath\Avira_wrapper.ps1"
+        } elseif ($item -eq '04-Ccleaner') {
             PowerShell.exe "& ""$tmppath\Ccleaner_wrapper.ps1"
-        } elseif ($item -eq '03-Malwarebytes') {
+        } elseif ($item -eq '02-Malwarebytes') {
             PowerShell.exe "& ""$tmppath\Malwarebytes_wrapper.ps1"
-        } elseif ($item -eq '04-MSERT') {
+        } elseif ($item -eq '03-MSERT') {
             PowerShell.exe "& ""$tmppath\SafetyScan.ps1"
         } elseif ($item -eq '05-Defrag') {
             # creo un file batch, che verra' lanciato al prossimo reboot
@@ -125,6 +136,7 @@ del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Program
             PowerShell.exe "& ""$tmppath\Update_Win10.ps1"
         }
     }
+    [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
 }
 
 # rimuovo la cartella temporanea
