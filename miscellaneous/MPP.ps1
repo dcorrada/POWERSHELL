@@ -119,12 +119,16 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq '01-Avira') {
             PowerShell.exe "& ""$tmppath\Avira_wrapper.ps1"
+            [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '04-Ccleaner') {
             PowerShell.exe "& ""$tmppath\Ccleaner_wrapper.ps1"
+            [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '02-Malwarebytes') {
             PowerShell.exe "& ""$tmppath\Malwarebytes_wrapper.ps1"
+            [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '03-MSERT') {
             PowerShell.exe "& ""$tmppath\SafetyScan.ps1"
+            [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '05-Defrag') {
             # creo un file batch, che verra' lanciato al prossimo reboot
             New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
@@ -139,8 +143,7 @@ del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Program
         } elseif ($item -eq '06-Winupdate') {
             PowerShell.exe "& ""$tmppath\Update_Win10.ps1"
         }
-    }
-    [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
+    }    
 }
 
 # rimuovo la cartella temporanea
