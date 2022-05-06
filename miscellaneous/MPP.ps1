@@ -82,7 +82,11 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'SafetySc
 $usrname = $env:USERNAME
 $hostname = $env:COMPUTERNAME
 $usrdir = $env:USERPROFILE
-$dom = $env:USERDNSDOMAIN
+if ($env:USERDNSDOMAIN) {
+    $dom = $env:USERDNSDOMAIN
+} else {
+    $dom = '.'
+}
 $wifi = 'disconnected'
 $ether = 'disconnected'
 $netlist = Get-NetAdapter
