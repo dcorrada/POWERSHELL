@@ -54,7 +54,6 @@ if ($apath) {
 Write-Host -NoNewline 'Perform... '
 $thebin = $fullpath + '\Avira.Systray.exe'
 Start-Process $thebin '/showMiniGui'
-[System.Windows.MessageBox]::Show("Click Ok to uninstall Ccleaner",'UNINSTALL','Ok','Warning') > $null
 Write-Host -ForegroundColor Green "DONE`n"
 
 # Uninstall
