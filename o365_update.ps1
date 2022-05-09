@@ -40,7 +40,7 @@ if (Test-Path "$env:CommonProgramFiles\microsoft shared\ClickToRun\OfficeC2RClie
 
     # getting update list
     Write-Host -NoNewline "Collecting builds... "
-    $HTML = Invoke-WebRequest -Uri 'https://docs.microsoft.com/en-us/officeupdates/update-history-office365-proplus-by-date'
+    $HTML = Invoke-WebRequest -Uri 'https://docs.microsoft.com/en-us/officeupdates/update-history-office365-proplus-by-date' -UseBasicParsing
     $result = $HTML.Content 
     $current = [regex]::matches( $result, '<a href=\"(monthly-channel|current-channel)(.*?)</a>')
     $builds = @('LATEST UPDATE')
