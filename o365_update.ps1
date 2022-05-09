@@ -61,8 +61,26 @@ if (Test-Path "$env:CommonProgramFiles\microsoft shared\ClickToRun\OfficeC2RClie
     }
 
     # dialog box
-    # *** TODO ***
-    # fare un menu a tendina in cui listare @builds ed assegnare la scelta a $selected_build
+    $formlist = FormBase -w 300 -h 200 -text $item
+    $DropDown = new-object System.Windows.Forms.ComboBox
+    $DropDown.Location = new-object System.Drawing.Size(10,50)
+    $DropDown.Size = new-object System.Drawing.Size(250,30)
+    $DropDown.Text = $builds[0]
+    foreach ($elem in $builds) {
+        if ($elem) {
+            $DropDown.Items.Add($elem)  > $null
+        }
+    }
+    $formlist.Controls.Add($DropDown)
+    $DropDownLabel = new-object System.Windows.Forms.Label
+    $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
+    $DropDownLabel.size = new-object System.Drawing.Size(250,30) 
+    $DropDownLabel.Text = "Select build"
+    $formlist.Controls.Add($DropDownLabel)
+    OKButton -form $formlist -x 100 -y 100 -text "Ok"
+    $formlist.Add_Shown({$DropDown.Select()})
+    $result = $formlist.ShowDialog()
+    $selected_build = $DropDown.Text
 
     # updating
     Write-Host -NoNewline "Updating o365... "
