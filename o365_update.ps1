@@ -84,9 +84,15 @@ if (Test-Path "$env:CommonProgramFiles\microsoft shared\ClickToRun\OfficeC2RClie
 
     # updating
     Write-Host -NoNewline "Updating o365... "
-    if ($selected_build -ne 'LATEST UPDATE') {
-        $build = "16.0."+(($date_build -split "Build ")[1] -split "\)")[0]
-        & "$env:CommonProgramFiles\microsoft shared\ClickToRun\OfficeC2RClient.exe" /update user updatetoversion=$build
+    if ($selected_build -ne 'LATEST UPDATE') { # rollback
+        $tobuild = "16.0."+(($selected_build -split "Build ")[1] -split "\)")[0]
+        $answ = [System.Windows.MessageBox]::Show("You are getting a rollback to build [$tobuild].`nAutomatic update will be disabled!`n`nDo you want to proceed?",'ROLLBACK','YesNo','Warning')
+        if ($answ -eq "Yes") {    
+            Start-Process powershell.exe -Verb runAs{
+                Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\ClickToRun\Configuration -Name UpdatesEnabled -Value "False"
+            }
+            & "$env:CommonProgramFiles\microsoft shared\ClickToRun\OfficeC2RClient.exe" /update user updatetoversion=$tobuild
+        }
     } else {
         & "$env:CommonProgramFiles\microsoft shared\ClickToRun\OfficeC2RClient.exe" /update user
     }
