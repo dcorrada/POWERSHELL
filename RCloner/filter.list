@@ -1,0 +1,44 @@
+# excluding system paths
+- /$**
+- /ESD**
+- /Intel**
+- /OneDriveTemp**
+- /PerfLogs**
+- /Program\ Files**
+- /ProgramData**
+- /Recovery**
+- /System\ Volume\ Information**
+- /Windows**
+# excluding root files
+- /*.sys
+- /*.tmp
+# global excluding AppData paths
+- /Users/*/AppData/Local/Comms**
+- /Users/*/AppData/Local/ConnectedDevicesPlatform**
+- /Users/*/AppData/Local/D3DSCache**
+- /Users/*/AppData/Local/Diagnostics**
+- /Users/*/AppData/Local/Dropbox**
+- /Users/*/AppData/Local/ElevatedDiagnostics**
+- /Users/*/AppData/Local/Microsoft**
+- /Users/*/AppData/Local/Microsoft_Corporation**
+- /Users/*/AppData/Local/OneDrive**
+- /Users/*/AppData/Local/Packages**
+- /Users/*/AppData/Local/PeerDistRepub**
+- /Users/*/AppData/Local/PlaceholderTileLogoFolder**
+- /Users/*/AppData/Local/Programs**
+- /Users/*/AppData/Local/Publishers**
+- /Users/*/AppData/Local/Temp**
+- /Users/*/AppData/Local/VirtualStore**
+- /Users/*/AppData/LocalLow/Microsoft**
+- /Users/*/AppData/LocalLow/Temp**
+- /Users/*/AppData/Roaming/Dropbox**
+- /Users/*/AppData/Roaming/DropboxElectron**
+- /Users/*/AppData/Roaming/Microsoft**
+- /Users/*/AppData/Roaming/NTUSER.DAT
+- /Users/*/AppData/Roaming/ntuser.dat*
+# adding profiles and related customizations
+- /Users/dario.corrada/Dropbox**
+- /Users/dario.corrada/VirtualBox\ VMs**
++ /Users/dario.corrada**
+# excluding any other profile
+- /Users**
