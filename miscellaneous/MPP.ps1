@@ -77,6 +77,7 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Malwareb
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Update_Win10.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'CleanOptimize.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'SafetyScan.ps1' -DestinationPath $tmppath
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'o365_update.ps1' -DestinationPath $tmppath
 
 # Informazioni
 $usrname = $env:USERNAME
@@ -104,14 +105,15 @@ Import-Module -Name "$tmppath\Modules\Forms.psm1"
 
 # pannello di controllo
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 330 -text "CONTROL PANEL"
+$form_panel = FormBase -w 350 -h 360 -text "CONTROL PANEL"
 $swlist['01-Avira'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "1. Avira software updater"
-$swlist['02-Malwarebytes'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "2. Malwarebytes launcher"
-$swlist['03-MSERT'] = CheckBox -form $form_panel -checked $false -x 20 -y 80 -text "3. MS Safety Scanner"
-$swlist['04-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "4. Ccleaner launcher"
-$swlist['06-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "5. Windows 10 updates"
-$swlist['05-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "6. Storage cleaner"
-OKButton -form $form_panel -x 100 -y 220 -text "Ok"
+$swlist['02-o365'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "2. Office365 update"
+$swlist['03-Malwarebytes'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "3. Malwarebytes launcher"
+$swlist['04-MSERT'] = CheckBox -form $form_panel -checked $false -x 20 -y 110 -text "4. MS Safety Scanner"
+$swlist['05-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "5. Ccleaner launcher"
+$swlist['07-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "6. Windows 10 updates"
+$swlist['06-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 200 -text "7. Storage cleaner"
+OKButton -form $form_panel -x 100 -y 250 -text "Ok"
 $result = $form_panel.ShowDialog()
 
 foreach ($item in ($swlist.Keys | Sort-Object)) {
@@ -120,16 +122,19 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         if ($item -eq '01-Avira') {
             PowerShell.exe "& ""$tmppath\Avira_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
-        } elseif ($item -eq '04-Ccleaner') {
+        } elseif ($item -eq '02-o365') {
+            PowerShell.exe "& ""$tmppath\o365_update.ps1"
+            [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
+        } elseif ($item -eq '05-Ccleaner') {
             PowerShell.exe "& ""$tmppath\Ccleaner_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
-        } elseif ($item -eq '02-Malwarebytes') {
+        } elseif ($item -eq '03-Malwarebytes') {
             PowerShell.exe "& ""$tmppath\Malwarebytes_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
-        } elseif ($item -eq '03-MSERT') {
+        } elseif ($item -eq '04-MSERT') {
             PowerShell.exe "& ""$tmppath\SafetyScan.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
-        } elseif ($item -eq '05-Defrag') {
+        } elseif ($item -eq '06-Defrag') {
             # creo un file batch, che verra' lanciato al prossimo reboot
             New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
 @"
@@ -140,13 +145,13 @@ del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Program
 "@ | Out-File "$tmppath\STEP01.cmd" -Encoding ASCII -Append
             Copy-Item -Path "$tmppath\STEP01.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
             [System.Windows.MessageBox]::Show("Storage cleaner is planned for the next boot",'DEFRAG','Ok','Info') > $null
-        } elseif ($item -eq '06-Winupdate') {
+        } elseif ($item -eq '07-Winupdate') {
             PowerShell.exe "& ""$tmppath\Update_Win10.ps1"
         }
     }    
 }
 
 # rimuovo la cartella temporanea
-if ($swlist['05-Defrag'].Checked -eq $false) {
+if ($swlist['06-Defrag'].Checked -eq $false) {
     Remove-Item 'C:\MPPtemp' -Recurse -Force
 }
