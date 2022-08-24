@@ -75,6 +75,7 @@ New-Item -ItemType directory -Path "$tmppath\Modules" > $null
 New-Item -ItemType directory -Path "$tmppath\AzureAD" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD' -DestinationPath "$tmppath\AzureAD"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Check_NuGet.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'JoinUser.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Join2Domain.ps1' -DestinationPath $tmppath
@@ -92,6 +93,8 @@ del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Program
 
 New-Item -ItemType file -Path "$tmppath\STEP02.cmd" > $null
 @"
+PowerShell.exe "& "'$tmppath\Check_NuGet.ps1'
+pause
 PowerShell.exe "& "'$tmppath\Powerize.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Wazuh.ps1'
