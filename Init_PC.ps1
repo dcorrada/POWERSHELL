@@ -59,15 +59,19 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
+            Write-Host -NoNewline "Installing from Microsoft Store..."
+            winget install  "Adobe Acrobat Reader DC" --source msstore --locale it
+            <# offline installer
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
             #Invoke-WebRequest -Uri 'http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe' -OutFile "$tmppath\AcroReadDC.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
+            #>
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
-            Write-Host -NoNewline "Download software..."
+            Write-Host -NoNewline "Download launcher..."
             $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
             #Invoke-WebRequest -Uri 'http://dl.google.com/chrome/install/375.126/chrome_installer.exe' -OutFile "$tmppath\ChromeSetup.exe"
             Write-Host -ForegroundColor Green " DONE"
