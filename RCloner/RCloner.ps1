@@ -113,9 +113,7 @@ $result = $formlist.ShowDialog()
 $loglevel= $DropDown.Text
 $logfile = $logdia.Text
 
-
-$flags = ('--progress', '--links', "--log-level $loglevel", "--log-file $logfile", "--filter-from $filter_list") #, '--dry-run')
-<#
+<# FLAGS
 --dry-run
     do a trial run with no permanent changes. Use this to see what rclone would
     do without actually doing it. 
@@ -142,7 +140,27 @@ $flags = ('--progress', '--links', "--log-level $loglevel", "--log-file $logfile
             events.
 
     ERROR   only outputs error messages.
+
+--sftp-disable-hashcheck
+    disable the execution of SSH commands to determine if remote file 
+    hashing is available.
 #>
+$form_panel = FormBase -w 400 -h 200 -text "BEHAVIOUR"
+$dryrun = CheckBox -form $form_panel -checked $false -x 20 -y 20 -text "Dry run (do nothing effectively, suggested for testing puposes)"
+$links = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Backup symlink as paths (store links as plain text)"
+$hashcheck = CheckBox -form $form_panel -checked $false -x 20 -y 80 -text "Disable hash check over SFTP (suggested for very big files)"
+OKButton -form $form_panel -x 100 -y 120 -text "Ok"
+$result = $form_panel.ShowDialog()
+$flags = ('--progress', "--log-level $loglevel", "--log-file $logfile", "--filter-from $filter_list")
+if ($dryrun.Checked) {
+    $flags += '--dry-run'
+}
+if ($links.Checked) {
+    $flags += '--links'
+}
+if ($hashcheck.Checked) {
+    $flags += '--sftp-disable-hashcheck'
+}
 
 if (Test-Path $logfile) { 
     # the log file will be overwritten each run
