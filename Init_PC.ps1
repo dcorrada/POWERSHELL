@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 20.12.3
+Version...: 22.09.2
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -59,15 +59,25 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
+            Write-Host -NoNewline "Installing Desktop Installer client..."
+            # see also https://phoenixnap.com/kb/install-winget
+            $download.Downloadfile("https://github.com/microsoft/winget-cli/releases/download/v1.3.2091/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+            Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+            [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
+            Write-Host -ForegroundColor Green " DONE"
+            Write-Host -NoNewline "Installing from Microsoft Store..."
+            winget install  "Adobe Acrobat Reader DC" --source msstore
+            <# offline installer
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
             #Invoke-WebRequest -Uri 'http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe' -OutFile "$tmppath\AcroReadDC.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
+            #>
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
-            Write-Host -NoNewline "Download software..."
+            Write-Host -NoNewline "Download launcher..."
             $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
             #Invoke-WebRequest -Uri 'http://dl.google.com/chrome/install/375.126/chrome_installer.exe' -OutFile "$tmppath\ChromeSetup.exe"
             Write-Host -ForegroundColor Green " DONE"
