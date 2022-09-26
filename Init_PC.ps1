@@ -47,34 +47,26 @@ $swlist['Skype'].Checked = $false
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Teams"
-$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "WatchGuard VPN"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "TreeSize"
+$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "WatchGuard VPN"
 $swlist['WatchGuard'].Checked = $false
-$swlist['WinDirStat'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "WinDirStat"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 340 -text "Ok"
 $result = $form_panel.ShowDialog()
 
 $download = New-Object net.webclient
+Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
+# see also https://phoenixnap.com/kb/install-winget
+$download.Downloadfile("https://github.com/microsoft/winget-cli/releases/download/v1.3.2091/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+[System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
+Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
-            Write-Host -NoNewline "Installing Desktop Installer client..."
-            # see also https://phoenixnap.com/kb/install-winget
-            $download.Downloadfile("https://github.com/microsoft/winget-cli/releases/download/v1.3.2091/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
-            Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-            [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Installing from Microsoft Store..."
+            Write-Host -NoNewline "Installing Acrobat Reader DC..."
             winget install  "Adobe Acrobat Reader DC" --source msstore --accept-package-agreements --accept-source-agreements
-            <# offline installer
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
-            #Invoke-WebRequest -Uri 'http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe' -OutFile "$tmppath\AcroReadDC.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\AcroReadDC.exe" -Wait
-            #>
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
             Write-Host -NoNewline "Download launcher..."
@@ -128,14 +120,10 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $download.Downloadfile("https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_7_2/WG-MVPN-SSL_12_7_2.exe", "C:\Users\Public\Desktop\WatchGuard.exe")
             Write-Host -ForegroundColor Green " DONE"
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
-        } elseif ($item -eq 'WinDirStat') {
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://windirstat.mirror.wearetriple.com//wds_current_setup.exe", "$tmppath\WinDirStat.exe")
-            #Invoke-WebRequest -Uri 'https://windirstat.mirror.wearetriple.com//wds_current_setup.exe' -OutFile "$tmppath\WinDirStat.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\WinDirStat.exe" -Wait
-            Write-Host -ForegroundColor Green " DONE"   
+        } elseif ($item -eq 'TreeSize') {
+            Write-Host -NoNewline "Installing TreeSize Free..."
+            winget install  "TreeSize Free" --source msstore --accept-package-agreements --accept-source-agreements
+            Write-Host -ForegroundColor Green " DONE"    
         } elseif ($item -eq '7ZIP') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
