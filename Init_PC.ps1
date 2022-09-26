@@ -66,7 +66,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Installing from Microsoft Store..."
-            winget install  "Adobe Acrobat Reader DC" --source msstore
+            winget install  "Adobe Acrobat Reader DC" --source msstore --accept-package-agreements --accept-source-agreements
             <# offline installer
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("http://ardownload.adobe.com/pub/adobe/reader/win/AcrobatDC/1900820071/AcroRdrDC1900820071_it_IT.exe", "$tmppath\AcroReadDC.exe")
