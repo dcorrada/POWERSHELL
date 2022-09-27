@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 21.08.1
+Version...: 22.09.1
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user
@@ -42,7 +42,7 @@ Connect-MsolService
 $Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" } | Sort-Object DisplayName
 
 # initialize dataframe for collecting data
-$local_array = @()
+$parseddata = @{}
 
 $tot = $Users.Count
 $usrcount = 0
@@ -57,33 +57,84 @@ foreach ($User in $Users) {
     $licenses = (Get-MsolUser -UserPrincipalName $username).Licenses.AccountSku | Sort-Object SkuPartNumber
     if ($licenses.Count -ge 1) { # at least one license
         foreach ($license in $licenses) {
-            $licenselist = $license.SkuPartNumber
-            
-            # initialize record for collecting data
-            $local_hash = [ordered]@{ 
-                Fullname = $fullname;
-                Username = $username;
-                Licenses = $licenselist
+            $license = $license.SkuPartNumber
+            $splitted = $fullname.Split(' ')
+            $parseddata[$username] = @{
+                'nome' = $splitted[0]
+                'cognome' = $splitted[1]
+                'email' = $username
+                'licenza' = ''
+                'pluslicenza' = ''
+                'start' = ''
             }
 
-            # update dataframe
-            $local_array += $local_hash
+            if ($license -match "O365_BUSINESS_PREMIUM") {
+                $parseddata[$username].licenza += "*Standard"
+            } elseif ($license -match "O365_BUSINESS_ESSENTIALS") {
+                $parseddata[$username].licenza += "*Basic"
+            } elseif ($license -match "EXCHANGESTANDARD") {
+                $parseddata[$username].licenza += "*Exchange"   
+            } else {
+                $parseddata[$username].pluslicenza += "*$license"
+            }
         }
     }
 }
 
-# output dataframe to a CSV file
+# import the AzureAD module
+$ErrorActionPreference= 'Stop'
+try {
+    Import-Module AzureAD
+} catch {
+    Install-Module AzureAD -Confirm:$False -Force
+    Import-Module AzureAD
+}
+$ErrorActionPreference= 'Inquire'
+
+# connect to AzureAD
+Connect-AzureAD
+
+Clear-Host
+Write-Host -ForegroundColor Yellow '*** RICERCA CREAZIONE ACCOUNT ***'
+Start-Sleep 2
+
+foreach ($User in $Users) {
+    $username = $User.UserPrincipalName
+    $plans = (Get-AzureADUser -SearchString $username).AssignedPlans
+
+    Write-Host -NoNewline "Looking account creation for $username... "
+
+    foreach ($record in $plans) {
+        if (($record.Service -eq 'MicrosoftOffice') -and ($record.CapabilityStatus -eq 'Enabled')){
+            $started = $record.AssignedTimestamp | Get-Date -format "yyyy/MM/dd"
+            if ($parseddata[$username].start -eq '') {
+                $parseddata[$username].start = $started
+            } elseif ($started -lt $parseddata[$username].start) {
+                $parseddata[$username].start = $started
+            }
+        }
+    }
+    
+    Write-Host -ForegroundColor Green 'DONE'
+}
+
 $outfile = "C:\Users\$env:USERNAME\Desktop\Licenses.csv"
-Write-Host -NoNewline "Writing to $outfile... "
+Write-Host -NoNewline "`n`nWriting to $outfile... "
 
-$header = @($local_array[0].Keys)
-$new_string = [system.String]::Join(";", $header)
-$new_string | Out-File $outfile -Encoding ASCII -Append
+'NOME;COGNOME;EMAIL;DATA;LICENZA;PLUS' | Out-File $outfile -Encoding ASCII -Append
 
-foreach ($item in $local_array) {
-    $record = @($item.Values)
-    $new_string = [system.String]::Join(";", $record)
+foreach ($item in $parseddata.Keys) {
+    $new_record = @(
+        $parseddata[$item].nome,
+        $parseddata[$item].cognome,
+        $parseddata[$item].email,
+        $parseddata[$item].start,
+        $parseddata[$item].licenza,
+        $parseddata[$item].pluslicenza
+    )
+    $new_string = [system.String]::Join(";", $new_record)
     $new_string | Out-File $outfile -Encoding ASCII -Append
 }
 
-Write-Host "DONE"
+Write-Host -ForegroundColor Green "DONE"
+Pause
