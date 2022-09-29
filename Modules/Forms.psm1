@@ -53,8 +53,6 @@ function OKButton {
     $obj.DialogResult = [System.Windows.Forms.DialogResult]::OK
     $form.AcceptButton = $obj
     $form.Controls.Add($obj)
-
-    return $obj
 }
 Export-ModuleMember -Function OKButton
 
