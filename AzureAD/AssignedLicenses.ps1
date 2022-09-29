@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 22.09.1
+Version...: 22.09.2
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user
@@ -22,6 +22,122 @@ $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
 $ErrorActionPreference= 'Inquire'
 
+# get working directory
+$fullname = $MyInvocation.MyCommand.Path
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AssignedLicenses\.ps1$" > $null
+$workdir = $matches[1]
+
+# graphical stuff
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+Import-Module -Name "$workdir\Modules\Forms.psm1"
+
+# the db files
+$dbfile = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv.AES"
+$dbfile_unlocked = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv"
+
+Import-Module -Name "$workdir\Modules\FileCryptography.psm1"
+if (Test-Path $dbfile -PathType Leaf) {
+    # reading current key
+    $adialog = FormBase -w 400 -h 200 -text "UNLOCK DB"
+    Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Enter the key for accessing to DB file" | Out-Null
+    $currentkey = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text ''
+    OKButton -form $adialog -x 100 -y 100 -text "Ok" | Out-Null
+    $result = $adialog.ShowDialog()
+
+    # unlocking DB file
+    $ErrorActionPreference= 'Stop'
+    Try {
+        $chiave = ConvertTo-SecureString $currentkey.Text -AsPlainText -Force
+        Unprotect-File $dbfile -Algorithm AES -Key $chiave -RemoveSource | Out-Null
+        Write-Host -ForegroundColor Green "*** ACCESS GRANTED ***"
+        $ErrorActionPreference= 'Inquire'
+    }
+    Catch {
+        Write-Host -ForegroundColor Red "*** AUTHENTICATION ERROR, aborting ***"
+        # Write-Output "`nError: $($error[0].ToString())"
+        Pause
+        exit
+    }
+} else {
+    # creating DB file
+    $adialog = FormBase -w 400 -h 300 -text "DB INIT"
+    Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Initialize your DB as follows" | Out-Null
+    $dbcontent = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 150 -text ''
+    $dbcontent.Multiline = $true;
+    $dbcontent.Text = @'
+user1@foobar.baz;password1
+user2@foobar.baz;password2
+'@
+    $dbcontent.AcceptsReturn = $true
+    OKButton -form $adialog -x 100 -y 220 -text "Ok" | Out-Null
+    $result = $adialog.ShowDialog()
+     'USR;PWD' | Out-File $dbfile_unlocked -Encoding ASCII -Append
+    $dbcontent.Text | Out-File $dbfile_unlocked -Encoding ASCII -Append
+}
+
+# reading DB file
+$filecontent = Get-Content -Path $dbfile_unlocked
+$allowed = @{}
+foreach ($newline in $filecontent) {
+    if ($newline -ne 'USR;PWD') {
+        ($username, $passwd) = $newline.Split(';')
+        $allowed[$username] = $passwd
+    }
+}
+
+# locking DB file
+$newkey = New-CryptographyKey -Algorithm AES -AsPlainText
+$securekey = ConvertTo-SecureString $newkey -AsPlainText -Force
+$ErrorActionPreference= 'Stop'
+Try {
+    Protect-File $dbfile_unlocked -Algorithm AES -Key $securekey | Out-Null
+    Remove-Item -Path $dbfile_unlocked
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    Write-Host -ForegroundColor Red "*** ERROR LOCKING ***"
+    Write-Host -ForegroundColor Yellow "[$dbfile_unlocked] was not crypted"
+    # Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+
+# show crypto key
+$adialog = FormBase -w 400 -h 220 -text "LOCK DB"
+Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "The key for accessing to DB file will be" | Out-Null
+TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
+Label -form $adialog -x 20 -y 80 -w 500 -h 30 -text "Cut 'n' Paste such string somewhere" | Out-Null
+OKButton -form $adialog -x 100 -y 130 -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
+
+# select the account to access
+$adialog = FormBase -w 350 -h (($allowed.Count * 30) + 120) -text "SELECT AN ACCOUNT"
+$they = 20
+$choices = @()
+foreach ($username in $allowed.Keys) {
+    if ($they -eq 20) {
+        $isfirst = $true
+    } else {
+        $isfirst = $false
+    }
+    $choices += RadioButton -form $adialog -x 20 -y $they -checked $isfirst -text $username
+    $they += 30
+}
+OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
+
+# get credentials for accessing
+foreach ($item in $choices) {
+    if ($item.Checked) {
+        $usr = $item.Text
+        $plain_pwd = $allowed[$usr]
+    }
+}
+$pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
+$credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
+
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
 try {
@@ -33,7 +149,17 @@ try {
 $ErrorActionPreference= 'Inquire'
 
 # connect to Tenant
-Connect-MsolService
+$ErrorActionPreference= 'Stop'
+Try {
+    Connect-MsolService -Credential $credits
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    Write-Host -ForegroundColor Red "*** ERROR ACCESSING TENANT ***"
+    # Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
 
 # get all accounts available 
 #Get-MsolAccountSku
@@ -46,10 +172,11 @@ $parseddata = @{}
 
 $tot = $Users.Count
 $usrcount = 0
+$parsebar = ProgressBar
+Clear-Host
+Write-Host -NoNewline "STEP01 - Collecting..."
 foreach ($User in $Users) {
     $usrcount ++
-    Clear-Host
-    Write-Host "Processing $usrcount users out of $tot..."
 
     $username = $User.UserPrincipalName
     $fullname = $User.DisplayName
@@ -79,7 +206,24 @@ foreach ($User in $Users) {
             }
         }
     }
+
+    # progress
+    $percent = ($usrcount / $tot)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
+    $formattato = '{0:0.0}' -f $percent
+    [int32]$progress = $percent   
+    $parsebar[2].Text = ("Record {0} out of {1} parsed [{2}%]" -f ($usrcount, $tot, $formattato))
+    if ($progress -ge 100) {
+        $parsebar[1].Value = 100
+    } else {
+        $parsebar[1].Value = $progress
+    }
+    [System.Windows.Forms.Application]::DoEvents()
 }
+Write-Host -ForegroundColor Green " DONE"
+$parsebar[0].Close()
 
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
@@ -92,17 +236,29 @@ try {
 $ErrorActionPreference= 'Inquire'
 
 # connect to AzureAD
-Connect-AzureAD
+$ErrorActionPreference= 'Stop'
+Try {
+    Connect-AzureAD -Credential $credits
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    Write-Host -ForegroundColor Red "*** ERROR ACCESSING TENANT ***"
+    # Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
 
-Clear-Host
-Write-Host -ForegroundColor Yellow '*** RICERCA CREAZIONE ACCOUNT ***'
 Start-Sleep 2
-
+$tot = $Users.Count
+$usrcount = 0
+$parsebar = ProgressBar
+Clear-Host
+Write-Host -NoNewline "STEP02 - Finalizing..."
 foreach ($User in $Users) {
+    $usrcount ++
+
     $username = $User.UserPrincipalName
     $plans = (Get-AzureADUser -SearchString $username).AssignedPlans
-
-    Write-Host -NoNewline "Looking account creation for $username... "
 
     foreach ($record in $plans) {
         if (($record.Service -eq 'MicrosoftOffice') -and ($record.CapabilityStatus -eq 'Enabled')){
@@ -115,14 +271,53 @@ foreach ($User in $Users) {
         }
     }
     
-    Write-Host -ForegroundColor Green 'DONE'
+    # progress
+    $percent = ($usrcount / $tot)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
+    $formattato = '{0:0.0}' -f $percent
+    [int32]$progress = $percent   
+    $parsebar[2].Text = ("Record {0} out of {1} parsed [{2}%]" -f ($usrcount, $tot, $formattato))
+    if ($progress -ge 100) {
+        $parsebar[1].Value = 100
+    } else {
+        $parsebar[1].Value = $progress
+    }
+    [System.Windows.Forms.Application]::DoEvents()
 }
+Write-Host -ForegroundColor Green " DONE"
+$parsebar[0].Close()
 
-$outfile = "C:\Users\$env:USERNAME\Desktop\Licenses.csv"
-Write-Host -NoNewline "`n`nWriting to $outfile... "
-
-'NOME;COGNOME;EMAIL;DATA;LICENZA;PLUS' | Out-File $outfile -Encoding ASCII -Append
-
+# writing output file
+# see https://techexpert.tips/powershell/powershell-creating-excel-file/
+Clear-Host
+Write-Host -NoNewline "Writing output file... "
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+$OpenFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+$OpenFileDialog.Title = "Salva File"
+$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
+$OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+$OpenFileDialog.filename = 'licenses'
+$OpenFileDialog.ShowDialog() | Out-Null
+$outfile = $OpenFileDialog.filename
+$Myexcel = New-Object -ComObject excel.application
+$Myexcel.visible = $false
+$Myworkbook = $Myexcel.workbooks.add()
+$Sheet1 = $Myworkbook.worksheets.item(1)
+$Sheet1.name = "Assigned_Licenses"
+$i = 1
+foreach ($item in ('NOME','COGNOME','EMAIL','DATA','LICENZA','PLUS')) {
+    $Sheet1.cells.item(1,$i) = $item
+    $i++
+}
+$Sheet1.Range("A1:F1").font.size = 12
+$Sheet1.Range("A1:F1").font.bold = $true
+$Sheet1.Range("A1:F1").font.ColorIndex = 2
+$Sheet1.Range("A1:F1").interior.colorindex = 1
+$i = 2
+$totrec = $parseddata.Keys.Count
+$parsebar = ProgressBar
 foreach ($item in $parseddata.Keys) {
     $new_record = @(
         $parseddata[$item].nome,
@@ -132,9 +327,33 @@ foreach ($item in $parseddata.Keys) {
         $parseddata[$item].licenza,
         $parseddata[$item].pluslicenza
     )
-    $new_string = [system.String]::Join(";", $new_record)
-    $new_string | Out-File $outfile -Encoding ASCII -Append
-}
+    $j = 1
+    foreach ($value in $new_record) {
+        $Sheet1.cells.item($i,$j) = $value
+        $j++
+    }
+    $i++
 
+    # progress
+    $percent = (($i-1) / $totrec)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
+    $formattato = '{0:0.0}' -f $percent
+    [int32]$progress = $percent   
+    $parsebar[2].Text = ("Writing {0} out of {1} records [{2}%]" -f (($i-1), $totrec, $formattato))
+    if ($progress -ge 100) {
+        $parsebar[1].Value = 100
+    } else {
+        $parsebar[1].Value = $progress
+    }
+    [System.Windows.Forms.Application]::DoEvents()    
+}
+$parsebar[0].Close()
+$Myworkbook.Activesheet.Cells.EntireColumn.Autofit()
+$Myexcel.displayalerts = $false
+$Myworkbook.Saveas($outfile)
+$Myexcel.displayalerts = $true
+$Myexcel.Quit()
 Write-Host -ForegroundColor Green "DONE"
 Pause
