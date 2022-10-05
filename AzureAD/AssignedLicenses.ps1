@@ -33,19 +33,43 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
+# function for killing Outlook instances
+function OutlookKiller {
+    $ErrorActionPreference= 'SilentlyContinue'
+    $outproc = Get-Process outlook
+    if ($outproc -ne $null) {
+        $ErrorActionPreference= 'Stop'
+        Try {
+            Stop-Process -ID $outproc.Id -Force
+            Start-Sleep 2
+        }
+        Catch { 
+            [System.Windows.MessageBox]::Show("Check out that all Oulook processes have been closed before go ahead",'TASK MANAGER','Ok','Warning') > $null
+        }
+    }
+    $ErrorActionPreference= 'Inquire'
+}
+
 # the db files
 $dbfile = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv.AES"
 $dbfile_unlocked = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv"
 
+# reading current key
+$adialog = FormBase -w 400 -h 230 -text "UNLOCK DB"
+RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Enter the key for accessing to DB file" | Out-Null
+$currentkey = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text ''
+$cleanDB = RadioButton -form $adialog -checked $false -x 20 -y 80 -w 500 -h 30 -text "Clean existing DB file"
+OKButton -form $adialog -x 100 -y 130 -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
+if ($cleanDB.Checked -eq $true) {
+    $answ = [System.Windows.MessageBox]::Show("Really delete DB file?",'DELETE','YesNo','Warning')
+    if ($answ -eq "Yes") {    
+        Remove-Item -Path $dbfile
+    }
+}
+
 Import-Module -Name "$workdir\Modules\FileCryptography.psm1"
 if (Test-Path $dbfile -PathType Leaf) {
-    # reading current key
-    $adialog = FormBase -w 400 -h 200 -text "UNLOCK DB"
-    Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Enter the key for accessing to DB file" | Out-Null
-    $currentkey = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text ''
-    OKButton -form $adialog -x 100 -y 100 -text "Ok" | Out-Null
-    $result = $adialog.ShowDialog()
-
     # unlocking DB file
     $ErrorActionPreference= 'Stop'
     Try {
@@ -105,12 +129,48 @@ Catch {
 }
 
 # show crypto key
-$adialog = FormBase -w 400 -h 220 -text "LOCK DB"
+$adialog = FormBase -w 400 -h 250 -text "LOCK DB"
 Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "The key for accessing to DB file will be" | Out-Null
 TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
-Label -form $adialog -x 20 -y 80 -w 500 -h 30 -text "Cut 'n' Paste such string somewhere" | Out-Null
-OKButton -form $adialog -x 100 -y 130 -text "Ok" | Out-Null
+Label -form $adialog -x 20 -y 80 -w 500 -h 30 -text "Cut 'n' Paste such string somewhere, otherwise..." | Out-Null
+$sendme = CheckBox -form $adialog -x 20 -y 110 -checked $false -text "send me an email (Outook)"
+OKButton -form $adialog -x 100 -y 160 -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
+
+# send crypto key
+if ($sendme.Checked -eq $true) {
+    Write-Host -NoNewline "Sending crypto key..."
+    OutlookKiller
+    $ErrorActionPreference= 'Stop'
+    Try {
+        $outlook = New-Object -ComObject Outlook.Application
+        $namespace = $outlook.GetNameSpace("MAPI")
+        $recipient = $namespace.Folders.GetFirst().Name
+        $email = $outlook.CreateItem(0)
+        $email.To = "$recipient"
+        $email.Subject = "Your Crypto Key"
+        $email.Body = "$newkey"
+        $email.Send()
+        $Outlook.Quit()
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
+        Start-Sleep 3
+        OutlookKiller
+        Write-Host -ForegroundColor Green " DONE"
+    }
+    Catch {
+        Write-Host -ForegroundColor Red " FAILED"
+        # Write-Output "`nError: $($error[0].ToString())"
+        $adialog = FormBase -w 400 -h 170 -text "WARNING"
+        Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Your crypto key was not sent" | Out-Null
+        TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
+        OKButton -form $adialog -x 100 -y 80 -text "Ok" | Out-Null
+        $result = $adialog.ShowDialog()
+    }
+    $ErrorActionPreference= 'Inquire'
+    Start-Process outlook
+} else {
+    Write-Host -ForegroundColor Blue "Send crypto key by email disabled"
+}
 
 # select the account to access
 $adialog = FormBase -w 350 -h (($allowed.Count * 30) + 120) -text "SELECT AN ACCOUNT"
@@ -355,5 +415,6 @@ $Myexcel.displayalerts = $false
 $Myworkbook.Saveas($outfile)
 $Myexcel.displayalerts = $true
 $Myexcel.Quit()
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
 Write-Host -ForegroundColor Green "DONE"
 Pause
