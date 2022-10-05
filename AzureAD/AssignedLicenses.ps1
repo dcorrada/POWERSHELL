@@ -147,7 +147,15 @@ if ($sendme.Checked -eq $true) {
     Try {
         $outlook = New-Object -ComObject Outlook.Application
         $namespace = $outlook.GetNameSpace("MAPI")
-        $recipient = $namespace.Folders.GetFirst().Name
+        #$recipient = $namespace.Folders.GetFirst().Name
+
+
+        $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
+        $InboxDef = $namespace.GetDefaultFolder($olFolders::olFolderInBox)
+        $InboxDef.FullFolderPath -match "^\\\\(.*)\\Inbox$" > $null
+        $recipient = $matches[1]
+        
+        
         $email = $outlook.CreateItem(0)
         $email.To = "$recipient"
         $email.Subject = "Your Crypto Key"
