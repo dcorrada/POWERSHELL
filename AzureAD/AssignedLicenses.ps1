@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 22.09.2
+Version...: 22.10.1
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user
@@ -147,15 +147,10 @@ if ($sendme.Checked -eq $true) {
     Try {
         $outlook = New-Object -ComObject Outlook.Application
         $namespace = $outlook.GetNameSpace("MAPI")
-        #$recipient = $namespace.Folders.GetFirst().Name
-
-
         $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
         $InboxDef = $namespace.GetDefaultFolder($olFolders::olFolderInBox)
         $InboxDef.FullFolderPath -match "^\\\\(.*)\\Inbox$" > $null
         $recipient = $matches[1]
-        
-        
         $email = $outlook.CreateItem(0)
         $email.To = "$recipient"
         $email.Subject = "Your Crypto Key"
