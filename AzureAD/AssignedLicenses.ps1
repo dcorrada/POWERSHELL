@@ -142,6 +142,7 @@ $result = $adialog.ShowDialog()
 # send crypto key
 if ($sendme.Checked -eq $true) {
     Write-Host -NoNewline "Sending crypto key..."
+    [System.Windows.MessageBox]::Show("Click Ok to close Outlook",'CLOSE','Ok','Warning') | Out-Null
     OutlookKiller
     $ErrorActionPreference= 'Stop'
     Try {
@@ -360,7 +361,7 @@ Clear-Host
 Write-Host -NoNewline "Writing output file... "
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-$OpenFileDialog.Title = "Salva File"
+$OpenFileDialog.Title = "Save File"
 $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
 $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
 $OpenFileDialog.filename = 'licenses'
@@ -372,7 +373,7 @@ $Myworkbook = $Myexcel.workbooks.add()
 $Sheet1 = $Myworkbook.worksheets.item(1)
 $Sheet1.name = "Assigned_Licenses"
 $i = 1
-foreach ($item in ('NOME','COGNOME','EMAIL','DATA','LICENZA','PLUS')) {
+foreach ($item in ('NAME','SURNAME','EMAIL','DATE','LICENSE','PLUS')) {
     $Sheet1.cells.item(1,$i) = $item
     $i++
 }
