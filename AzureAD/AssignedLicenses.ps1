@@ -158,14 +158,17 @@ if ($sendme.Checked -eq $true) {
         $email.Body = "$newkey"
         $email.Send()
         $Outlook.Quit()
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
-        Start-Sleep 3
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null  
         OutlookKiller
+        for ($i = 0; $i -lt 5; $i++) {
+            Write-Host -NoNewline '.'
+            Start-Sleep 1
+        }
         Write-Host -ForegroundColor Green " DONE"
     }
     Catch {
         Write-Host -ForegroundColor Red " FAILED"
-        # Write-Output "`nError: $($error[0].ToString())"
+        # Write-Output "`nError: $($error[0].ToString()"
         $adialog = FormBase -w 400 -h 170 -text "WARNING"
         Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Your crypto key was not sent" | Out-Null
         TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
