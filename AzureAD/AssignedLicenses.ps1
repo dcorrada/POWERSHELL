@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 22.10.1
+Version...: 22.10.2
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user
@@ -247,6 +247,7 @@ foreach ($User in $Users) {
     $username = $User.UserPrincipalName
     $fullname = $User.DisplayName
 
+    # for the AccountSku list see https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference 
     $licenses = (Get-MsolUser -UserPrincipalName $username).Licenses.AccountSku | Sort-Object SkuPartNumber
     if ($licenses.Count -ge 1) { # at least one license
         foreach ($license in $licenses) {
@@ -267,6 +268,12 @@ foreach ($User in $Users) {
                 $parseddata[$username].licenza += "*Basic"
             } elseif ($license -match "EXCHANGESTANDARD") {
                 $parseddata[$username].licenza += "*Exchange"   
+            } elseif ($license -match "ENTERPRISEPACKPLUS_FACULTY") {
+                $parseddata[$username].licenza += "*A3_EnterprisePackPlus"
+            } elseif ($license -match "M365EDU_A3_FACULTY") {
+                $parseddata[$username].licenza += "*A3_EDU"
+            } elseif ($license -match "STANDARDWOFFPACK_FACULTY") {
+                $parseddata[$username].licenza += "*A1"
             } else {
                 $parseddata[$username].pluslicenza += "*$license"
             }
