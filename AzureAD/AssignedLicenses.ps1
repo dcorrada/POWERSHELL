@@ -304,7 +304,7 @@ $ErrorActionPreference= 'Inquire'
 # connect to AzureAD
 $ErrorActionPreference= 'Stop'
 Try {
-    Connect-AzureAD -Credential $credits
+    Connect-AzureAD -Credential $credits | Out-Null
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
@@ -327,7 +327,7 @@ foreach ($User in $Users) {
     $plans = (Get-AzureADUser -SearchString $username).AssignedPlans
 
     foreach ($record in $plans) {
-        if (($record.Service -eq 'MicrosoftOffice') -and ($record.CapabilityStatus -eq 'Enabled')){
+        if ((($record.Service -eq 'MicrosoftOffice') -or ($record.Service -eq 'exchange')) -and ($record.CapabilityStatus -eq 'Enabled')){
             $started = $record.AssignedTimestamp | Get-Date -format "yyyy/MM/dd"
             if ($parseddata[$username].start -eq '') {
                 $parseddata[$username].start = $started
