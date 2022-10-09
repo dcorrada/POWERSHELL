@@ -59,7 +59,7 @@ $namespace = $outlook.GetNameSpace("MAPI")
 $namespace.Folders | Select Name 
 
 # lista delle cartelle dell'account di posta e del PST
-$namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders | Select Name 
+$namespace.Folders.Item('dario.corrada@gmail.com').Folders | Select Name 
 $namespace.Folders.Item('Archivio_Posta').Folders | Select Name 
 
 #>
@@ -76,15 +76,15 @@ foreach ($from_folder in $SourceDest.Keys) {
     Write-Host -ForegroundColor Yellow "`nDA [$from_folder] A [$to_folder]"
     
     # ciclo nuovo, da testare
-    while ($namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder").Items.Count -gt 0) {
-        $subject = $namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder").Items[1].Subject
+    while ($namespace.Folders.Item('dario.corrada@gmail.com').Folders.Item("$from_folder").Items.Count -gt 0) {
+        $subject = $namespace.Folders.Item('dario.corrada@gmail.com').Folders.Item("$from_folder").Items[1].Subject
         Write-Host "Backup di <$subject>"
-        $namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder").Items[1].Move($namespace.Folders.Item('Archivio_Posta').Folders.Item("$to_folder"))
+        $namespace.Folders.Item('dario.corrada@gmail.com').Folders.Item("$from_folder").Items[1].Move($namespace.Folders.Item('Archivio_Posta').Folders.Item("$to_folder"))
         Start-Sleep 3
     }
 
     <# ciclo vecchio, non funzionante
-    $Source = $namespace.Folders.Item('dario.corrada@agmsolutions.net').Folders.Item("$from_folder")
+    $Source = $namespace.Folders.Item('dario.corrada@gmail.com').Folders.Item("$from_folder")
     $Dest = $namespace.Folders.Item('Archivio_Posta').Folders.Item("$to_folder")
     $Messages = $Source.Items
     foreach ($msg in $Messages) {
