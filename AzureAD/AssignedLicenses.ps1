@@ -150,7 +150,7 @@ if ($sendme.Checked -eq $true) {
         $namespace = $outlook.GetNameSpace("MAPI")
         $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
         $InboxDef = $namespace.GetDefaultFolder($olFolders::olFolderInBox)
-        $InboxDef.FullFolderPath -match "^\\\\(.*)\\Inbox$" > $null
+        $InboxDef.FullFolderPath -match "^\\\\(.*@.*)\\(Inbox|Posta)" > $null
         $recipient = $matches[1]
         $email = $outlook.CreateItem(0)
         $email.To = "$recipient"
