@@ -38,20 +38,21 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 $tmppath = "C:\TEMPSOFTWARE"
 New-Item -ItemType directory -Path $tmppath > $null
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 455 -text "SOFTWARES"
+$form_panel = FormBase -w 350 -h 485 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
-$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Revo Uninstaller"
-$swlist['Skype'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Skype"
+$swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Open Hardware Monitor"
+$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Revo Uninstaller"
+$swlist['Skype'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Skype"
 $swlist['Skype'].Checked = $false
-$swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Speccy"
-$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Supremo"
-$swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "TreeSize"
-$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "WatchGuard VPN"
+$swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
+$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
+$swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
+$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['WatchGuard'].Checked = $false
-$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 340 -text "Ok"
+$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
+OKButton -form $form_panel -x 100 -y 370 -text "Ok"
 $result = $form_panel.ShowDialog()
 
 $download = New-Object net.webclient
@@ -131,6 +132,14 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
+            Write-Host -ForegroundColor Green " DONE"   
+        } elseif ($item -eq 'TempMonitor') {
+            Write-Host -NoNewline "Download software..."
+            $download.Downloadfile("https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip", "$tmppath\openhardwaremonitor-v0.9.6.zip")
+            #Invoke-WebRequest -Uri 'https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip' -OutFile "$tmppath\openhardwaremonitor-v0.9.6.zip"
+            Write-Host -ForegroundColor Green " DONE"
+            Write-Host -NoNewline "Install software..."
+            Expand-Archive "$tmppath\openhardwaremonitor-v0.9.6.zip" -DestinationPath 'C:\'
             Write-Host -ForegroundColor Green " DONE"   
         }
     }
