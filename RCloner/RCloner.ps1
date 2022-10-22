@@ -45,6 +45,43 @@ $OpenFileDialog.filter = 'Plain text file | *.*'
 $OpenFileDialog.ShowDialog() | Out-Null
 $filter_list = $OpenFileDialog.filename # plain text file containing filtering rules
 
+# get remotes list
+Write-Host -NoNewline "Looking at remotes list... "
+$pinfo = New-Object System.Diagnostics.ProcessStartInfo
+$pinfo.FileName = $rclone
+$pinfo.RedirectStandardError = $true
+$pinfo.RedirectStandardOutput = $true
+$pinfo.UseShellExecute = $false
+$pinfo.Arguments = "listremotes"
+$p = New-Object System.Diagnostics.Process
+$p.StartInfo = $pinfo
+$p.Start() | Out-Null
+$p.WaitForExit()
+$stdout = $p.StandardOutput.ReadToEnd()
+$stderr = $p.StandardError.ReadToEnd()
+Write-Host -ForegroundColor Green "DONE"
+$splitted = $stdout.Split("`n")
+$adialog = FormBase -w 275 -h ((($splitted.Count-1) * 30) + 120) -text "SELECT A REMOTE"
+$they = 20
+$choices = @()
+foreach ($remote in $splitted) {
+    if ($remote -match ":$") {
+        if ($they -eq 20) {
+            $isfirst = $true
+        } else {
+            $isfirst = $false
+        }
+        $choices += RadioButton -form $adialog -x 20 -y $they -checked $isfirst -text $remote
+        $they += 30 
+    }
+}
+OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
+foreach ($item in $choices) {
+    if ($item.Checked) {
+        $selected_remote = $item.Text
+    }
+}
 
 # source and target def
 $form = FormBase -w 400 -h 200 -text 'PATHS'
@@ -66,14 +103,18 @@ $form.Controls.Add($label2)
 $rmtpath = New-Object System.Windows.Forms.TextBox
 $rmtpath.Location = New-Object System.Drawing.Point(90,60)
 $rmtpath.Size = New-Object System.Drawing.Size(250,30)
-$rmtpath.Text = 'Melampo:/media/CAMUS/BACKUP_AGM/'
+$rmtpath.Text = '[write here your path]'
 $form.Controls.Add($rmtpath)
 $OKButton = New-Object System.Windows.Forms.Button
 OKButton -form $form -x 100 -y 100 -text "Ok"
 $form.Topmost = $true
 $result = $form.ShowDialog()
 $source = $srcpath.Text
-$target = $rmtpath.Text
+$target = -join($selected_remote, $rmtpath.Text)
+if ($target -match '[write here your path]') {
+    [System.Windows.MessageBox]::Show("No defined path for [$selected_remote]",'ERROR','Ok','Error') > $null
+    Exit
+}
 <#
 The script process only one volume for each run, defined by $source variable.
 Prior to define the destination path ($target) you need to configure the remote
