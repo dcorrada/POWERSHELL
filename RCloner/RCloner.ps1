@@ -111,7 +111,7 @@ $form.Topmost = $true
 $result = $form.ShowDialog()
 $source = $srcpath.Text
 $target = -join($selected_remote, $rmtpath.Text)
-if ($target -match '[write here your path]') {
+if ($target -match 'write here your path') {
     [System.Windows.MessageBox]::Show("No defined path for [$selected_remote]",'ERROR','Ok','Error') > $null
     Exit
 }
