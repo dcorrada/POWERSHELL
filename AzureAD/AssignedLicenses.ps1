@@ -227,8 +227,27 @@ Catch {
     exit
 }
 
-# get all accounts available 
-#Get-MsolAccountSku
+# available licenses
+$avail_licenses = @{}
+$get_licenses = Get-MsolAccountSku
+foreach ($license in $get_licenses) {
+    $label = $license.AccountSkuId
+    $avail = $license.ActiveUnits - $license.ConsumedUnits
+    $avail_licenses[$label] = $avail
+}
+$adialog = FormBase -w 400 -h ((($avail_licenses.Count) * 30) + 120) -text "AVAILABLE LICENSES"
+$they = 20
+foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
+    $string = $item.Name + " = " + $item.Value
+    $label = New-Object System.Windows.Forms.Label
+    $label.Location = New-Object System.Drawing.Point(10,$they)
+    $label.Size = New-Object System.Drawing.Size(350,20)
+    $label.Text = $string
+    $adialog.Controls.Add($label)
+    $they += 30
+}
+OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
 
 # retrieve all users that are licensed
 $Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" } | Sort-Object DisplayName
