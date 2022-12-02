@@ -1,6 +1,6 @@
 <#
 Name......: drvUpdate_Win10.ps1
-Version...: 20.12.1
+Version...: 22.12.1
 Author....: Dario CORRADA
 
 This script tries to fetch and install (optional) driver updates
