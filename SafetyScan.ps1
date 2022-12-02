@@ -75,6 +75,7 @@ $downbin = 'C:\Users\' + $env:USERNAME + '\Downloads\MSERT.exe'
 if (Test-Path $downbin) {
     Remove-Item $downbin -Force    
 }
+# also available at http://definitionupdates.microsoft.com/download/definitionupdates/safetyscanner/amd64/msert.exe
 $download.DownloadFile('https://go.microsoft.com/fwlink/?LinkId=212732', $downbin)
 #Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?LinkId=212732' -OutFile $downbin
 Write-Host -ForegroundColor Green "DONE`n"

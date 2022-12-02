@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 22.09.2
+Version...: 22.10.2
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user
@@ -33,19 +33,45 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
+# function for killing Outlook instances
+function OutlookKiller {
+    $ErrorActionPreference= 'SilentlyContinue'
+    $outproc = Get-Process outlook
+    if ($outproc -ne $null) {
+        $ErrorActionPreference= 'Stop'
+        Try {
+            Stop-Process -ID $outproc.Id -Force
+            Start-Sleep 2
+        }
+        Catch { 
+            [System.Windows.MessageBox]::Show("Check out that all Oulook processes have been closed before go ahead",'TASK MANAGER','Ok','Warning') > $null
+        }
+    }
+    $ErrorActionPreference= 'Inquire'
+}
+
 # the db files
 $dbfile = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv.AES"
 $dbfile_unlocked = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv"
 
-Import-Module -Name "$workdir\Modules\FileCryptography.psm1"
 if (Test-Path $dbfile -PathType Leaf) {
     # reading current key
-    $adialog = FormBase -w 400 -h 200 -text "UNLOCK DB"
-    Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Enter the key for accessing to DB file" | Out-Null
+    $adialog = FormBase -w 400 -h 230 -text "UNLOCK DB"
+    RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Enter the key for accessing to DB file" | Out-Null
     $currentkey = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text ''
-    OKButton -form $adialog -x 100 -y 100 -text "Ok" | Out-Null
+    $cleanDB = RadioButton -form $adialog -checked $false -x 20 -y 80 -w 500 -h 30 -text "Clean existing DB file"
+    OKButton -form $adialog -x 100 -y 130 -text "Ok" | Out-Null
     $result = $adialog.ShowDialog()
+    if ($cleanDB.Checked -eq $true) {
+        $answ = [System.Windows.MessageBox]::Show("Really delete DB file?",'DELETE','YesNo','Warning')
+        if ($answ -eq "Yes") {    
+            Remove-Item -Path $dbfile
+        }
+    }
+}
 
+Import-Module -Name "$workdir\Modules\FileCryptography.psm1"
+if (Test-Path $dbfile -PathType Leaf) {
     # unlocking DB file
     $ErrorActionPreference= 'Stop'
     Try {
@@ -105,12 +131,52 @@ Catch {
 }
 
 # show crypto key
-$adialog = FormBase -w 400 -h 220 -text "LOCK DB"
+$adialog = FormBase -w 400 -h 250 -text "LOCK DB"
 Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "The key for accessing to DB file will be" | Out-Null
 TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
-Label -form $adialog -x 20 -y 80 -w 500 -h 30 -text "Cut 'n' Paste such string somewhere" | Out-Null
-OKButton -form $adialog -x 100 -y 130 -text "Ok" | Out-Null
+Label -form $adialog -x 20 -y 80 -w 500 -h 30 -text "Cut 'n' Paste such string somewhere, otherwise..." | Out-Null
+$sendme = CheckBox -form $adialog -x 20 -y 110 -checked $false -text "send me an email (Outook)"
+OKButton -form $adialog -x 100 -y 160 -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
+
+# send crypto key
+if ($sendme.Checked -eq $true) {
+    Write-Host -NoNewline "Sending crypto key..."
+    [System.Windows.MessageBox]::Show("Click Ok to close Outlook",'CLOSE','Ok','Warning') | Out-Null
+    OutlookKiller
+    $ErrorActionPreference= 'Stop'
+    Try {
+        $outlook = New-Object -ComObject Outlook.Application
+        $namespace = $outlook.GetNameSpace("MAPI")
+        $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
+        $InboxDef = $namespace.GetDefaultFolder($olFolders::olFolderInBox)
+        $InboxDef.FullFolderPath -match "^\\\\(.*@.*)\\(Inbox|Posta)" > $null
+        $recipient = $matches[1]
+        $email = $outlook.CreateItem(0)
+        $email.To = "$recipient"
+        $email.Subject = "Your Crypto Key"
+        $email.Body = "$newkey"
+        $email.Send()
+        $Outlook.Quit()
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
+        Start-Sleep 3
+        OutlookKiller
+        Write-Host -ForegroundColor Green " DONE"
+    }
+    Catch {
+        Write-Host -ForegroundColor Red " FAILED"
+        # Write-Output "`nError: $($error[0].ToString())"
+        $adialog = FormBase -w 400 -h 170 -text "WARNING"
+        Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Your crypto key was not sent" | Out-Null
+        TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
+        OKButton -form $adialog -x 100 -y 80 -text "Ok" | Out-Null
+        $result = $adialog.ShowDialog()
+    }
+    $ErrorActionPreference= 'Inquire'
+    Start-Process outlook
+} else {
+    Write-Host -ForegroundColor Blue "Send crypto key by email disabled"
+}
 
 # select the account to access
 $adialog = FormBase -w 350 -h (($allowed.Count * 30) + 120) -text "SELECT AN ACCOUNT"
@@ -161,8 +227,27 @@ Catch {
     exit
 }
 
-# get all accounts available 
-#Get-MsolAccountSku
+# available licenses
+$avail_licenses = @{}
+$get_licenses = Get-MsolAccountSku
+foreach ($license in $get_licenses) {
+    $label = $license.AccountSkuId
+    $avail = $license.ActiveUnits - $license.ConsumedUnits
+    $avail_licenses[$label] = $avail
+}
+$adialog = FormBase -w 400 -h ((($avail_licenses.Count) * 30) + 120) -text "AVAILABLE LICENSES"
+$they = 20
+foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
+    $string = $item.Name + " = " + $item.Value
+    $label = New-Object System.Windows.Forms.Label
+    $label.Location = New-Object System.Drawing.Point(10,$they)
+    $label.Size = New-Object System.Drawing.Size(350,20)
+    $label.Text = $string
+    $adialog.Controls.Add($label)
+    $they += 30
+}
+OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
 
 # retrieve all users that are licensed
 $Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" } | Sort-Object DisplayName
@@ -181,6 +266,7 @@ foreach ($User in $Users) {
     $username = $User.UserPrincipalName
     $fullname = $User.DisplayName
 
+    # for the AccountSku list see https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference 
     $licenses = (Get-MsolUser -UserPrincipalName $username).Licenses.AccountSku | Sort-Object SkuPartNumber
     if ($licenses.Count -ge 1) { # at least one license
         foreach ($license in $licenses) {
@@ -201,6 +287,12 @@ foreach ($User in $Users) {
                 $parseddata[$username].licenza += "*Basic"
             } elseif ($license -match "EXCHANGESTANDARD") {
                 $parseddata[$username].licenza += "*Exchange"   
+            } elseif ($license -match "ENTERPRISEPACKPLUS_FACULTY") {
+                $parseddata[$username].licenza += "*A3_EnterprisePackPlus"
+            } elseif ($license -match "M365EDU_A3_FACULTY") {
+                $parseddata[$username].licenza += "*A3_EDU"
+            } elseif ($license -match "STANDARDWOFFPACK_FACULTY") {
+                $parseddata[$username].licenza += "*A1"
             } else {
                 $parseddata[$username].pluslicenza += "*$license"
             }
@@ -238,7 +330,7 @@ $ErrorActionPreference= 'Inquire'
 # connect to AzureAD
 $ErrorActionPreference= 'Stop'
 Try {
-    Connect-AzureAD -Credential $credits
+    Connect-AzureAD -Credential $credits | Out-Null
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
@@ -261,7 +353,7 @@ foreach ($User in $Users) {
     $plans = (Get-AzureADUser -SearchString $username).AssignedPlans
 
     foreach ($record in $plans) {
-        if (($record.Service -eq 'MicrosoftOffice') -and ($record.CapabilityStatus -eq 'Enabled')){
+        if ((($record.Service -eq 'MicrosoftOffice') -or ($record.Service -eq 'exchange')) -and ($record.CapabilityStatus -eq 'Enabled')){
             $started = $record.AssignedTimestamp | Get-Date -format "yyyy/MM/dd"
             if ($parseddata[$username].start -eq '') {
                 $parseddata[$username].start = $started
@@ -295,7 +387,7 @@ Clear-Host
 Write-Host -NoNewline "Writing output file... "
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-$OpenFileDialog.Title = "Salva File"
+$OpenFileDialog.Title = "Save File"
 $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
 $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
 $OpenFileDialog.filename = 'licenses'
@@ -307,7 +399,7 @@ $Myworkbook = $Myexcel.workbooks.add()
 $Sheet1 = $Myworkbook.worksheets.item(1)
 $Sheet1.name = "Assigned_Licenses"
 $i = 1
-foreach ($item in ('NOME','COGNOME','EMAIL','DATA','LICENZA','PLUS')) {
+foreach ($item in ('NAME','SURNAME','EMAIL','DATE','LICENSE','PLUS')) {
     $Sheet1.cells.item(1,$i) = $item
     $i++
 }
@@ -355,5 +447,6 @@ $Myexcel.displayalerts = $false
 $Myworkbook.Saveas($outfile)
 $Myexcel.displayalerts = $true
 $Myexcel.Quit()
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
 Write-Host -ForegroundColor Green "DONE"
 Pause
