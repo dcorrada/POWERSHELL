@@ -76,6 +76,7 @@ New-Item -ItemType directory -Path "$tmppath\AzureAD" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD' -DestinationPath "$tmppath\AzureAD"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Check_NuGet.ps1' -DestinationPath $tmppath
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'drvUpdate_Win10.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'JoinUser.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Join2Domain.ps1' -DestinationPath $tmppath
@@ -93,6 +94,7 @@ del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Program
 
 New-Item -ItemType file -Path "$tmppath\STEP02.cmd" > $null
 @"
+copy "$tmppath\STEP03.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 PowerShell.exe "& "'$tmppath\Check_NuGet.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Powerize.ps1'
@@ -104,10 +106,16 @@ pause
 PowerShell.exe "& "'$tmppath\AzureAD\CreateMSAccount.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Update_Win10.ps1'
-pause
-rd /s /q "$tmppath"
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP02.cmd"
 "@ | Out-File "$tmppath\STEP02.cmd" -Encoding ASCII -Append
+
+New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
+@"
+PowerShell.exe "& "'$tmppath\drvUpdate_Win10.ps1'
+pause
+rd /s /q "$tmppath"
+del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP03.cmd"
+"@ | Out-File "$tmppath\STEP03.cmd" -Encoding ASCII -Append
 
 # copio il primo batch file per il riavvio successivo
 Copy-Item -Path "$tmppath\STEP01.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
