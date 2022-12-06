@@ -16,7 +16,9 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 $workdir = Get-Location
-Import-Module -Name "$workdir\Modules\Forms.psm1"
+$workdir -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Locales$" > $null
+$repopath = $matches[1]
+Import-Module -Name "$repopath\Modules\Forms.psm1"
 
 # dialog box 
 $form_modalita = FormBase -w 370 -h 220 -text "WIFI PROFILES"
