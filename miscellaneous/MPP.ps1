@@ -71,15 +71,18 @@ if (Test-Path $tmppath) {
 New-Item -ItemType directory -Path $tmppath > $null
 New-Item -ItemType directory -Path "$tmppath\Modules" > $null
 New-Item -ItemType directory -Path "$tmppath\3rd_Parties" > $null
+New-Item -ItemType directory -Path "$tmppath\Safety" > $null
 New-Item -ItemType directory -Path "$tmppath\Updates" > $null
+New-Item -ItemType directory -Path "$tmppath\Upkeep" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Avira_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Ccleaner_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Malwarebytes_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\SafetyScan.ps1' -DestinationPath "$tmppath\Safety"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\o365_update.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\Update_Win10.ps1' -DestinationPath "$tmppath\Updates"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'CleanOptimize.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'SafetyScan.ps1' -DestinationPath $tmppath
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Upkeep\CleanOptimize.ps1' -DestinationPath "$tmppath\Upkeep"
+
 
 # Informazioni
 $usrname = $env:USERNAME
@@ -134,13 +137,13 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             PowerShell.exe "& ""$tmppath\3rd_Parties\Malwarebytes_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '04-MSERT') {
-            PowerShell.exe "& ""$tmppath\SafetyScan.ps1"
+            PowerShell.exe "& ""$tmppath\Safety\SafetyScan.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '06-Defrag') {
             # creo un file batch, che verra' lanciato al prossimo reboot
             New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
 @"
-PowerShell.exe "& "'$tmppath\CleanOptimize.ps1'
+PowerShell.exe "& "'$tmppath\Upkeep\CleanOptimize.ps1'
 pause
 rmdir /s /q "C:\MPPtemp"
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
