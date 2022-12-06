@@ -71,13 +71,10 @@ if (Test-Path $tmppath) {
 New-Item -ItemType directory -Path $tmppath > $null
 New-Item -ItemType directory -Path "$tmppath\Modules" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Avira_wrapper.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Ccleaner_wrapper.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Malwarebytes_wrapper.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Update_Win10.ps1' -DestinationPath $tmppath
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties' -DestinationPath "$tmppath\3rd_Parties"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'CleanOptimize.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'SafetyScan.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'o365_update.ps1' -DestinationPath $tmppath
 
 # Informazioni
 $usrname = $env:USERNAME
@@ -120,16 +117,16 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq '01-Avira') {
-            PowerShell.exe "& ""$tmppath\Avira_wrapper.ps1"
+            PowerShell.exe "& ""$tmppath\3rd_Parties\Avira_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '02-o365') {
-            PowerShell.exe "& ""$tmppath\o365_update.ps1"
+            PowerShell.exe "& ""$tmppath\Updates\o365_update.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '05-Ccleaner') {
-            PowerShell.exe "& ""$tmppath\Ccleaner_wrapper.ps1"
+            PowerShell.exe "& ""$tmppath\3rd_Parties\Ccleaner_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '03-Malwarebytes') {
-            PowerShell.exe "& ""$tmppath\Malwarebytes_wrapper.ps1"
+            PowerShell.exe "& ""$tmppath\3rd_Parties\Malwarebytes_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '04-MSERT') {
             PowerShell.exe "& ""$tmppath\SafetyScan.ps1"
@@ -146,7 +143,7 @@ del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Program
             Copy-Item -Path "$tmppath\STEP01.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
             [System.Windows.MessageBox]::Show("Storage cleaner is planned for the next boot",'DEFRAG','Ok','Info') > $null
         } elseif ($item -eq '07-Winupdate') {
-            PowerShell.exe "& ""$tmppath\Update_Win10.ps1"
+            PowerShell.exe "& ""$tmppath\Updates\Update_Win10.ps1"
         }
     }    
 }
