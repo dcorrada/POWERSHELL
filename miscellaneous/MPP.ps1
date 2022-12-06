@@ -40,13 +40,13 @@ Param(
     $directories = $objects | where {$_.type -eq "dir"}
     
     $directories | ForEach-Object { 
-        DownloadFilesFromRepo -Owner $Owner -Repository $Repository -Path $_.path -DestinationPath $($DestinationPath+$_.name)
+        DownloadFilesFromRepo -Owner $Owner -Repository $Repository -Path $_.path -DestinationPath $($DestinationPath+'\'+$_.name)
     }
     
     if (-not (Test-Path $DestinationPath)) {
         # Destination path does not exist, let's create it
         try {
-            New-Item -Path $DestinationPath -ItemType Directory -ErrorAction Stop
+            New-Item -Path $DestinationPath -ItemType Directory -ErrorAction Stop | out-null
         } catch {
             throw "Could not create path '$DestinationPath'!"
         }
