@@ -14,11 +14,6 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# get working directory
-$fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\PPPC\.ps1$" > $null
-$workdir = $matches[1]
-
 # header 
 $ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
@@ -45,13 +40,13 @@ Param(
     $directories = $objects | where {$_.type -eq "dir"}
     
     $directories | ForEach-Object { 
-        DownloadFilesFromRepo -Owner $Owner -Repository $Repository -Path $_.path -DestinationPath $($DestinationPath+$_.name)
+        DownloadFilesFromRepo -Owner $Owner -Repository $Repository -Path $_.path -DestinationPath $($DestinationPath+'\'+$_.name)
     }
     
     if (-not (Test-Path $DestinationPath)) {
         # Destination path does not exist, let's create it
         try {
-            New-Item -Path $DestinationPath -ItemType Directory -ErrorAction Stop
+            New-Item -Path $DestinationPath -ItemType Directory -ErrorAction Stop | out-null
         } catch {
             throw "Could not create path '$DestinationPath'!"
         }
@@ -71,24 +66,21 @@ Param(
 # creo una cartella temporanea e scarico gli script
 $tmppath = 'C:\PPPCtemp'
 New-Item -ItemType directory -Path $tmppath > $null
-New-Item -ItemType directory -Path "$tmppath\Modules" > $null
-New-Item -ItemType directory -Path "$tmppath\AzureAD" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD' -DestinationPath "$tmppath\AzureAD"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties' -DestinationPath "$tmppath\3rd_Parties"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates' -DestinationPath "$tmppath\Updates"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD' -DestinationPath "$tmppath\AD"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Check_NuGet.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'drvUpdate_Win10.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'JoinUser.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Join2Domain.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Powerize.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Update_Win10.ps1' -DestinationPath $tmppath
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Wazuh.ps1' -DestinationPath $tmppath
+
 
 # creo i file batch per gli step da eseguire
 New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
 @"
 copy "$tmppath\STEP02.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-PowerShell.exe "& "'$tmppath\Join2Domain.ps1'
+PowerShell.exe "& "'$tmppath\AD\Join2Domain.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
 "@ | Out-File "$tmppath\STEP01.cmd" -Encoding ASCII -Append
 
@@ -99,19 +91,19 @@ PowerShell.exe "& "'$tmppath\Check_NuGet.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Powerize.ps1'
 pause
-PowerShell.exe "& "'$tmppath\Wazuh.ps1'
+PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
 pause
-PowerShell.exe "& "'$tmppath\JoinUser.ps1'
+PowerShell.exe "& "'$tmppath\AD\JoinUser.ps1'
 pause
 PowerShell.exe "& "'$tmppath\AzureAD\CreateMSAccount.ps1'
 pause
-PowerShell.exe "& "'$tmppath\Update_Win10.ps1'
+PowerShell.exe "& "'$tmppath\Updates\Update_Win10.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP02.cmd"
 "@ | Out-File "$tmppath\STEP02.cmd" -Encoding ASCII -Append
 
 New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
 @"
-PowerShell.exe "& "'$tmppath\drvUpdate_Win10.ps1'
+PowerShell.exe "& "'$tmppath\Updates\drvUpdate_Win10.ps1'
 pause
 rd /s /q "$tmppath"
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP03.cmd"
