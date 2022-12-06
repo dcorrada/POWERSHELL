@@ -65,12 +65,22 @@ Param(
 
 # creo una cartella temporanea e scarico gli script
 $tmppath = 'C:\PPPCtemp'
+if (Test-Path $tmppath) {
+    Remove-Item -Path $tmppath -Recurse -Force > $null
+}
 New-Item -ItemType directory -Path $tmppath > $null
+New-Item -ItemType directory -Path "$tmppath\Modules" > $null
+New-Item -ItemType directory -Path "$tmppath\3rd_Parties" > $null
+New-Item -ItemType directory -Path "$tmppath\AD" > $null
+New-Item -ItemType directory -Path "$tmppath\AzureAD" > $null
+New-Item -ItemType directory -Path "$tmppath\Updates" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD' -DestinationPath "$tmppath\AzureAD"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties' -DestinationPath "$tmppath\3rd_Parties"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates' -DestinationPath "$tmppath\Updates"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD' -DestinationPath "$tmppath\AD"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Wazuh.ps1' -DestinationPath "$tmppath\3rd_Parties"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD\Join2Domain.ps1' -DestinationPath "$tmppath\AD"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD\JoinUser.ps1' -DestinationPath "$tmppath\AD"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD\CreateMSAccount.ps1' -DestinationPath "$tmppath\AzureAD"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\drvUpdate_Win10.ps1' -DestinationPath "$tmppath\Updates"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\Update_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Check_NuGet.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Powerize.ps1' -DestinationPath $tmppath

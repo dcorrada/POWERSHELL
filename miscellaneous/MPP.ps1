@@ -70,9 +70,14 @@ if (Test-Path $tmppath) {
 }
 New-Item -ItemType directory -Path $tmppath > $null
 New-Item -ItemType directory -Path "$tmppath\Modules" > $null
+New-Item -ItemType directory -Path "$tmppath\3rd_Parties" > $null
+New-Item -ItemType directory -Path "$tmppath\Updates" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties' -DestinationPath "$tmppath\3rd_Parties"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates' -DestinationPath "$tmppath\Updates"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Avira_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Ccleaner_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Malwarebytes_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\o365_update.ps1' -DestinationPath "$tmppath\Updates"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\Update_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'CleanOptimize.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'SafetyScan.ps1' -DestinationPath $tmppath
 
