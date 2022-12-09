@@ -71,6 +71,7 @@ if (Test-Path $tmppath) {
 New-Item -ItemType directory -Path $tmppath > $null
 New-Item -ItemType directory -Path "$tmppath\Modules" > $null
 New-Item -ItemType directory -Path "$tmppath\3rd_Parties" > $null
+New-Item -ItemType directory -Path "$tmppath\O365" > $null
 New-Item -ItemType directory -Path "$tmppath\Safety" > $null
 New-Item -ItemType directory -Path "$tmppath\Updates" > $null
 New-Item -ItemType directory -Path "$tmppath\Upkeep" > $null
@@ -79,7 +80,7 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Part
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Ccleaner_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Malwarebytes_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\SafetyScan.ps1' -DestinationPath "$tmppath\Safety"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\o365_update.ps1' -DestinationPath "$tmppath\Updates"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'O365\o365_update.ps1' -DestinationPath "$tmppath\O365"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\Update_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Upkeep\CleanOptimize.ps1' -DestinationPath "$tmppath\Upkeep"
 
@@ -128,7 +129,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             PowerShell.exe "& ""$tmppath\3rd_Parties\Avira_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '02-o365') {
-            PowerShell.exe "& ""$tmppath\Updates\o365_update.ps1"
+            PowerShell.exe "& ""$tmppath\O365\o365_update.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '05-Ccleaner') {
             PowerShell.exe "& ""$tmppath\3rd_Parties\Ccleaner_wrapper.ps1"
