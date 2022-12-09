@@ -107,7 +107,7 @@ listed at https://rclone.org/
 
 # logs
 $formlist = FormBase -w 400 -h 200 -text 'LOGS'
-$DropDownLabel = Label -form $form -x 10 -y 20 -w 80 -h 30 -text 'Log level:'
+$DropDownLabel = Label -form $formlist -x 10 -y 20 -w 80 -h 30 -text 'Log level:'
 $DropDown = new-object System.Windows.Forms.ComboBox
 $DropDown.Location = new-object System.Drawing.Size(90,20)
 $DropDown.Size = new-object System.Drawing.Size(250,30)
@@ -116,8 +116,8 @@ foreach ($elem in ('DEBUG', 'INFO', 'NOTICE', 'ERROR')) {
 }
 $DropDown.Text = 'NOTICE'
 $formlist.Controls.Add($DropDown)
-$filelabel = Label -form $form -x 10 -y 60 -w 80 -h 30 -text 'Log file:'
-$logdia = TxtBox -form $form -x 90 -y 60 -w 250 -h 30 -text 'C:\RClone\Melampo.log'
+$filelabel = Label -form $formlist -x 10 -y 60 -w 80 -h 30 -text 'Log file:'
+$logdia = TxtBox -form $formlist -x 90 -y 60 -w 250 -h 30 -text 'C:\RClone\Melampo.log'
 $OKButton = OKButton -form $formlist -x 100 -y 100 -text "Ok"
 $formlist.Add_Shown({$DropDown.Select()})
 $result = $formlist.ShowDialog()
