@@ -30,24 +30,56 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
+<# 
+*** TODO ***
+Verificare funzionamento RSAT e trovare un metodo che non richiami Active Directory (aka Get-ADUser)
+#>
+# import Active Directory module
+$ErrorActionPreference= 'Stop'
+try {
+    Import-Module ActiveDirectory
+} catch {
+    Add-WindowsCapability -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 -Online
+    Import-Module ActiveDirectory
+}
+$ErrorActionPreference= 'Inquire'
+
+<#
 # create temporary directory
 $tmppath = 'C:\TEMPSOFTWARE'
 if (!(Test-Path $tmppath)) {
     New-Item -ItemType directory -Path $tmppath > $null
 }
+#>
 
 # getting users list
 $users = Get-CimInstance Win32_UserAccount
 $whoami = @{}
-foreach ($item in $users) {
-    $whoami[$item.Name] = $item.Domain
-}
 $folders = Get-ChildItem C:\Users
 $orphans = @()
 foreach ($item in $folders) {
     Write-Host -NoNewline "Checking [$item]..."
-    if (!($users.Name -contains $item)) {
-        $orphans += $item
+    if ($users.Name -contains $item) {
+        Write-Host -ForegroundColor Green 'OK'
+        $whoami[$item] = 'local'
+    } else {
+        $answ = [System.Windows.MessageBox]::Show("[$item] is not a local user: search on AD?",'INFO','YesNo','Warning')
+        if ($answ -eq "Yes") {
+            $ErrorActionPreference= 'Stop'
+            try {
+                Get-ADUser -Identity $item | Out-Null
+                Write-Host -ForegroundColor Green 'OK'
+                $whoami[$item] = 'AD'
+            } catch { 
+                # AD user not found
+                $orphans += $item
+                Write-Host -ForegroundColor Red 'KO'
+            }
+            $ErrorActionPreference= 'Inquire'
+        } else {
+            $orphans += $item
+            Write-Host -ForegroundColor Red 'KO'
+        }
     }
 }
 $group = [ADSI] "WinNT://./Administrators,group"
@@ -77,14 +109,14 @@ foreach ($box in $boxes) {
     if ($box.Checked -eq $true) {
         $theuser = $box.Text
         Write-Host -NoNewline "Checking [$theuser]... "
-        if ($whoami[$theuser] -eq $env:COMPUTERNAME) {
+        if ($whoami[$theuser] -eq 'local') {
             Write-Host -ForegroundColor Blue 'local'
 
             # remove local account
             Write-Host -NoNewline 'Removing account... '
             $ErrorActionPreference= 'Stop'
             Try {
-                Remove-LocalUser -Name $theuser
+                # Remove-LocalUser -Name $theuser
                 Write-Host -ForegroundColor Green 'OK'                
             }
             Catch {
@@ -96,7 +128,7 @@ foreach ($box in $boxes) {
                 }
             }
             $ErrorActionPreference= 'Inquire'
-        } else {
+        } elseif ($whoami[$theuser] -eq 'AD') {
             Write-Host -ForegroundColor Cyan 'AD'
 
             # remove admin privileges            
@@ -104,7 +136,7 @@ foreach ($box in $boxes) {
                 Write-Host -NoNewline 'Disabling admin... '
                 $ErrorActionPreference= 'Stop'
                 Try {
-                    Remove-LocalGroupMember -Group "Administrators" -Member $theuser
+                    # Remove-LocalGroupMember -Group "Administrators" -Member $theuser
                     Write-Host -ForegroundColor Green 'OK'                
                 }
                 Catch {
@@ -135,6 +167,7 @@ foreach ($box in $boxes) {
     }
 }
 
+<#
 # removing TEMPSOFTWARE
 $ErrorActionPreference = 'Stop'
 Try {
@@ -158,3 +191,4 @@ Catch {
     pause
 }
 $ErrorActionPreference = 'Inquire'
+#>
