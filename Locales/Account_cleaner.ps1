@@ -50,6 +50,9 @@ foreach ($item in $folders) {
         $orphans += $item
     }
 }
+$group = [ADSI] "WinNT://./Administrators,group"
+$members = @($group.psbase.Invoke("Members"))
+$AdminList = ($members | ForEach {$_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null)})
 
 # control panel
 $hsize = 150 + (30 * $folders.Count)
@@ -96,29 +99,27 @@ foreach ($box in $boxes) {
         } else {
             Write-Host -ForegroundColor Cyan 'AD'
 
-            # remove admin privileges
-            Write-Host -NoNewline 'Disabling admin... '
-            $ErrorActionPreference= 'Stop'
-            Try {
-                
-                Write-Host -ForegroundColor Green 'OK'                
-            }
-            Catch {
-                Write-Host -ForegroundColor Red 'KO'
-                Write-Output "`nError: $($error[0].ToString())"
-                $answ = [System.Windows.MessageBox]::Show("An error occurred! Proceed?",'ERROR','YesNo','Error')
-                if ($answ -eq "No") {    
-                    exit
+            # remove admin privileges            
+            if ($AdminList -contains $theuser) {
+                Write-Host -NoNewline 'Disabling admin... '
+                $ErrorActionPreference= 'Stop'
+                Try {
+                    Remove-LocalGroupMember -Group "Administrators" -Member $theuser
+                    Write-Host -ForegroundColor Green 'OK'                
                 }
+                Catch {
+                    Write-Host -ForegroundColor Red 'KO'
+                    Write-Output "`nError: $($error[0].ToString())"
+                    $answ = [System.Windows.MessageBox]::Show("An error occurred! Proceed?",'ERROR','YesNo','Error')
+                    if ($answ -eq "No") {    
+                        exit
+                    }
+                }
+                $ErrorActionPreference= 'Inquire'                
             }
-            $ErrorActionPreference= 'Inquire'
         }
 
 <#
-        Write-Host "Removing $theuser..."
-
-
-
         # search and remove keys
         $record = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
             Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
