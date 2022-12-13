@@ -1,6 +1,6 @@
 ﻿<#
 Name......: Account_cleaner.ps1
-Version...: 19.12.1
+Version...: 22.12.2
 Author....: Dario CORRADA
 
 This script removes account from local computer
@@ -37,39 +37,87 @@ if (!(Test-Path $tmppath)) {
 }
 
 # getting users list
-$userlist = Get-ChildItem C:\Users
+$users = Get-CimInstance Win32_UserAccount
+$whoami = @{}
+foreach ($item in $users) {
+    $whoami[$item.Name] = $item.Domain
+}
+$folders = Get-ChildItem C:\Users
+$orphans = @()
+foreach ($item in $folders) {
+    Write-Host -NoNewline "Checking [$item]..."
+    if (!($users.Name -contains $item)) {
+        $orphans += $item
+    }
+}
 
 # control panel
-$hsize = 150 + (30 * $userlist.Count)
-$form_panel = FormBase -w 300 -h $hsize -text "USER FOLDERS"
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(200,30)
-$label.Text = "Select users to be deleted:"
-$form_panel.Controls.Add($label)
+$hsize = 150 + (30 * $folders.Count)
+$form_panel = FormBase -w 300 -h $hsize -text "USERS FOLDERS"
+$label = Label -form $form_panel -x 10 -y 20 -w 200 -h 30 -text 'Select profiles to be deleted:'
 $vpos = 50
 $boxes = @()
-foreach ($elem in $userlist) {
-    $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem
+foreach ($item in $folders) {
+    if ($orphans -contains $item) {
+        $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $item -enabled $false
+    } else {
+        $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $item
+    }
     $vpos += 30
 }
 $vpos += 20
 OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
 $result = $form_panel.ShowDialog()
 
-# get a list of local users
-$locales = Get-LocalUser
-
+# perform operations
 foreach ($box in $boxes) {
     if ($box.Checked -eq $true) {
         $theuser = $box.Text
+        Write-Host -NoNewline "Checking [$theuser]... "
+        if ($whoami[$theuser] -eq $env:COMPUTERNAME) {
+            Write-Host -ForegroundColor Blue 'local'
 
+            # remove local account
+            Write-Host -NoNewline 'Removing account... '
+            $ErrorActionPreference= 'Stop'
+            Try {
+                Remove-LocalUser -Name $theuser
+                Write-Host -ForegroundColor Green 'OK'                
+            }
+            Catch {
+                Write-Host -ForegroundColor Red 'KO'
+                Write-Output "`nError: $($error[0].ToString())"
+                $answ = [System.Windows.MessageBox]::Show("An error occurred! Proceed?",'ERROR','YesNo','Error')
+                if ($answ -eq "No") {    
+                    exit
+                }
+            }
+            $ErrorActionPreference= 'Inquire'
+        } else {
+            Write-Host -ForegroundColor Cyan 'AD'
+
+            # remove admin privileges
+            Write-Host -NoNewline 'Disabling admin... '
+            $ErrorActionPreference= 'Stop'
+            Try {
+                
+                Write-Host -ForegroundColor Green 'OK'                
+            }
+            Catch {
+                Write-Host -ForegroundColor Red 'KO'
+                Write-Output "`nError: $($error[0].ToString())"
+                $answ = [System.Windows.MessageBox]::Show("An error occurred! Proceed?",'ERROR','YesNo','Error')
+                if ($answ -eq "No") {    
+                    exit
+                }
+            }
+            $ErrorActionPreference= 'Inquire'
+        }
+
+<#
         Write-Host "Removing $theuser..."
 
-        # remove local account
-        if ($locales.Name -contains $theuser) {
-            Remove-LocalUser -Name $theuser
-        }
+
 
         # search and remove keys
         $record = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
@@ -80,9 +128,13 @@ foreach ($box in $boxes) {
         # removing user folder
         $thepath = 'C:\Users\' + $theuser
         Move-Item -Path $thepath -Destination 'C:\TEMPSOFTWARE' -Force
+
+#>
+
     }
 }
 
+# removing TEMPSOFTWARE
 $ErrorActionPreference = 'Stop'
 Try {
     # Cambio i permessi su file e cartelle
