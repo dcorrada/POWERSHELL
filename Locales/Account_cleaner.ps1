@@ -30,20 +30,6 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-<# 
-*** TODO ***
-Verificare funzionamento RSAT e trovare un metodo che non richiami Active Directory (aka Get-ADUser)
-#>
-# import Active Directory module
-$ErrorActionPreference= 'Stop'
-try {
-    Import-Module ActiveDirectory
-} catch {
-    Add-WindowsCapability -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 -Online
-    Import-Module ActiveDirectory
-}
-$ErrorActionPreference= 'Inquire'
-
 <#
 # create temporary directory
 $tmppath = 'C:\TEMPSOFTWARE'
@@ -52,48 +38,77 @@ if (!(Test-Path $tmppath)) {
 }
 #>
 
-# getting users list
-$users = Get-CimInstance Win32_UserAccount
-$whoami = @{}
-$folders = Get-ChildItem C:\Users
-$orphans = @()
-foreach ($item in $folders) {
-    Write-Host -NoNewline "Checking [$item]..."
-    if ($users.Name -contains $item) {
-        Write-Host -ForegroundColor Green 'OK'
-        $whoami[$item] = 'local'
-    } else {
-        $answ = [System.Windows.MessageBox]::Show("[$item] is not a local user: search on AD?",'INFO','YesNo','Warning')
-        if ($answ -eq "Yes") {
-            $ErrorActionPreference= 'Stop'
-            try {
-                Get-ADUser -Identity $item | Out-Null
-                Write-Host -ForegroundColor Green 'OK'
-                $whoami[$item] = 'AD'
-            } catch { 
-                # AD user not found
-                $orphans += $item
-                Write-Host -ForegroundColor Red 'KO'
-            }
-            $ErrorActionPreference= 'Inquire'
-        } else {
-            $orphans += $item
-            Write-Host -ForegroundColor Red 'KO'
-        }
+# gathering user profiles candidates to remove
+$usrcandidates = @{}
+Write-Host -NoNewline 'Fetching data...'
+
+# getting user folders
+foreach ($item in Get-ChildItem C:\Users) {
+    $usrcandidates[$item.Name] = @{
+        FullPath = 'C:\Users\' + $item.Name
+        IsAdmin = 'na'
+        Domain = 'na'
+        Orphan = 'No'
+        SID = 'na'
     }
+    Write-Host -NoNewline '.'
 }
+
+# looking for registry keys
+$regges = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
+            Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
+foreach ($item in $regges) {
+    $item.ProfileImagePath -match "^C:\\Users\\([a-zA-Z_\-\.\\\s0-9:]+)$" > $null
+    if ($usrcandidates.ContainsKey($matches[1])) {
+        $usrcandidates[$matches[1]].SID = $item.PSChildName
+    }
+    Write-Host -NoNewline '.'
+}
+
+<# checking local or AD
+
+NOTE:   the full AD userlist is shown solely whenever DC is visible,
+        the cmdlet Get-CimInstance works without importing any AD module
+#>
+$halloffame = @{}
+foreach ($item in Get-CimInstance Win32_UserAccount) {
+    $halloffame[$item.Name] = $item.Domain
+    Write-Host -NoNewline '.'
+}
+foreach ($item in $usrcandidates.Keys) {
+    if ($halloffame.ContainsKey($item)) {
+        if ($halloffame[$item] -eq $env:COMPUTERNAME) {
+            $usrcandidates[$item].Domain = 'local'
+        } else {
+            $usrcandidates[$item].Domain = 'AD'
+        }
+    } else {
+        $usrcandidates[$item].Orphan = 'Yes'
+    }
+    Write-Host -NoNewline '.'
+}
+
+# checking domain privileges
 $group = [ADSI] "WinNT://./Administrators,group"
 $members = @($group.psbase.Invoke("Members"))
-$AdminList = ($members | ForEach {$_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null)})
+$AdminList = ($members | ForEach {$_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null);Write-Host -NoNewline '.'})
+foreach ($item in $AdminList) {
+    if ($usrcandidates.ContainsKey($item)) {
+        $usrcandidates[$item].IsAdmin = 'Yes'
+    }
+    Write-Host -NoNewline '.'
+}
+
+Write-Host -ForegroundColor Green 'OK'
 
 # control panel
-$hsize = 150 + (30 * $folders.Count)
-$form_panel = FormBase -w 300 -h $hsize -text "USERS FOLDERS"
+$hsize = 150 + (30 * $usrcandidates.Count)
+$form_panel = FormBase -w 300 -h $hsize -text "USERS LIST"
 $label = Label -form $form_panel -x 10 -y 20 -w 200 -h 30 -text 'Select profiles to be deleted:'
 $vpos = 50
 $boxes = @()
-foreach ($item in $folders) {
-    if ($orphans -contains $item) {
+foreach ($item in ($usrcandidates.Keys | Sort-Object)) {
+    if ($usrcandidates[$item].Orphan -eq 'Yes') {
         $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $item -enabled $false
     } else {
         $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $item
@@ -151,13 +166,21 @@ foreach ($box in $boxes) {
             }
         }
 
-<#
+
+
+<# 
+*** TODO ***
+DEBUGGARE:  la variabile [$keypath] ingloba in un unica stringa TUTTI i PSChildName di TUTTE le utenze catturate con [$record],
+            MA [Remove-Item] rimuove solo la prima utenza che trova in cima alla stringa
+
         # search and remove keys
         $record = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
             Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
         $keypath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + $record.PSChildName
         Remove-Item -Path $keypath -Recurse
-        
+#>
+
+<#        
         # removing user folder
         $thepath = 'C:\Users\' + $theuser
         Move-Item -Path $thepath -Destination 'C:\TEMPSOFTWARE' -Force
