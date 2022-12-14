@@ -30,13 +30,11 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-<#
 # create temporary directory
 $tmppath = 'C:\TEMPSOFTWARE'
 if (!(Test-Path $tmppath)) {
     New-Item -ItemType directory -Path $tmppath > $null
 }
-#>
 
 # gathering user profiles candidates to remove
 $usrcandidates = @{}
@@ -123,95 +121,99 @@ $result = $form_panel.ShowDialog()
 foreach ($box in $boxes) {
     if ($box.Checked -eq $true) {
         $theuser = $box.Text
-        Write-Host -NoNewline "Checking [$theuser]... "
-        if ($whoami[$theuser] -eq 'local') {
-            Write-Host -ForegroundColor Blue 'local'
+        Clear-Host
+        Write-Host -ForegroundColor Blue "*** Oblivioning [$theuser] ***"
 
-            # remove local account
-            Write-Host -NoNewline 'Removing account... '
-            $ErrorActionPreference= 'Stop'
+        if ($usrcandidates[$theuser].IsAdmin -eq 'Yes') {
+            Write-Host -NoNewline 'Disabling admin... '
+            $ErrorActionPreference = 'Stop'
             Try {
-                # Remove-LocalUser -Name $theuser
+                Remove-LocalGroupMember -Group 'Administrators' -Member $theuser
                 Write-Host -ForegroundColor Green 'OK'                
             }
             Catch {
                 Write-Host -ForegroundColor Red 'KO'
-                Write-Output "`nError: $($error[0].ToString())"
-                $answ = [System.Windows.MessageBox]::Show("An error occurred! Proceed?",'ERROR','YesNo','Error')
+                Write-Output "ERROR: $($error[0].ToString())`n"
+                $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
                 if ($answ -eq "No") {    
                     exit
                 }
             }
-            $ErrorActionPreference= 'Inquire'
-        } elseif ($whoami[$theuser] -eq 'AD') {
-            Write-Host -ForegroundColor Cyan 'AD'
-
-            # remove admin privileges            
-            if ($AdminList -contains $theuser) {
-                Write-Host -NoNewline 'Disabling admin... '
-                $ErrorActionPreference= 'Stop'
-                Try {
-                    # Remove-LocalGroupMember -Group "Administrators" -Member $theuser
-                    Write-Host -ForegroundColor Green 'OK'                
-                }
-                Catch {
-                    Write-Host -ForegroundColor Red 'KO'
-                    Write-Output "`nError: $($error[0].ToString())"
-                    $answ = [System.Windows.MessageBox]::Show("An error occurred! Proceed?",'ERROR','YesNo','Error')
-                    if ($answ -eq "No") {    
-                        exit
-                    }
-                }
-                $ErrorActionPreference= 'Inquire'                
-            }
+            $ErrorActionPreference = 'Inquire'
         }
 
+        if ($usrcandidates[$theuser].Domain -eq 'local') {
+            Write-Host -NoNewline 'Removing local account... '
+            $ErrorActionPreference = 'Stop'
+            Try {
+                Remove-LocalUser -Name $theuser
+                Write-Host -ForegroundColor Green 'OK'                
+            }
+            Catch {
+                Write-Host -ForegroundColor Red 'KO'
+                Write-Output "ERROR: $($error[0].ToString())`n"
+                $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
+                if ($answ -eq "No") {    
+                    exit
+                }
+            }
+            $ErrorActionPreference = 'Inquire'
+        }
 
+        if ($usrcandidates[$theuser].SID -ne 'na') {
+            Write-Host -NoNewline 'Cleaning registry... '
+            $ErrorActionPreference = 'Stop'
+            Try {
+                $keypath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + $usrcandidates[$theuser].SID
+                Remove-Item -Path $keypath -Recurse
+                Write-Host -ForegroundColor Green 'OK'                
+            }
+            Catch {
+                Write-Host -ForegroundColor Red 'KO'
+                Write-Output "ERROR: $($error[0].ToString())`n"
+                $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
+                if ($answ -eq "No") {    
+                    exit
+                }
+            }
+            $ErrorActionPreference = 'Inquire'
+        }
 
-<# 
-*** TODO ***
-DEBUGGARE:  la variabile [$keypath] ingloba in un unica stringa TUTTI i PSChildName di TUTTE le utenze catturate con [$record],
-            MA [Remove-Item] rimuove solo la prima utenza che trova in cima alla stringa
+        Write-Host -NoNewline 'Sweeping data... '
+        $ErrorActionPreference = 'Stop'
+        Try {
+            Move-Item -Path $usrcandidates[$theuser].FullPath -Destination 'C:\TEMPSOFTWARE' -Force
+            Write-Host -ForegroundColor Green 'OK'                
+        }
+        Catch {
+            Write-Host -ForegroundColor Red 'KO'
+            Write-Output "ERROR: $($error[0].ToString())`n"
+            $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
+            if ($answ -eq "No") {    
+                exit
+            }
+        }
+        $ErrorActionPreference = 'Inquire'
 
-        # search and remove keys
-        $record = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
-            Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
-        $keypath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + $record.PSChildName
-        Remove-Item -Path $keypath -Recurse
-#>
-
-<#        
-        # removing user folder
-        $thepath = 'C:\Users\' + $theuser
-        Move-Item -Path $thepath -Destination 'C:\TEMPSOFTWARE' -Force
-
-#>
-
-    }
+        Start-Sleep -Seconds 2
+    }    
 }
 
-<#
 # removing TEMPSOFTWARE
 $ErrorActionPreference = 'Stop'
 Try {
-    # Cambio i permessi su file e cartelle
-    # $string = '/F C:\TEMPSOFTWARE /R /D Y'
-    # Start-Process -Wait takeown.exe $string
-
     # elevate Explorer
     taskkill /F /IM explorer.exe
     Start-Sleep 3
     Start-Process C:\Windows\explorer.exe
 
-    $path = "C:\TEMPSOFTWARE"
     $shell = new-object -comobject "Shell.Application"
-    $item = $shell.Namespace(0).ParseName("$path")
+    $item = $shell.Namespace(0).ParseName($tmppath)
     $item.InvokeVerb("delete")
     Clear-RecycleBin -Force -Confirm:$false
 }
 Catch {
-    Write-Output "`nError: $($error[0].ToString())"
-    pause
+    $answ = [System.Windows.MessageBox]::Show("Unable to delete temp files",'FAIL','Ok','Error')
+    Write-Output "`n***`nError: $($error[0].ToString())"
 }
 $ErrorActionPreference = 'Inquire'
-#>
