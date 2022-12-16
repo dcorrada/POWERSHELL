@@ -74,7 +74,7 @@ if ($answ -eq "Yes") {
         
         # granting local admin privileges
         try {
-            Add-LocalGroupMember -Group "Administrators" -Member "AGM\$username"
+            Add-LocalGroupMember -Group "Administrators" -Member $fullname
         }
         catch {
             [System.Windows.MessageBox]::Show("Cannot granting admin privilege to $username",'ACCOUNT','Ok','Error')
