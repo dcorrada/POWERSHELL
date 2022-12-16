@@ -53,8 +53,8 @@ foreach ($item in Get-ChildItem C:\Users) {
 }
 
 # looking for registry keys
-$regges = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
-            Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
+$regges =   Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
+            Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users" } | Select-Object -Property ProfileimagePath, PSChildName
 foreach ($item in $regges) {
     $item.ProfileImagePath -match "^C:\\Users\\([a-zA-Z_\-\.\\\s0-9:]+)$" > $null
     if ($usrcandidates.ContainsKey($matches[1])) {
