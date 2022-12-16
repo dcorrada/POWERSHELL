@@ -182,7 +182,7 @@ foreach ($box in $boxes) {
         Write-Host -NoNewline 'Sweeping data... '
         $ErrorActionPreference = 'Stop'
         Try {
-            Move-Item -Path $usrcandidates[$theuser].FullPath -Destination 'C:\TEMPSOFTWARE' -Force
+            Move-Item -Path $usrcandidates[$theuser].FullPath -Destination $tmppath -Force
             Write-Host -ForegroundColor Green 'OK'                
         }
         Catch {
