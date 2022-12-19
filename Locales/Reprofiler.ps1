@@ -30,154 +30,170 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# create temporary directory
-$tmppath = 'C:\TEMPSOFTWARE'
-if (!(Test-Path $tmppath)) {
-    New-Item -ItemType directory -Path $tmppath > $null
-}
-
-# getting users list
+# getting users folders
 $userlist = Get-ChildItem C:\Users
 
 # control panel
 $hsize = 150 + (30 * $userlist.Count)
 $form_panel = FormBase -w 300 -h $hsize -text "USER FOLDERS"
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(200,30)
-$label.Text = "Select profiles to be backupped:"
+$label = Label -form $form_panel -x 10 -y 20 -w 200 -h 30 -text 'Select profile to be backupped:'
 $form_panel.Controls.Add($label)
 $vpos = 50
 $boxes = @()
 foreach ($elem in $userlist) {
-    $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem
+    if ($vpos -eq 50) {
+        $isfirst = $true
+    } else {
+        $isfirst = $false
+    }
+    $boxes += RadioButton -form $form_panel -checked $isfirst -x 20 -y $vpos -text $elem
     $vpos += 30
 }
 $vpos += 20
 OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
 $result = $form_panel.ShowDialog()
-
-# get a list of local users
-$locales = Get-LocalUser
-
-foreach ($box in $boxes) {
-    if ($box.Checked -eq $true) {
-        $theuser = $box.Text
-        Write-Host -NoNewline "Removing account [$theuser]..."
-        $ErrorActionPreference= 'Stop'
-        Try {
-            # remove local account
-            if ($locales.Name -contains $theuser) {
-                Remove-LocalUser -Name $theuser
-            }
-            # search and remove keys
-            $record = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
-                Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
-            $keypath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + $record.PSChildName
-            Remove-Item -Path $keypath -Recurse
-            Write-Host -ForegroundColor Green ' DONE'
-        }
-        Catch {
-            Write-Host -ForegroundColor Red ' FAILED'
-            Write-Output "`nError: $($error[0].ToString())"
-            Pause
-            exit
-        }    
-        Write-Host -NoNewline "Backupping profile of [$theuser]..."
-        $ErrorActionPreference= 'Stop'
-        Try {
-            # renaming user folder
-            Rename-Item "C:\Users\$theuser" "C:\Users\OLD-$theuser-OLD"
-            Write-Host -ForegroundColor Green ' DONE'
-        }
-        Catch {
-            Write-Host -ForegroundColor Red ' FAILED'
-            Write-Output "`nError: $($error[0].ToString())"
-            Pause
-            exit
-        }
+foreach ($item in $boxes) {
+    if ($item.Checked) {
+        $theuser = $item.Text
     }
 }
 
-# creating local account
-$answ = [System.Windows.MessageBox]::Show("Create local account?",'ACCOUNT','YesNo','Info')
-if ($answ -eq "Yes") {
-    $form = FormBase -w 520 -h 270 -text "ACCOUNT"
-    $font = New-Object System.Drawing.Font("Arial", 12)
-    $form.Font = $font
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(10,20)
-    $label.Size = New-Object System.Drawing.Size(500,30)
-    $label.Text = "Username:"
-    $form.Controls.Add($label)
-    $usrname = New-Object System.Windows.Forms.TextBox
-    $usrname.Location = New-Object System.Drawing.Point(10,60)
-    $usrname.Size = New-Object System.Drawing.Size(450,30)
-    $form.Controls.Add($usrname)
-    $label2 = New-Object System.Windows.Forms.Label
-    $label2.Location = New-Object System.Drawing.Point(10,100)
-    $label2.Size = New-Object System.Drawing.Size(500,30)
-    $label2.Text = "Fullname:"
-    $form.Controls.Add($label2)
-    $fullname = New-Object System.Windows.Forms.TextBox
-    $fullname.Location = New-Object System.Drawing.Point(10,140)
-    $fullname.Size = New-Object System.Drawing.Size(450,30)
-    $form.Controls.Add($fullname)
-    $OKButton = New-Object System.Windows.Forms.Button
-    OKButton -form $form -x 200 -y 190 -text "Ok"
-    $form.Topmost = $true
-    $result = $form.ShowDialog()
-    $username = $usrname.Text
-    $completo = $fullname.Text
-    $form_pswd = FormBase -w 450 -h 230 -text "CREATE PASSWORD"
-    $personal = RadioButton -form $form_pswd -checked $true -x 30 -y 20 -text "Set your own password"
-    $randomic  = RadioButton -form $form_pswd -checked $false -x 30 -y 50 -text "Generate random password"
-    OKButton -form $form_pswd -x 90 -y 120 -text "Ok"
-    $result = $form_pswd.ShowDialog()
-    if ($result -eq "OK") {
-        if ($personal.Checked) {
-            $form = FormBase -w 520 -h 200 -text "PASSWORD"
-            $font = New-Object System.Drawing.Font("Arial", 12)
-            $form.Font = $font
-            $label = New-Object System.Windows.Forms.Label
-            $label.Location = New-Object System.Drawing.Point(10,20)
-            $label.Size = New-Object System.Drawing.Size(500,30)
-            $label.Text = "Password:"
-            $form.Controls.Add($label)
-            $usrname = New-Object System.Windows.Forms.TextBox
-            $usrname.Location = New-Object System.Drawing.Point(10,60)
-            $usrname.Size = New-Object System.Drawing.Size(450,30)
-            $usrname.PasswordChar = '*'
-            $form.Controls.Add($usrname)
-            $OKButton = New-Object System.Windows.Forms.Button
-            OKButton -form $form -x 200 -y 120 -text "Ok"
-            $form.Topmost = $true
-            $result = $form.ShowDialog()
-            $thepasswd = $usrname.Text
-        } elseif ($randomic.Checked) {
-            Add-Type -AssemblyName 'System.Web'
-            $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
-        }
+
+# identity check
+if ($theuser -eq $env:USERNAME) {
+    [System.Windows.MessageBox]::Show("Operating and target users doesn't be the same!",'ABORTING','Ok','Warning') | Out-Null
+    Exit    
+}
+
+# removing account entries
+Write-Host -NoNewline 'Removing local account... '
+$ErrorActionPreference = 'Stop'
+Try {
+    Remove-LocalUser -Name $theuser
+    Write-Host -ForegroundColor Green 'OK'                
+}
+Catch {
+    Write-Host -ForegroundColor Red 'KO'
+    Write-Output "ERROR: $($error[0].ToString())`n"
+    $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
+    # in case we are dealing with an ADuser proceed anyway...
+    if ($answ -eq "No") {    
+        exit
     }
-    $pwd = ConvertTo-SecureString $thepasswd -AsPlainText -Force
+}
+$ErrorActionPreference = 'Inquire'
+Write-Host -NoNewline 'Disabling admin... '
+$ErrorActionPreference = 'Stop'
+Try {
+    Remove-LocalGroupMember -Group 'Administrators' -Member $theuser
+    Write-Host -ForegroundColor Green 'OK'                
+}
+Catch {
+    Write-Host -ForegroundColor Red 'KO'
+    Write-Output "ERROR: $($error[0].ToString())`n"
+    $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
+    if ($answ -eq "No") {    
+        exit
+    }
+}
+$ErrorActionPreference = 'Inquire'
+Write-Host -NoNewline 'Cleaning registry... '
+$ErrorActionPreference = 'Stop'
+Try {
+    $SID =  Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
+            Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
+    if ($SID) {
+        $keypath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + $SID
+        Remove-Item -Path $keypath -Recurse
+        Write-Host -ForegroundColor Green 'OK'
+    } else {
+        Write-Host -ForegroundColor Red 'KO'
+    }       
+}
+Catch {
+    Write-Host -ForegroundColor Red 'KO'
+    Write-Output "ERROR: $($error[0].ToString())`n"
+    $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
+    if ($answ -eq "No") {    
+        exit
+    }
+}
+$ErrorActionPreference = 'Inquire'
+
+# backup folder
+$tmppath = 'C:\REPROFILER'
+if (!(Test-Path $tmppath)) {
+    New-Item -ItemType directory -Path $tmppath > $null
+}
+Write-Host -NoNewline 'Sweeping data... '
+$ErrorActionPreference = 'Stop'
+Try {
+    Move-Item -Path "C:\Users\$theuser" -Destination $tmppath -Force
+    Write-Host -ForegroundColor Green 'OK'
+    [System.Windows.MessageBox]::Show("[$theuser] data are moved to [$tmppath]",'INFO','Ok','Info') | Out-Null         
+}
+Catch {
+    Write-Host -ForegroundColor Red 'KO'
+    Write-Output "ERROR: $($error[0].ToString())`n"
+    $answ = [System.Windows.MessageBox]::Show("Exception emerge: Proceed anyway?",'WAIT','YesNo','Error')
+    if ($answ -eq "No") {    
+        exit
+    }
+}
+$ErrorActionPreference = 'Inquire'
+
+# select new user mode
+$usrform = FormBase -w 350 -h 220 -text "ACCOUNT"
+$usrlabel = Label -form $usrform -x 10 -y 20 -w 80 -h 30 -text 'Username:'
+$usrbox = TxtBox -form $usrform -x 100 -y 20 -w 200 -h 30 -text $theuser
+$pwdlabel = Label -form $usrform -x 10 -y 50 -w 80 -h 30 -text 'Password:'
+$pwdbox = TxtBox -form $usrform -x 100 -y 50 -w 200 -h 30 -text ''
+$pwdbox.PasswordChar = '*'
+$localusr = RadioButton -form $usrform -x 30 -y 80 -checked $true -text 'local user'
+$localusr.Size = '120,30'
+$adusr = RadioButton -form $usrform -x 180 -y 80 -checked $false -text 'AD user'
+OKButton -form $usrform -x 100 -y 120 -text "Ok" | Out-Null
+$result = $usrform.ShowDialog()
+
+$username = $usrbox.Text
+$thepasswd = $pwdbox.Text
+$pwd = ConvertTo-SecureString $thepasswd -AsPlainText -Force
+
+if ($localusr.Checked) {
     $ErrorActionPreference= 'Stop'
     Try {
-        New-LocalUser -Name $username -Password $pwd -FullName $completo -PasswordNeverExpires -AccountNeverExpires -Description "utente locale"
+        New-LocalUser -Name $username -Password $pwd -FullName $username -PasswordNeverExpires -AccountNeverExpires -Description "local user"
         Add-LocalGroupMember -Group "Administrators" -Member $username
         Write-Host -ForegroundColor Green "Local account created"
-        Write-Host "Username...: " -NoNewline
-        Write-Host $username -ForegroundColor Cyan
-        Write-Host "Password...: " -NoNewline
-        Write-Host $thepasswd -ForegroundColor Cyan
         $ErrorActionPreference= 'Inquire'
-        Pause
     }
     Catch {
-        Write-Host -ForegroundColor Red "Creating local account failed"
         Write-Output "`nError: $($error[0].ToString())"
         Pause
         exit
     }    
+} elseif ($adusr.Checked) {
+    [System.Windows.MessageBox]::Show("Connect to your domain before proceed...",'ACCOUNT','Ok','Warning') | Out-Null
+
+    # add domain prefix to username
+    $username = $usrname.Text
+    $thiscomputer = Get-WmiObject -Class Win32_ComputerSystem
+    $fullname = $thiscomputer.Domain + '\' + $username
+
+    # test user
+    [reflection.assembly]::LoadWithPartialName("System.DirectoryServices.AccountManagement") > $null
+    $principalContext = [System.DirectoryServices.AccountManagement.PrincipalContext]::new([System.DirectoryServices.AccountManagement.ContextType]'Machine',$env:COMPUTERNAME)
+    if ($principalContext.ValidateCredentials($fullname,$thepasswd)) {
+        # granting local admin privileges
+        try {
+            Add-LocalGroupMember -Group "Administrators" -Member $fullname
+        }
+        catch {
+            [System.Windows.MessageBox]::Show("Cannot granting admin privilege to $username",'ACCOUNT','Ok','Error') | Out-Null
+        }
+    } else {
+        [System.Windows.MessageBox]::Show("Invalid credentials for $username",'ACCOUNT','Ok','Error') | Out-Null
+    }
 }
 
 # reboot
