@@ -52,7 +52,12 @@ foreach ($elem in $userlist) {
 $vpos += 20
 OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
 $result = $form_panel.ShowDialog()
-$theuser = $box.Text
+foreach ($item in $boxes) {
+    if ($item.Checked) {
+        $theuser = $item.Text
+    }
+}
+
 
 # identity check
 if ($theuser -eq $env:USERNAME) {
@@ -97,9 +102,13 @@ $ErrorActionPreference = 'Stop'
 Try {
     $SID =  Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" |
             Get-ItemProperty | Where-Object {$_.ProfileimagePath -match "C:\\Users\\$theuser" } | Select-Object -Property ProfileimagePath, PSChildName
-    $keypath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + $SID
-    Remove-Item -Path $keypath -Recurse
-    Write-Host -ForegroundColor Green 'OK'                
+    if ($SID) {
+        $keypath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + $SID
+        Remove-Item -Path $keypath -Recurse
+        Write-Host -ForegroundColor Green 'OK'
+    } else {
+        Write-Host -ForegroundColor Red 'KO'
+    }       
 }
 Catch {
     Write-Host -ForegroundColor Red 'KO'
@@ -119,7 +128,7 @@ if (!(Test-Path $tmppath)) {
 Write-Host -NoNewline 'Sweeping data... '
 $ErrorActionPreference = 'Stop'
 Try {
-    Move-Item -Path $usrcandidates[$theuser].FullPath -Destination $tmppath -Force
+    Move-Item -Path "C:\Users\$theuser" -Destination $tmppath -Force
     Write-Host -ForegroundColor Green 'OK'
     [System.Windows.MessageBox]::Show("[$theuser] data are moved to [$tmppath]",'INFO','Ok','Info') | Out-Null         
 }

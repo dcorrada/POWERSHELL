@@ -65,8 +65,9 @@ foreach ($item in $regges) {
 
 <# checking local or AD
 
-NOTE:   the full AD userlist is shown solely whenever DC is visible,
-        the cmdlet Get-CimInstance works without importing any AD module
+NOTE:   the full AD userlist is shown solely whenever DC is visible AND
+        from an active ADuser sesson.
+        The cmdlet Get-CimInstance works without importing any AD module
 #>
 $halloffame = @{}
 foreach ($item in Get-CimInstance Win32_UserAccount) {
@@ -86,13 +87,14 @@ foreach ($item in $usrcandidates.Keys) {
     Write-Host -NoNewline '.'
 }
 
-# checking domain privileges
+# checking admin privileges
 $group = [ADSI] "WinNT://./Administrators,group"
 $members = @($group.psbase.Invoke("Members"))
 $AdminList = ($members | ForEach {$_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null);Write-Host -NoNewline '.'})
 foreach ($item in $AdminList) {
     if ($usrcandidates.ContainsKey($item)) {
         $usrcandidates[$item].IsAdmin = 'Yes'
+        $usrcandidates[$item].Orphan = 'No'
     }
     Write-Host -NoNewline '.'
 }
