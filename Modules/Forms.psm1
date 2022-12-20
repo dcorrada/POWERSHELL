@@ -119,13 +119,13 @@ function LoginWindow {
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Size(10,20) 
     $label.Size = New-Object System.Drawing.Size(300,20) 
-    $label.Text = "Inserisci le tue credenziali"
+    $label.Text = "Insert your credentials:"
     $form_PWD.Controls.Add($label)
 
     $usrlabel = New-Object System.Windows.Forms.Label
     $usrlabel.Location = New-Object System.Drawing.Size(10,50) 
     $usrlabel.Size = New-Object System.Drawing.Size(100,20) 
-    $usrlabel.Text = "Utente:"
+    $usrlabel.Text = "Username:"
     $form_PWD.Controls.Add($usrlabel)
     $textBox = New-Object System.Windows.Forms.TextBox
     $textBox.Location = New-Object System.Drawing.Point(130,50)

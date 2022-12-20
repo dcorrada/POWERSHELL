@@ -85,29 +85,11 @@ foreach ($item in $choices) {
 
 # source and target def
 $form = FormBase -w 400 -h 200 -text 'PATHS'
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(80,30)
-$label.Text = 'Local Source:'
-$form.Controls.Add($label)
-$srcpath = New-Object System.Windows.Forms.TextBox
-$srcpath.Location = New-Object System.Drawing.Point(90,20)
-$srcpath.Size = New-Object System.Drawing.Size(250,30)
-$srcpath.Text = 'C:\'
-$form.Controls.Add($srcpath)
-$label2 = New-Object System.Windows.Forms.Label
-$label2.Location = New-Object System.Drawing.Point(10,60)
-$label2.Size = New-Object System.Drawing.Size(80,30)
-$label2.Text = 'Remote target:'
-$form.Controls.Add($label2)
-$rmtpath = New-Object System.Windows.Forms.TextBox
-$rmtpath.Location = New-Object System.Drawing.Point(90,60)
-$rmtpath.Size = New-Object System.Drawing.Size(250,30)
-$rmtpath.Text = '[write here your path]'
-$form.Controls.Add($rmtpath)
-$OKButton = New-Object System.Windows.Forms.Button
-OKButton -form $form -x 100 -y 100 -text "Ok"
-$form.Topmost = $true
+$label = Label -form $form -x 10 -y 20 -w 80 -h 30 -text 'Local source:'
+$srcpath = TxtBox -form $form -x 90 -y 20 -w 250 -h 30 -text 'C:\'
+$label2 = Label -form $form -x 10 -y 60 -w 80 -h 30 -text 'Remote target:'
+$rmtpath = TxtBox -form $form -x 90 -y 60 -w 250 -h 30 -text '[write here your path]'
+$OKButton = OKButton -form $form -x 100 -y 100 -text 'Ok'
 $result = $form.ShowDialog()
 $source = $srcpath.Text
 $target = -join($selected_remote, $rmtpath.Text)
@@ -125,11 +107,7 @@ listed at https://rclone.org/
 
 # logs
 $formlist = FormBase -w 400 -h 200 -text 'LOGS'
-$DropDownLabel = new-object System.Windows.Forms.Label
-$DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
-$DropDownLabel.size = new-object System.Drawing.Size(80,30) 
-$DropDownLabel.Text = "Log level:"
-$formlist.Controls.Add($DropDownLabel)
+$DropDownLabel = Label -form $formlist -x 10 -y 20 -w 80 -h 30 -text 'Log level:'
 $DropDown = new-object System.Windows.Forms.ComboBox
 $DropDown.Location = new-object System.Drawing.Size(90,20)
 $DropDown.Size = new-object System.Drawing.Size(250,30)
@@ -138,17 +116,9 @@ foreach ($elem in ('DEBUG', 'INFO', 'NOTICE', 'ERROR')) {
 }
 $DropDown.Text = 'NOTICE'
 $formlist.Controls.Add($DropDown)
-$filelabel = New-Object System.Windows.Forms.Label
-$filelabel.Location = New-Object System.Drawing.Point(10,60)
-$filelabel.Size = New-Object System.Drawing.Size(80,30)
-$filelabel.Text = 'Log file:'
-$formlist.Controls.Add($filelabel)
-$logdia = New-Object System.Windows.Forms.TextBox
-$logdia.Location = New-Object System.Drawing.Point(90,60)
-$logdia.Size = New-Object System.Drawing.Size(250,30)
-$logdia.Text = 'C:\RClone\Melampo.log'
-$formlist.Controls.Add($logdia)
-OKButton -form $formlist -x 100 -y 100 -text "Ok"
+$filelabel = Label -form $formlist -x 10 -y 60 -w 80 -h 30 -text 'Log file:'
+$logdia = TxtBox -form $formlist -x 90 -y 60 -w 250 -h 30 -text 'C:\RClone\Melampo.log'
+$OKButton = OKButton -form $formlist -x 100 -y 100 -text "Ok"
 $formlist.Add_Shown({$DropDown.Select()})
 $result = $formlist.ShowDialog()
 $loglevel= $DropDown.Text

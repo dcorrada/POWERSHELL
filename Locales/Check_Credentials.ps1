@@ -1,57 +1,33 @@
-# this is a script to check account credentials
+<#
+Name......: Check_Credentials.ps1
+Version...: 22.12.1
+Author....: Dario CORRADA
+
+This script just check if login credentials are correct
+#>
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 $workdir = Get-Location
-Import-Module -Name "$workdir\Modules\Forms.psm1"
+$workdir -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Locales$" > $null
+$repopath = $matches[1]
+Import-Module -Name "$repopath\Modules\Forms.psm1"
 
 # get credentials
-$form_PWD = New-Object System.Windows.Forms.Form
-$form_PWD.Text = "LOGIN"
-$form_PWD.Size = "400,270"
-$form_PWD.StartPosition = 'CenterScreen'
-$form_PWD.Topmost = $true
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Size(10,20) 
-$label.Size = New-Object System.Drawing.Size(300,20) 
-$label.Text = "Insert your credentials"
-$form_PWD.Controls.Add($label)
-$usrlabel = New-Object System.Windows.Forms.Label
-$usrlabel.Location = New-Object System.Drawing.Size(10,50) 
-$usrlabel.Size = New-Object System.Drawing.Size(100,20) 
-$usrlabel.Text = "Username:"
-$form_PWD.Controls.Add($usrlabel)
-$textBox = New-Object System.Windows.Forms.TextBox
-$textBox.Location = New-Object System.Drawing.Point(130,50)
-$textBox.Size = New-Object System.Drawing.Size(150,20)
-$form_PWD.Add_Shown({$textBox.Select()})
-$form_PWD.Controls.Add($textBox)
-$pwdlabel = New-Object System.Windows.Forms.Label
-$pwdlabel.Location = New-Object System.Drawing.Size(10,80) 
-$pwdlabel.Size = New-Object System.Drawing.Size(100,20) 
-$pwdlabel.Text = "Password:"
-$form_PWD.Controls.Add($pwdlabel)
+$form_PWD = FormBase -w 400 -h 270 -text "LOGIN"
+$label = Label -form $form_PWD -x 10 -y 20 -w 300 -h 20 -text 'Insert your credentials'
+$usrlabel = Label -form $form_PWD -x 10 -y 50 -w 100 -h 20 -text 'Username:'
+$textBox = TxtBox -form $form_PWD -x 130 -y 50 -w 150 -h 20 -text ''
+$CheckBox = CheckBox -form $form_PWD -checked $false -x 20 -y 120 -text "Domain Account"
+$pwdlabel = Label -form $form_PWD -x 10 -y 80 -w 100 -h 20 -text 'Password:'
 $MaskedTextBox = New-Object System.Windows.Forms.MaskedTextBox
 $MaskedTextBox.PasswordChar = '*'
 $MaskedTextBox.Location = New-Object System.Drawing.Point(130,80)
 $MaskedTextBox.Size = New-Object System.Drawing.Size(150,20)
 $form_PWD.Add_Shown({$MaskedTextBox.Select()})
 $form_PWD.Controls.Add($MaskedTextBox)
-$CheckBox = New-Object System.Windows.Forms.CheckBox
-$CheckBox.Location = New-Object System.Drawing.Point(20,120)
-$CheckBox.Size = New-Object System.Drawing.Size(200,20)
-$CheckBox.Checked = $false
-$CheckBox.Text = "Domain Account"
-$form_PWD.Add_Shown({$CheckBox.Select()})
-$form_PWD.Controls.Add($CheckBox)
-$OKButton = New-Object System.Windows.Forms.Button
-$OKButton.Location = "100,160"
-$OKButton.Size = '100,30'
-$OKButton.Text = "Ok"
-$OKButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-$form_PWD.AcceptButton = $OKButton
-$form_PWD.Controls.Add($OKButton)
+$OKButton = OKButton -form $form_PWD -x 100 -y 160 -text 'Ok'
 $result = $form_PWD.ShowDialog()
 
 # get domain name
