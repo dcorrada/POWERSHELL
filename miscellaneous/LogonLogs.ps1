@@ -5,6 +5,8 @@ Author....: Dario CORRADA
 
 This script collects any logs about logon of a user.
 
+https://learn.microsoft.com/en-us/answers/questions/267891/logon-history-for-single-ad-user-using-powershell.html
+
 ******** NOT TESTED YET ******* 
 * (needs AD admin privileges) *
 *******************************
