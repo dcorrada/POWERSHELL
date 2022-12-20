@@ -8,13 +8,6 @@ This script detach any account from Teams desktop app
 See also:
 https://learn.microsoft.com/en-us/answers/questions/774931/a-powershell-command-to-disconnect-work-or-school.html
 https://answers.microsoft.com/it-it/msteams/forum/all/errore-80090016-di-accesso-a-teams/101e5def-75a7-4dd6-acba-87a08bacf7ca
-
-NOTES:
-221215  After running the script the subsequent reload of Teams proposed the usual login
-        dialog. Once logged in an error message occurred*, but it was a false positive and 
-        don't know if related with this script. Further investigations needed...
-
-[*] https://answers.microsoft.com/en-us/msoffice/forum/all/keyset-does-not-exist-tpm/de690cea-bba8-4260-8985-872e136e76c2
 #>
 
 # elevated script execution with admin privileges
