@@ -36,7 +36,9 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 # fetch and install additional softwares
 # modify download paths according to updated software versions (updated on 2021/01/18)
 $tmppath = "C:\TEMPSOFTWARE"
-New-Item -ItemType directory -Path $tmppath > $null
+if (!(Test-Path $tmppath)) {
+    New-Item -ItemType directory -Path $tmppath | Out-Null
+}
 $swlist = @{}
 $form_panel = FormBase -w 350 -h 485 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
@@ -52,7 +54,7 @@ $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -te
 $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['WatchGuard'].Checked = $false
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 370 -text "Ok"
+OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 $result = $form_panel.ShowDialog()
 
 $download = New-Object net.webclient
@@ -61,13 +63,16 @@ Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
 $download.Downloadfile("https://github.com/microsoft/winget-cli/releases/download/v1.3.2091/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
 Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
 [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
+$winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+$winget_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent --interactive'
 Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            winget install  "Adobe Acrobat Reader DC" --source msstore --accept-package-agreements --accept-source-agreements
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
             Write-Host -NoNewline "Download launcher..."
@@ -123,7 +128,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
-            winget install  "TreeSize Free" --source msstore --accept-package-agreements --accept-source-agreements
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"    
         } elseif ($item -eq '7ZIP') {            
             <# the version stored on MSstore has less features
