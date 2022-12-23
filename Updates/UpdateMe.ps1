@@ -71,6 +71,7 @@ foreach ($item in ($selmods.Keys | Sort-Object)) {
         Catch {
             Write-Host -ForegroundColor Red 'KO'
             Write-Output "Error: $($error[0].ToString())`n"
+            Pause
         }
     } else {
         Write-Host -ForegroundColor Yellow 'skipped'
@@ -84,7 +85,7 @@ thx to Harm Veenstra
 https://powershellisfun.com/2022/07/11/updating-your-powershell-modules-to-the-latest-version-plus-cleaning-up-older-versions/
 #>
 $adialog = FormBase -w 425 -h ((($halloffame.Count-1) * 30) + 125) -text "PREVIOUS INSTALLED"
-Label -form $adialog -x 20 -y 20 -w 300 -h 30 -text 'Would you uninstall previous version(s)?'
+Label -form $adialog -x 20 -y 20 -w 300 -h 30 -text 'Would you uninstall previous version(s)?' | Out-Null
 $they = 50
 $selmods = @{}
 foreach ($item in $halloffame) {
@@ -114,6 +115,7 @@ foreach ($item in $selmods.Keys) {
         Catch {
             Write-Host -ForegroundColor Red 'KO'
             Write-Output "Error: $($error[0].ToString())`n"
+            Pause
         }
     }
 }
