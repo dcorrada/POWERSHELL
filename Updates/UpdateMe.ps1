@@ -1,6 +1,6 @@
 <#
 Name......: UpdateMe.ps1
-Version...: 22.12.1
+Version...: 22.12.2
 Author....: Dario CORRADA
 
 This script looks for installed Powershell modules and try to update them
@@ -77,5 +77,44 @@ foreach ($item in ($selmods.Keys | Sort-Object)) {
     }
 }
 
+<# 
+Cleaning previous installed versions
 
+thx to Harm Veenstra
+https://powershellisfun.com/2022/07/11/updating-your-powershell-modules-to-the-latest-version-plus-cleaning-up-older-versions/
+#>
+$adialog = FormBase -w 425 -h ((($halloffame.Count-1) * 30) + 125) -text "PREVIOUS INSTALLED"
+Label -form $adialog -x 20 -y 20 -w 300 -h 30 -text 'Would you uninstall previous version(s)?'
+$they = 50
+$selmods = @{}
+foreach ($item in $halloffame) {
+    $previous = Get-InstalledModule -Name $item.Name -AllVersions | Sort-Object PublishedDate -Descending
+    $current = $previous[0].Version.ToString() # latest version installed
+    if ($previous.Count -gt 1) {
+        for ($i = 1; $i -lt $previous.Count; $i++) {
+            $akey = $item.Name + ' - ' + $previous[$i].Version
+            $selmods[$akey] = CheckBox -form $adialog -checked $false -x 20 -y $they -text $akey
+            $they += 30
+        }
+    }
+}
+OKButton -form $adialog -x 150 -y ($they + 20) -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
+foreach ($item in $selmods.Keys) {
+    if ($selmods[$item].Checked) {
+        Write-Host -NoNewline "Uninstalling $item... "
+        $ErrorActionPreference= 'Stop'
+        Try {
+            $item -match "^([a-zA-Z_\-\.0-9]+) - ([0-9\.]+)$" > $null
+            Uninstall-Module -Name $matches[1] -RequiredVersion $matches[2] -Force:$True -ErrorAction Stop
+            $matches = @()
+            Write-Host -ForegroundColor Green 'OK'
+            $ErrorActionPreference= 'Inquire'
+        }
+        Catch {
+            Write-Host -ForegroundColor Red 'KO'
+            Write-Output "Error: $($error[0].ToString())`n"
+        }
+    }
+}
 
