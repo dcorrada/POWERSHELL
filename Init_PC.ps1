@@ -64,7 +64,7 @@ $download.Downloadfile("https://github.com/microsoft/winget-cli/releases/downloa
 Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
 [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
 $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
-$winget_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent --interactive'
+$winget_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
 Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
