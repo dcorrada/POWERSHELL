@@ -1,6 +1,6 @@
 <#
 Name......: Autoreply.ps1
-Version...: 21.10.1
+Version...: 22.12.1
 Author....: Dario CORRADA
 
 This script sets an autoreply message in Outlook. In the following example I will set an autoreply from 04:00pm to 09:00am of the day after. 
@@ -58,32 +58,22 @@ if ($outproc -ne $null) {
 $ErrorActionPreference= 'Inquire'
 
 # get credentials
-$form = FormBase -w 520 -h 270 -text "ACCOUNT"
-$font = New-Object System.Drawing.Font("Arial", 12)
-$form.Font = $font
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(500,30)
-$label.Text = "Username:"
-$form.Controls.Add($label)
-$usrname = New-Object System.Windows.Forms.TextBox
-$usrname.Location = New-Object System.Drawing.Point(10,60)
-$usrname.Size = New-Object System.Drawing.Size(450,30)
-$form.Controls.Add($usrname)
-$label2 = New-Object System.Windows.Forms.Label
-$label2.Location = New-Object System.Drawing.Point(10,100)
-$label2.Size = New-Object System.Drawing.Size(500,30)
-$label2.Text = "Password:"
-$form.Controls.Add($label2)
-$passwd = New-Object System.Windows.Forms.MaskedTextBox
+$form = FormBase -w 520 -h 300 -text "ACCOUNT"
+$labelusr = Label -form $form -x 10 -y 20 -w 500 -h 30 -text 'Username:'
+$usrname = TxtBox -form $form -x 10 -y 60 -w 450 -h 30 -text ''
+$labelpwd = Label -form $form -x 10 -y 100 -w 500 -h 30 -text 'Password:'
+$passwd = TxtBox -form $form -x 10 -y 140 -w 450 -h 30 -text ''
 $passwd.PasswordChar = '*'
-$passwd.Location = New-Object System.Drawing.Point(10,140)
-$passwd.Size = New-Object System.Drawing.Size(450,30)
-$form.Controls.Add($passwd)
-$OKButton = New-Object System.Windows.Forms.Button
-OKButton -form $form -x 200 -y 190 -text "Ok"
+OKButton -form $form -x 200 -y 190 -text "Ok" | Out-Null
 $form.Topmost = $true
 $result = $form.ShowDialog()
+
+<#
+# If you need to set specific time zone you can list those locally stored in the registry as follows
+$TimeZone = Get-ChildItem "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Time zones" | foreach {Get-ItemProperty $_.PSPath}
+$TimeZone | sort Display | Format-Table -Auto PSChildname,Display
+#>
+Set-MailboxRegionalConfiguration -TimeZone 'UTC' -Identity $unique
 
 # setting autoreply
 $username = $usrname.Text
