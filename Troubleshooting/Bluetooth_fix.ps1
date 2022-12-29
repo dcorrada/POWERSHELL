@@ -39,7 +39,14 @@ Write-Host -ForegroundColor Blue "`nSTEP 00: Unjoin device(s)"
 $btdevices = @{}
 foreach ($item in (Get-PnpDevice -Class Bluetooth)) {
     if ($item.HardwareID -imatch 'dev') {
-        $hex = [uInt64]('0x{0}' -f $item.HardwareID[0].Substring(12))
+        $ErrorActionPreference= 'Stop'
+        try {
+            $hex = [uInt64]('0x{0}' -f $item.HardwareID[0].Substring(12))
+        }
+        catch {
+            $hex = 'na'
+        }
+        $ErrorActionPreference= 'Inquire'
         $btdevices[$item.FriendlyName] = @{
             'Name'     = $item.FriendlyName
             'Status'   = $item.Status
@@ -91,12 +98,16 @@ foreach ($item in $choices) {
         }
         $ErrorActionPreference= 'Inquire'
         Write-Host -NoNewline "Unpairing... "
-        $success = $BTR::Unpair($btdevices[$devname].Address)
-        if (!$success) {
-            Start-Sleep 1
-            Write-Host -ForegroundColor Green 'OK'
+        if ($btdevices[$devname].Address -eq 'na') {
+            Write-Host -ForegroundColor Yellow 'skipped'
         } else {
-            Write-Host -ForegroundColor Red 'KO'
+            $success = $BTR::Unpair($btdevices[$devname].Address)
+            if (!$success) {
+                Start-Sleep 1
+                Write-Host -ForegroundColor Green 'OK'
+            } else {
+                Write-Host -ForegroundColor Red 'KO'
+            }
         }
     }
 }
