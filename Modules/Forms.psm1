@@ -83,6 +83,22 @@ function Label {
 }
 Export-ModuleMember -Function Label
 
+function DropDown {
+    param ($form, $x, $y, $w, $h, [String[]]$opts)
+
+    $obj = new-object System.Windows.Forms.ComboBox
+    $obj.Location = New-Object System.Drawing.Point($x,$y)
+    $obj.Size = New-Object System.Drawing.Size($w,$h)
+    foreach ($elem in $opts) {
+        $obj.Items.Add($elem)  > $null
+    }
+    $obj.Text = $opts[0]
+    $form.Controls.Add($obj)
+
+    return $obj
+}
+Export-ModuleMember -Function DropDown
+
 function ProgressBar {
     $form_bar = New-Object System.Windows.Forms.Form
     $form_bar.Text = "PROGRESS"
@@ -112,7 +128,7 @@ Export-ModuleMember -Function ProgressBar
 function LoginWindow {
     $form_PWD = New-Object System.Windows.Forms.Form
     $form_PWD.Text = "LOGIN"
-    $form_PWD.Size = "400,250"
+    $form_PWD.Size = "350,200"
     $form_PWD.StartPosition = 'CenterScreen'
     $form_PWD.Topmost = $true
 
@@ -124,24 +140,24 @@ function LoginWindow {
 
     $usrlabel = New-Object System.Windows.Forms.Label
     $usrlabel.Location = New-Object System.Drawing.Size(10,50) 
-    $usrlabel.Size = New-Object System.Drawing.Size(100,20) 
+    $usrlabel.Size = New-Object System.Drawing.Size(80,20) 
     $usrlabel.Text = "Username:"
     $form_PWD.Controls.Add($usrlabel)
     $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.Location = New-Object System.Drawing.Point(130,50)
-    $textBox.Size = New-Object System.Drawing.Size(150,20)
+    $textBox.Location = New-Object System.Drawing.Point(100,50)
+    $textBox.Size = New-Object System.Drawing.Size(200,20)
     $form_PWD.Add_Shown({$textBox.Select()})
     $form_PWD.Controls.Add($textBox)
 
     $pwdlabel = New-Object System.Windows.Forms.Label
     $pwdlabel.Location = New-Object System.Drawing.Size(10,80) 
-    $pwdlabel.Size = New-Object System.Drawing.Size(100,20) 
+    $pwdlabel.Size = New-Object System.Drawing.Size(80,20) 
     $pwdlabel.Text = "Password:"
     $form_PWD.Controls.Add($pwdlabel)
     $MaskedTextBox = New-Object System.Windows.Forms.MaskedTextBox
     $MaskedTextBox.PasswordChar = '*'
-    $MaskedTextBox.Location = New-Object System.Drawing.Point(130,80)
-    $MaskedTextBox.Size = New-Object System.Drawing.Size(150,20)
+    $MaskedTextBox.Location = New-Object System.Drawing.Point(100,80)
+    $MaskedTextBox.Size = New-Object System.Drawing.Size(200,20)
     $form_PWD.Add_Shown({$MaskedTextBox.Select()})
     $form_PWD.Controls.Add($MaskedTextBox)
 
