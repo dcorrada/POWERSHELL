@@ -85,11 +85,11 @@ foreach ($item in $choices) {
 
 # source and target def
 $form = FormBase -w 400 -h 200 -text 'PATHS'
-$label = Label -form $form -x 10 -y 20 -w 80 -h 30 -text 'Local source:'
+Label -form $form -x 10 -y 20 -w 80 -h 30 -text 'Local source:' | Out-Null
 $srcpath = TxtBox -form $form -x 90 -y 20 -w 250 -h 30 -text 'C:\'
-$label2 = Label -form $form -x 10 -y 60 -w 80 -h 30 -text 'Remote target:'
+Label -form $form -x 10 -y 60 -w 80 -h 30 -text 'Remote target:' | Out-Null
 $rmtpath = TxtBox -form $form -x 90 -y 60 -w 250 -h 30 -text '[write here your path]'
-$OKButton = OKButton -form $form -x 100 -y 100 -text 'Ok'
+OKButton -form $form -x 100 -y 100 -text 'Ok' | Out-Null
 $result = $form.ShowDialog()
 $source = $srcpath.Text
 $target = -join($selected_remote, $rmtpath.Text)
@@ -107,21 +107,14 @@ listed at https://rclone.org/
 
 # logs
 $formlist = FormBase -w 400 -h 200 -text 'LOGS'
-$DropDownLabel = Label -form $formlist -x 10 -y 20 -w 80 -h 30 -text 'Log level:'
-$DropDown = new-object System.Windows.Forms.ComboBox
-$DropDown.Location = new-object System.Drawing.Size(90,20)
-$DropDown.Size = new-object System.Drawing.Size(250,30)
-foreach ($elem in ('DEBUG', 'INFO', 'NOTICE', 'ERROR')) {
-    $DropDown.Items.Add($elem)  > $null
-}
-$DropDown.Text = 'NOTICE'
-$formlist.Controls.Add($DropDown)
-$filelabel = Label -form $formlist -x 10 -y 60 -w 80 -h 30 -text 'Log file:'
+Label -form $formlist -x 10 -y 20 -w 80 -h 30 -text 'Log level:' | Out-Null
+$verbosity = DropDown -form $formlist -x 90 -y 20 -w 250 -h 30 -opts ('DEBUG', 'INFO', 'NOTICE', 'ERROR')
+$verbosity.Text = 'NOTICE'
+Label -form $formlist -x 10 -y 60 -w 80 -h 30 -text 'Log file:' | Out-Null
 $logdia = TxtBox -form $formlist -x 90 -y 60 -w 250 -h 30 -text 'C:\RClone\Melampo.log'
 $OKButton = OKButton -form $formlist -x 100 -y 100 -text "Ok"
-$formlist.Add_Shown({$DropDown.Select()})
 $result = $formlist.ShowDialog()
-$loglevel= $DropDown.Text
+$loglevel= $verbosity.Text
 $logfile = $logdia.Text
 
 <# FLAGS
