@@ -64,12 +64,14 @@ $srvinfo = @{
 $usrlogin = LoginWindow
 
 
-# configuring specific client (DA FARE)
-# see https://social.msdn.microsoft.com/Forums/Lync/en-US/ba552159-bc16-4ffa-ae4b-1cb22bab8228/outlook-add-account-to-existing-profile-via-a-script
+# configuring specific client
+<#
+Sembra che non ci sia modo di configurare account IMAP/SMTP via riga di comando
+Al limite si può passare dal tool del pannello di controllo il cui eseguibile 
+per Outlook si trova come C:\Program Files\Microsoft Office\root\Office16\OLCFG.EXE
+#>
 if ($MailClient -match "Office16\\OUTLOOK\.EXE$") {
     Write-Host -NoNewline "Configuring Microsoft Outlook 365... "
-} elseif ($MailClient -match <# Stringa di Windows Mail #>) {
-    Write-Host -NoNewline "Configuring Windows Mail... "
 } else {
     [System.Windows.MessageBox]::Show("No compliant client found",'ABORT','Ok','Warning') | Out-Null
 }
