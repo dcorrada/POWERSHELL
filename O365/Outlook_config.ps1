@@ -55,7 +55,7 @@ function OutlookKiller {
 $form_modalita = FormBase -w 300 -h 190 -text "CONFIGURATION"
 $import = RadioButton -form $form_modalita -checked $false -x 30 -y 20 -text "Import Outlook config"
 $export  = RadioButton -form $form_modalita -checked $true -x 30 -y 50 -text "Export Outlook config"
-OKButton -form $form_modalita -x 90 -y 90 -text "Ok"
+OKButton -form $form_modalita -x 90 -y 90 -text "Ok" | Out-Null
 $result = $form_modalita.ShowDialog()
 
 # select path where configs have to be saved/retrieved

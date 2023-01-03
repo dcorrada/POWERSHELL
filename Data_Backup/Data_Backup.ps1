@@ -84,26 +84,22 @@ $root_path = 'C:\'
 
 # select user profiles
 $userlist = Get-ChildItem C:\Users
-$hsize = 200 + (30 * $userlist.Count)
-$form_panel = FormBase -w 300 -h $hsize -text "USER FOLDERS"
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(200,30)
-$label.Text = "Select users to backup:"
-$form_panel.Controls.Add($label)
+$hsize = 175 + (25 * $userlist.Count)
+$form_panel = FormBase -w 280 -h $hsize -text "USER FOLDERS"
+Label -form $form_panel -x 10 -y 20 -text 'Select users to backup:' | Out-Null
 $vpos = 50
 $boxes = @()
 foreach ($elem in $userlist) {
     if ($elem.Name -eq $env:USERNAME) {
         $boxes += CheckBox -form $form_panel -checked $true -enabled $false -x 20 -y $vpos -text $elem.Name
-        $vpos += 30
+        $vpos += 25
     } else {
         $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem.Name
         $vpos += 30
     }
 }
 $vpos += 20
-OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
+OKButton -form $form_panel -x 80 -y $vpos -text "Ok" | Out-Null
 $result = $form_panel.ShowDialog()
 foreach ($box in $boxes) {
     if ($box.Checked -eq $true) {

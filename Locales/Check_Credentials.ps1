@@ -15,19 +15,14 @@ $repopath = $matches[1]
 Import-Module -Name "$repopath\Modules\Forms.psm1"
 
 # get credentials
-$form_PWD = FormBase -w 400 -h 270 -text "LOGIN"
-$label = Label -form $form_PWD -x 10 -y 20 -w 300 -h 20 -text 'Insert your credentials'
-$usrlabel = Label -form $form_PWD -x 10 -y 50 -w 100 -h 20 -text 'Username:'
-$textBox = TxtBox -form $form_PWD -x 130 -y 50 -w 150 -h 20 -text ''
-$CheckBox = CheckBox -form $form_PWD -checked $false -x 20 -y 120 -text "Domain Account"
-$pwdlabel = Label -form $form_PWD -x 10 -y 80 -w 100 -h 20 -text 'Password:'
-$MaskedTextBox = New-Object System.Windows.Forms.MaskedTextBox
-$MaskedTextBox.PasswordChar = '*'
-$MaskedTextBox.Location = New-Object System.Drawing.Point(130,80)
-$MaskedTextBox.Size = New-Object System.Drawing.Size(150,20)
-$form_PWD.Add_Shown({$MaskedTextBox.Select()})
-$form_PWD.Controls.Add($MaskedTextBox)
-$OKButton = OKButton -form $form_PWD -x 100 -y 160 -text 'Ok'
+$form_PWD = FormBase -w 300 -h 230 -text "LOGIN"
+Label -form $form_PWD -x 10 -y 20 -text 'Insert your credentials' | Out-Null 
+Label -form $form_PWD -x 10 -y 50 -w 80 -text 'Username:' | Out-Null 
+$textBox = TxtBox -form $form_PWD -x 90 -y 50 -w 180
+Label -form $form_PWD -x 10 -y 80 -w 80 -text 'Password:' | Out-Null 
+$MaskedTextBox = TxtBox -form $form_PWD -x 90 -y 80 -w 180 -masked $true
+$CheckBox = CheckBox -form $form_PWD -checked $false -x 10 -y 110 -text "Domain Account"
+OKButton -form $form_PWD -x 75 -y 150 -text 'Ok' | Out-Null
 $result = $form_PWD.ShowDialog()
 
 # get domain name

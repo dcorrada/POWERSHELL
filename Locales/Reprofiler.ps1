@@ -34,11 +34,11 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 $userlist = Get-ChildItem C:\Users
 
 # control panel
-$hsize = 150 + (30 * $userlist.Count)
+$hsize = 150 + (25 * $userlist.Count)
 $form_panel = FormBase -w 300 -h $hsize -text "USER FOLDERS"
-$label = Label -form $form_panel -x 10 -y 20 -w 200 -h 30 -text 'Select profile to be backupped:'
+Label -form $form_panel -x 10 -y 20 -w 200 -h 30 -text 'Select profile to be backupped:' | Out-Null
 $form_panel.Controls.Add($label)
-$vpos = 50
+$vpos = 45
 $boxes = @()
 foreach ($elem in $userlist) {
     if ($vpos -eq 50) {
@@ -47,10 +47,10 @@ foreach ($elem in $userlist) {
         $isfirst = $false
     }
     $boxes += RadioButton -form $form_panel -checked $isfirst -x 20 -y $vpos -text $elem
-    $vpos += 30
+    $vpos += 25
 }
 $vpos += 20
-OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
+OKButton -form $form_panel -x 90 -y $vpos -text "Ok" | Out-Null
 $result = $form_panel.ShowDialog()
 foreach ($item in $boxes) {
     if ($item.Checked) {
@@ -144,13 +144,11 @@ $ErrorActionPreference = 'Inquire'
 
 # select new user mode
 $usrform = FormBase -w 350 -h 220 -text "ACCOUNT"
-$usrlabel = Label -form $usrform -x 10 -y 20 -w 80 -h 30 -text 'Username:'
+Label -form $usrform -x 10 -y 20 -w 80 -h 30 -text 'Username:' | Out-Null
 $usrbox = TxtBox -form $usrform -x 100 -y 20 -w 200 -h 30 -text $theuser
-$pwdlabel = Label -form $usrform -x 10 -y 50 -w 80 -h 30 -text 'Password:'
-$pwdbox = TxtBox -form $usrform -x 100 -y 50 -w 200 -h 30 -text ''
-$pwdbox.PasswordChar = '*'
-$localusr = RadioButton -form $usrform -x 30 -y 80 -checked $true -text 'local user'
-$localusr.Size = '120,30'
+Label -form $usrform -x 10 -y 50 -w 80 -h 30 -text 'Password:' | Out-Null
+$pwdbox = TxtBox -form $usrform -x 100 -y 50 -w 200 -h 30 -masked $true
+$localusr = RadioButton -form $usrform -x 30 -y 80 -w 120 -checked $true -text 'local user'
 $adusr = RadioButton -form $usrform -x 180 -y 80 -checked $false -text 'AD user'
 OKButton -form $usrform -x 100 -y 120 -text "Ok" | Out-Null
 $result = $usrform.ShowDialog()

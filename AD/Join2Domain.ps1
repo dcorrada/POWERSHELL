@@ -38,25 +38,13 @@ $output[0] -match "Server:\s+[a-zA-Z_\-0-9]+\.([a-zA-Z\-0-9\.]+)$" > $null
 $dominio = $matches[1]
 $answ = [System.Windows.MessageBox]::Show("Join to [$dominio]?",'DOMAIN','YesNo','Info')
 if ($answ -eq "No") {    
-    $form = FormBase -w 520 -h 220 -text "DOMAIN"
-    $font = New-Object System.Drawing.Font("Arial", 12)
-    $form.Font = $font
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(10,20)
-    $label.Size = New-Object System.Drawing.Size(500,30)
-    $label.Text = "Domain name:"
-    $form.Controls.Add($label)
-    $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.Location = New-Object System.Drawing.Point(10,60)
-    $textBox.Size = New-Object System.Drawing.Size(450,30)
-    $form.Controls.Add($textBox)
-    $OKButton = New-Object System.Windows.Forms.Button
-    OKButton -form $form -x 200 -y 110 -text "Ok"
-    $form.Topmost = $true
+    $form = FormBase -w 300 -h 175 -text "DOMAIN"
+    Label -form $form -x 10 -y 20 -text 'Domain name:' | Out-Null
+    $adom = TxtBox -form $form -x 10 -y 50 -w 250
+    OKButton -form $form -x 100 -y 90 -text "Ok" | Out-Null
     $result = $form.ShowDialog()
-    $dominio = $textBox.Text
+    $dominio = $adom.Text 
 }
-
 
 # getting AD credentials
 $ad_login = LoginWindow
@@ -67,7 +55,7 @@ $noou = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "null"
 $consulenti  = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "Client Consulenti"
 $milano = RadioButton -form $form_modalita -checked $false -x 30 -y 80 -text "Client Milano"
 $torino = RadioButton -form $form_modalita -checked $false -x 30 -y 110 -text "Client Torino"
-OKButton -form $form_modalita -x 90 -y 150 -text "Ok"
+OKButton -form $form_modalita -x 90 -y 150 -text "Ok" | Out-Null
 $result = $form_modalita.ShowDialog()
 
 # get distinguished name suffix

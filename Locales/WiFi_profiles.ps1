@@ -24,7 +24,7 @@ Import-Module -Name "$repopath\Modules\Forms.psm1"
 $form_modalita = FormBase -w 370 -h 220 -text "WIFI PROFILES"
 $esporta = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Export profiles"
 $importa  = RadioButton -form $form_modalita -checked $false -x 30 -y 60 -text "Import profiles"
-OKButton -form $form_modalita -x 90 -y 120 -text "Ok"
+OKButton -form $form_modalita -x 90 -y 120 -text "Ok" | Out-Null
 $result = $form_modalita.ShowDialog()
 
 if ($result -eq "OK") {

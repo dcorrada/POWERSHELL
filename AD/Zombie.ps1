@@ -45,21 +45,17 @@ $ErrorActionPreference= 'Inquire'
 
 # retrieve the list of available OUs
 $ou_available = Get-ADOrganizationalUnit -Filter *
-$hsize = 150 + (30 * $ou_available.Count)
+$hsize = 150 + (25 * $ou_available.Count)
 $form_panel = FormBase -w 300 -h $hsize -text "AVAILABLE OU"
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(200,30)
-$label.Text = "Select OU for looking for:"
-$form_panel.Controls.Add($label)
-$vpos = 50
+Label -form $form_panel -x 10 -y 20 -text 'Select OU for looking for:' | Out-Null 
+$vpos = 45
 $boxes = @()
 foreach ($elem in ($ou_available.Name | Sort-Object)) {
     $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem
-    $vpos += 30
+    $vpos += 25
 }
 $vpos += 20
-OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
+OKButton -form $form_panel -x 90 -y $vpos -text "Ok" | Out-Null
 $result = $form_panel.ShowDialog()
 
 # retrieve users list from selected OUs

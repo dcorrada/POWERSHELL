@@ -45,9 +45,9 @@ $AD_login = LoginWindow
 
 # dialog
 $aform = FormBase -w 300 -h 150 -text 'COMPUTER'
-$alabel = Label -form $aform -x 10 -y 20 -w 80 -h 30 -text 'hostname:'
+Label -form $aform -x 10 -y 20 -w 80 -h 30 -text 'hostname:' | Out-Null
 $abox = TxtBox -form $aform -x 90 -y 20 -w 150 -h 30 -text ''
-$abutton = OKButton -form $aform -x 100 -y 60 -text "Ok"
+OKButton -form $aform -x 100 -y 60 -text "Ok" | Out-Null
 $result = $aform.ShowDialog()
 $tosearch = $abox.Text
 
