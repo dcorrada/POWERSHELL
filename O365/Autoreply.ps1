@@ -31,7 +31,7 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# import the EXO V2 module
+# import the EXO module
 $ErrorActionPreference= 'Stop'
 try {
     Import-Module ExchangeOnlineManagement
@@ -58,15 +58,7 @@ if ($outproc -ne $null) {
 $ErrorActionPreference= 'Inquire'
 
 # get credentials
-$form = FormBase -w 520 -h 300 -text "ACCOUNT"
-$labelusr = Label -form $form -x 10 -y 20 -w 500 -h 30 -text 'Username:'
-$usrname = TxtBox -form $form -x 10 -y 60 -w 450 -h 30 -text ''
-$labelpwd = Label -form $form -x 10 -y 100 -w 500 -h 30 -text 'Password:'
-$passwd = TxtBox -form $form -x 10 -y 140 -w 450 -h 30 -text ''
-$passwd.PasswordChar = '*'
-OKButton -form $form -x 200 -y 190 -text "Ok" | Out-Null
-$form.Topmost = $true
-$result = $form.ShowDialog()
+$usrlogin = LoginWindow
 
 <#
 # If you need to set specific time zone you can list those locally stored in the registry as follows
@@ -76,12 +68,9 @@ $TimeZone | sort Display | Format-Table -Auto PSChildname,Display
 Set-MailboxRegionalConfiguration -TimeZone 'UTC' -Identity $unique
 
 # setting autoreply
-$username = $usrname.Text
-$username -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" > $null
+$usrlogin.Username -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" | Out-Null
 $unique = $matches[1]
-$password = ConvertTo-SecureString $passwd.Text -AsPlainText -Force
-$UserCredential = New-Object System.Management.Automation.PSCredential -ArgumentList ($username, $password)
-Connect-ExchangeOnline -Credential $UserCredential
+Connect-ExchangeOnline -Credential $usrlogin
 $message = @'
 <html> <body> <div  style="font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt; color:rg b(0,0,0)">
 <p>Hi there,</p>

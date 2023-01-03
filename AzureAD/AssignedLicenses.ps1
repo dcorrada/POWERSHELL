@@ -56,11 +56,11 @@ $dbfile_unlocked = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv"
 
 if (Test-Path $dbfile -PathType Leaf) {
     # reading current key
-    $adialog = FormBase -w 400 -h 230 -text "UNLOCK DB"
+    $adialog = FormBase -w 350 -h 200 -text "UNLOCK DB"
     RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Enter the key for accessing to DB file" | Out-Null
     $currentkey = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text ''
     $cleanDB = RadioButton -form $adialog -checked $false -x 20 -y 80 -w 500 -h 30 -text "Clean existing DB file"
-    OKButton -form $adialog -x 100 -y 130 -text "Ok" | Out-Null
+    OKButton -form $adialog -x 100 -y 120 -text "Ok" | Out-Null
     $result = $adialog.ShowDialog()
     if ($cleanDB.Checked -eq $true) {
         $answ = [System.Windows.MessageBox]::Show("Really delete DB file?",'DELETE','YesNo','Warning')

@@ -34,30 +34,12 @@ $answ = [System.Windows.MessageBox]::Show("Are you looking for an AD user?",'ACC
 if ($answ -eq "Yes") {
 
     # dialog form
-    $form = FormBase -w 520 -h 270 -text "ACCOUNT"
-    $font = New-Object System.Drawing.Font("Arial", 12)
-    $form.Font = $font
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(10,20)
-    $label.Size = New-Object System.Drawing.Size(500,30)
-    $label.Text = "Username:"
-    $form.Controls.Add($label)
-    $usrname = New-Object System.Windows.Forms.TextBox
-    $usrname.Location = New-Object System.Drawing.Point(10,60)
-    $usrname.Size = New-Object System.Drawing.Size(450,30)
-    $form.Controls.Add($usrname)
-    $label2 = New-Object System.Windows.Forms.Label
-    $label2.Location = New-Object System.Drawing.Point(10,100)
-    $label2.Size = New-Object System.Drawing.Size(500,30)
-    $label2.Text = "Password:"
-    $form.Controls.Add($label2)
-    $passwd = New-Object System.Windows.Forms.MaskedTextBox
-    $passwd.PasswordChar = '*'
-    $passwd.Location = New-Object System.Drawing.Point(10,140)
-    $passwd.Size = New-Object System.Drawing.Size(450,30)
-    $form.Controls.Add($passwd)
-    $OKButton = New-Object System.Windows.Forms.Button
-    OKButton -form $form -x 200 -y 190 -text "Ok"
+    $form = FormBase -w 350 -h 175 -text "ACCOUNT"
+    Label -form $form -x 10 -y 20 -w 90 -text 'Username:'
+    $usrname = TxtBox -form $form -x 100 -y 20 -w 200
+    Label -form $form -x 10 -y 50 -w 90 -text 'Password:'
+    $passwd = TxtBox -form $form -x 100 -y 50 -w 200 -masked $true
+    OKButton -form $form -x 120 -y 90 -text "Ok" | Out-Null
     $form.Topmost = $true
     $result = $form.ShowDialog()
 
@@ -74,7 +56,7 @@ if ($answ -eq "Yes") {
         
         # granting local admin privileges
         try {
-            Add-LocalGroupMember -Group "Administrators" -Member "AGM\$username"
+            Add-LocalGroupMember -Group "Administrators" -Member $fullname
         }
         catch {
             [System.Windows.MessageBox]::Show("Cannot granting admin privilege to $username",'ACCOUNT','Ok','Error')

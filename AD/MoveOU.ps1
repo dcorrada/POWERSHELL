@@ -46,23 +46,14 @@ foreach ($item in $ou_available) {
 
 $source_dest = @()
 foreach ($item in ('OU SOURCE', 'OU DESTINATION')) {
-    $formlist = FormBase -w 400 -h 200 -text $item
-    $DropDown = new-object System.Windows.Forms.ComboBox
-    $DropDown.Location = new-object System.Drawing.Size(10,60)
-    $DropDown.Size = new-object System.Drawing.Size(350,30)
-    foreach ($elem in ($ou_list | sort)) {
-        $DropDown.Items.Add($elem)  > $null
-    }
-    $formlist.Controls.Add($DropDown)
-    $DropDownLabel = new-object System.Windows.Forms.Label
-    $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
-    $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
-    $DropDownLabel.Text = "Select OU"
-    $formlist.Controls.Add($DropDownLabel)
-    OKButton -form $formlist -x 100 -y 100 -text "Ok"
-    $formlist.Add_Shown({$DropDown.Select()})
+
+    $formlist = FormBase -w 400 -h 175 -text $item
+    Label -form $formlist -x 10 -y 20 -text 'Select OU:'
+    $ous = DropDown -form $formlist -x 10 -y 50 -w 350 -opts ($ou_list | sort)
+    OKButton -form $formlist -x 140 -y 90 -text "Ok" | Out-Null
     $result = $formlist.ShowDialog()
-    $source_dest += $DropDown.Text
+    $source_dest += $ous.Text
+    
 }
 
 foreach ($computer_name in $computer_list) {
