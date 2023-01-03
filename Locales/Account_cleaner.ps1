@@ -102,10 +102,10 @@ foreach ($item in $AdminList) {
 Write-Host -ForegroundColor Green 'OK'
 
 # control panel
-$hsize = 150 + (30 * $usrcandidates.Count)
+$hsize = 150 + (25 * $usrcandidates.Count)
 $form_panel = FormBase -w 300 -h $hsize -text "USERS LIST"
-$label = Label -form $form_panel -x 10 -y 20 -w 200 -h 30 -text 'Select profiles to be deleted:'
-$vpos = 50
+Label -form $form_panel -x 10 -y 20 -w 200 -h 30 -text 'Select profiles to be deleted:' | Out-Null
+$vpos = 45
 $boxes = @()
 foreach ($item in ($usrcandidates.Keys | Sort-Object)) {
     if ($usrcandidates[$item].Orphan -eq 'Yes') {
@@ -113,7 +113,7 @@ foreach ($item in ($usrcandidates.Keys | Sort-Object)) {
     } else {
         $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $item
     }
-    $vpos += 30
+    $vpos += 25
 }
 $vpos += 20
 OKButton -form $form_panel -x 90 -y $vpos -text "Ok"

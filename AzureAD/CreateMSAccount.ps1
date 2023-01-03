@@ -44,33 +44,24 @@ catch {
 }
 
 # define username
-$form = FormBase -w 520 -h 270 -text "ACCOUNT"
-$font = New-Object System.Drawing.Font("Arial", 12)
-$form.Font = $font
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(500,30)
-$label.Text = "Username:"
-$form.Controls.Add($label)
-$usrname = New-Object System.Windows.Forms.TextBox
-$usrname.Location = New-Object System.Drawing.Point(10,60)
-$usrname.Size = New-Object System.Drawing.Size(450,30)
-$form.Controls.Add($usrname)
-$label2 = New-Object System.Windows.Forms.Label
-$label2.Location = New-Object System.Drawing.Point(10,100)
-$label2.Size = New-Object System.Drawing.Size(500,30)
-$label2.Text = "Fullname:"
-$form.Controls.Add($label2)
-$fullname = New-Object System.Windows.Forms.TextBox
-$fullname.Location = New-Object System.Drawing.Point(10,140)
-$fullname.Size = New-Object System.Drawing.Size(450,30)
-$form.Controls.Add($fullname)
-$OKButton = New-Object System.Windows.Forms.Button
-OKButton -form $form -x 200 -y 190 -text "Ok"
-$form.Topmost = $true
+$form = FormBase -w 350 -h 270 -text "ACCOUNT"
+Label -form $form -x 20 -y 20 -w 80 -text 'Username:' | Out-Null
+$usrname = TxtBox -form $form -x 100 -y 20 
+Label -form $form -x 20 -y 50 -w 80 -text 'Fullname:' | Out-Null
+$fullname = TxtBox -form $form -x 100 -y 50 
+$personal = RadioButton -form $form -checked $true -x 20 -y 80 -text "Set your own password"
+$apass = TxtBox -form $form -x 40 -y 110 -w 260 -masked $true
+$randomic  = RadioButton -form $form -checked $false -x 20 -y 140 -text "Generate random password"
+OKButton -form $form -x 120 -y 190 -text "Ok" | Out-Null
 $result = $form.ShowDialog()
 $username = $usrname.Text
 $completo = $fullname.Text
+if ($personal.Checked) {
+    $thepasswd = $apass.Text
+} elseif ($randomic.Checked) {
+    Add-Type -AssemblyName 'System.Web'
+    $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
+}
 
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
@@ -115,7 +106,7 @@ $optbasic = RadioButton -form $form_modalita -checked $false -x 30 -y 20 -text "
 if ($avail_basic -lt 1) { $optbasic.Enabled = $false }
 $optstandard  = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "Office 365 Standard"
 if ($avail_standard -lt 1) { $optstandard.Enabled = $false }
-OKButton -form $form_modalita -x 90 -y 120 -text "Ok"
+OKButton -form $form_modalita -x 90 -y 120 -text "Ok" | Out-Null
 $result = $form_modalita.ShowDialog()
 if ($result -eq "OK") {
     if ($optbasic.Checked) {
@@ -136,42 +127,6 @@ $ErrorActionPreference= 'Stop'
 try {
     $domains = Get-MsolDomain
     $suffix = $domains[($domains.Count - 1)].Name
-    $form_pswd = FormBase -w 450 -h 230 -text "CREATE PASSWORD"
-    $personal = RadioButton -form $form_pswd -checked $true -x 30 -y 20 -text "Set your own password"
-    $randomic  = RadioButton -form $form_pswd -checked $false -x 30 -y 50 -text "Generate random password"
-    OKButton -form $form_pswd -x 90 -y 120 -text "Ok"
-    $result = $form_pswd.ShowDialog()
-    if ($result -eq "OK") {
-        if ($personal.Checked) {
-            $form = FormBase -w 520 -h 200 -text "PASSWORD"
-            $font = New-Object System.Drawing.Font("Arial", 12)
-            $form.Font = $font
-        
-            $label = New-Object System.Windows.Forms.Label
-            $label.Location = New-Object System.Drawing.Point(10,20)
-            $label.Size = New-Object System.Drawing.Size(500,30)
-            $label.Text = "Password:"
-            $form.Controls.Add($label)
-        
-            $usrname = New-Object System.Windows.Forms.TextBox
-            $usrname.Location = New-Object System.Drawing.Point(10,60)
-            $usrname.Size = New-Object System.Drawing.Size(450,30)
-            $usrname.PasswordChar = '*'
-            $form.Controls.Add($usrname)
-        
-            $OKButton = New-Object System.Windows.Forms.Button
-        
-            OKButton -form $form -x 200 -y 120 -text "Ok"
-        
-            $form.Topmost = $true
-            $result = $form.ShowDialog()
-
-            $thepasswd = $usrname.Text
-        } elseif ($randomic.Checked) {
-            Add-Type -AssemblyName 'System.Web'
-            $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
-        }
-    }
     New-MsolUser -UserPrincipalName "$username@$suffix" -FirstName $firstname -LastName $lastname -DisplayName $completo -Password $thepasswd -ForceChangePassword $false -UsageLocation 'IT' -LicenseAssignment $assigned
 }
 catch {

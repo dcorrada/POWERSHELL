@@ -31,10 +31,10 @@ Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # OU dialog box
-$form_modalita = FormBase -w 300 -h 200 -text "STRATEGIES"
+$form_modalita = FormBase -w 300 -h 175 -text "STRATEGIES"
 $cache = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Delete cache files"
 $restore  = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "Restore last update image"
-OKButton -form $form_modalita -x 90 -y 90 -text "Ok"
+OKButton -form $form_modalita -x 90 -y 90 -text "Ok" | Out-Null
 $result = $form_modalita.ShowDialog()
 
 if ($result -eq 'Ok') {

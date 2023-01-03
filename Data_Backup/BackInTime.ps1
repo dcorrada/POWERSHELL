@@ -115,22 +115,19 @@ foreach ($item in $candidates) {
         $userslist += $item.Name
         $candidatepath = $userspath + $item.Name + '\'
         $path2select = Get-ChildItem -Path $candidatepath -Attributes D
-        $hsize = 200 + (30 * $path2select.Count)
-        $form_panel = FormBase -w 350 -h $hsize -text "$item's folders"
-        $label = New-Object System.Windows.Forms.Label
-        $label.Location = New-Object System.Drawing.Point(10,20)
-        $label.Size = New-Object System.Drawing.Size(200,30)
-        $label.Text = "Select folders to restore:"
-        $form_panel.Controls.Add($label)
-        $vpos = 50
+        $hsize = 150 + (25 * $path2select.Count)
+        $form_panel = FormBase -w 300 -h $hsize -text "$item's folders"
+        Label -form $form_panel -x 10 -y 20 -text 'Select folders to restore:' | Out-Null
+        $vpos = 45
         $boxes = @()
         foreach ($elem in $path2select) {
             $boxes += CheckBox -form $form_panel -checked $false -x 20 -y $vpos -text $elem.Name
-            $vpos += 30
+            $vpos += 25
         }
         $vpos += 20
-        OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
+        OKButton -form $form_panel -x 90 -y $vpos -text "Ok" | Out-Null 
         $result = $form_panel.ShowDialog()
+
         $path2process = @()
         foreach ($box in $boxes) {
             if ($box.Checked -eq $true) {

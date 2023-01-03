@@ -31,7 +31,7 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# import the EXO V2 module
+# import the EXO module
 $ErrorActionPreference= 'Stop'
 try {
     Import-Module ExchangeOnlineManagement
@@ -58,40 +58,12 @@ if ($outproc -ne $null) {
 $ErrorActionPreference= 'Inquire'
 
 # get credentials
-$form = FormBase -w 520 -h 270 -text "ACCOUNT"
-$font = New-Object System.Drawing.Font("Arial", 12)
-$form.Font = $font
-$label = New-Object System.Windows.Forms.Label
-$label.Location = New-Object System.Drawing.Point(10,20)
-$label.Size = New-Object System.Drawing.Size(500,30)
-$label.Text = "Username:"
-$form.Controls.Add($label)
-$usrname = New-Object System.Windows.Forms.TextBox
-$usrname.Location = New-Object System.Drawing.Point(10,60)
-$usrname.Size = New-Object System.Drawing.Size(450,30)
-$form.Controls.Add($usrname)
-$label2 = New-Object System.Windows.Forms.Label
-$label2.Location = New-Object System.Drawing.Point(10,100)
-$label2.Size = New-Object System.Drawing.Size(500,30)
-$label2.Text = "Password:"
-$form.Controls.Add($label2)
-$passwd = New-Object System.Windows.Forms.MaskedTextBox
-$passwd.PasswordChar = '*'
-$passwd.Location = New-Object System.Drawing.Point(10,140)
-$passwd.Size = New-Object System.Drawing.Size(450,30)
-$form.Controls.Add($passwd)
-$OKButton = New-Object System.Windows.Forms.Button
-OKButton -form $form -x 200 -y 190 -text "Ok"
-$form.Topmost = $true
-$result = $form.ShowDialog()
+$usrlogin = LoginWindow
 
 # setting autoreply
-$username = $usrname.Text
-$username -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" > $null
+$usrlogin.Username -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" | Out-Null
 $unique = $matches[1]
-$password = ConvertTo-SecureString $passwd.Text -AsPlainText -Force
-$UserCredential = New-Object System.Management.Automation.PSCredential -ArgumentList ($username, $password)
-Connect-ExchangeOnline -Credential $UserCredential
+Connect-ExchangeOnline -Credential $usrlogin
 $message = @'
 <html> <body> <div  style="font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt; color:rg b(0,0,0)">
 <p>Hi there,</p>

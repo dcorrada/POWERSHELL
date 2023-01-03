@@ -34,7 +34,7 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 $form_modalita = FormBase -w 300 -h 200 -text "CERTIFICATES"
 $togli = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "Remove certificate"
 $metti  = RadioButton -form $form_modalita -checked $false -x 30 -y 60 -text "Request certificate"
-OKButton -form $form_modalita -x 90 -y 120 -text "Ok"
+OKButton -form $form_modalita -x 90 -y 120 -text "Ok" | Out-Null
 $result = $form_modalita.ShowDialog()
 
 if ($result -eq "OK") {
@@ -45,25 +45,12 @@ if ($result -eq "OK") {
         foreach ($cert in $cert_list) {
             $opt_list += $cert.Subject
         }
-        $formlist = FormBase -w 400 -h 200 -text "CERTIFICATES"
-        $DropDown = new-object System.Windows.Forms.ComboBox
-        $DropDown.Location = new-object System.Drawing.Size(10,60)
-        $DropDown.Size = new-object System.Drawing.Size(350,30)
-        $font = New-Object System.Drawing.Font("Arial", 12)
-        $DropDown.Font = $font
-        foreach ($elem in ($opt_list | sort)) {
-            $DropDown.Items.Add($elem)  > $null
-        }
-        $formlist.Controls.Add($DropDown)
-        $DropDownLabel = new-object System.Windows.Forms.Label
-        $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
-        $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
-        $DropDownLabel.Text = "Select certificate"
-        $formlist.Controls.Add($DropDownLabel)
-        OKButton -form $formlist -x 100 -y 100 -text "Ok"
-        $formlist.Add_Shown({$DropDown.Select()})
+        $formlist = FormBase -w 300 -h 175 -text "CERTIFICATES"
+        Label -form $formlist -x 10 -y 20 -text 'Select certificate:' | Out-Null
+        $certs = DropDown -form $formlist -x 10 -y 50 -w 250 -opts ($opt_list | sort)
+        OKButton -form $formlist -x 70 -y 90 -text "Ok" | Out-Null
         $result = $formlist.ShowDialog()
-        $selected = $DropDown.Text
+        $selected = $certs.Text
 
         # remove certificate
         foreach ($cert in $cert_list) { 
@@ -74,25 +61,12 @@ if ($result -eq "OK") {
 
     } elseif ($metti.Checked) {
         # list available certificates
-        $formlist = FormBase -w 400 -h 200 -text "CERTIFICATES"
-        $DropDown = new-object System.Windows.Forms.ComboBox
-        $DropDown.Location = new-object System.Drawing.Size(10,60)
-        $DropDown.Size = new-object System.Drawing.Size(350,30)
-        $font = New-Object System.Drawing.Font("Arial", 12)
-        $DropDown.Font = $font
-        foreach ($elem in ("Utente", "EFS di base")) {
-            $DropDown.Items.Add($elem)  > $null
-        }
-        $formlist.Controls.Add($DropDown)
-        $DropDownLabel = new-object System.Windows.Forms.Label
-        $DropDownLabel.Location = new-object System.Drawing.Size(10,20) 
-        $DropDownLabel.size = new-object System.Drawing.Size(500,30) 
-        $DropDownLabel.Text = "Select certificate"
-        $formlist.Controls.Add($DropDownLabel)
-        OKButton -form $formlist -x 100 -y 100 -text "Ok"
-        $formlist.Add_Shown({$DropDown.Select()})
+        $formlist = FormBase -w 300 -h 175 -text "CERTIFICATES"
+        Label -form $formlist -x 10 -y 20 -text 'Select certificate:' | Out-Null
+        $certs = DropDown -form $formlist -x 10 -y 50 -w 250 -opts ("Utente", "EFS di base")
+        OKButton -form $formlist -x 70 -y 90 -text "Ok" | Out-Null
         $result = $formlist.ShowDialog()
-        $selected = $DropDown.Text
+        $selected = $certs.Text
 
         if ($selected -match "Utente") {
             $tag = "User"
