@@ -150,9 +150,9 @@ $logfile = $logdia.Text
     hashing is available.
 #>
 $form_panel = FormBase -w 400 -h 200 -text "BEHAVIOUR"
-$dryrun = CheckBox -form $form_panel -checked $false -x 20 -y 20 -text "Dry run (do nothing effectively, suggested for testing puposes)"
-$links = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Backup symlink as paths (store links as plain text)"
-$hashcheck = CheckBox -form $form_panel -checked $false -x 20 -y 80 -text "Disable hash check over SFTP (suggested for very big files)"
+$dryrun = CheckBox -form $form_panel -checked $false -x 20 -y 20 -w 350 -text "Dry run (do nothing effectively, suggested for testing puposes)"
+$links = CheckBox -form $form_panel -checked $true -x 20 -y 50 -w 350 -text "Backup symlink as paths (store links as plain text)"
+$hashcheck = CheckBox -form $form_panel -checked $false -x 20 -y 80 -w 350 -text "Disable hash check over SFTP (suggested for very big files)"
 OKButton -form $form_panel -x 100 -y 120 -text "Ok"
 $result = $form_panel.ShowDialog()
 $flags = ('--progress', "--log-level $loglevel", "--log-file $logfile", "--filter-from $filter_list")
