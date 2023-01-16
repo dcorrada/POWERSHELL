@@ -75,3 +75,14 @@ if ($MailClient -match "Office16\\OUTLOOK\.EXE$") {
 } else {
     [System.Windows.MessageBox]::Show("No compliant client found",'ABORT','Ok','Warning') | Out-Null
 }
+
+<#
+Managing autodiscover.xml 
+* https://exchangepedia.com/2015/10/use-a-powershell-function-to-get-autodiscover-xml.html
+* https://4sysops.com/archives/control-outlook-autodiscover-using-registry-and-powershell/
+#>
+
+# close Outlook client first...
+$OutlookApplication = New-Object -comobject Outlook.Application # close Outlook client first
+$autodiscoverxml = $outlookApplication.Session.AutoDiscoverXML
+
