@@ -35,12 +35,11 @@ if ($answ -eq "Yes") {
 
     # dialog form
     $form = FormBase -w 350 -h 175 -text "ACCOUNT"
-    Label -form $form -x 10 -y 20 -w 90 -text 'Username:'
+    Label -form $form -x 10 -y 20 -w 90 -text 'Username:'  | Out-Null
     $usrname = TxtBox -form $form -x 100 -y 20 -w 200
-    Label -form $form -x 10 -y 50 -w 90 -text 'Password:'
+    Label -form $form -x 10 -y 50 -w 90 -text 'Password:'  | Out-Null
     $passwd = TxtBox -form $form -x 100 -y 50 -w 200 -masked $true
     OKButton -form $form -x 120 -y 90 -text "Ok" | Out-Null
-    $form.Topmost = $true
     $result = $form.ShowDialog()
 
     # add domain prefix to username

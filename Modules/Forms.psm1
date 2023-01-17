@@ -104,7 +104,7 @@ Export-ModuleMember -Function OKButton
 function LoginWindow {
     $form_PWD = New-Object System.Windows.Forms.Form
     $form_PWD.Text = "LOGIN"
-    $form_PWD.Size = "350,200"
+    $form_PWD.Size = "350,220"
     $form_PWD.StartPosition = 'CenterScreen'
     $form_PWD.Topmost = $true
 
