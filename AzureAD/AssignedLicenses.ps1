@@ -188,7 +188,7 @@ foreach ($username in $allowed.Keys) {
     } else {
         $isfirst = $false
     }
-    $choices += RadioButton -form $adialog -x 20 -y $they -checked $isfirst -text $username
+    $choices += RadioButton -form $adialog -x 20 -y $they -w 300 -checked $isfirst -text $username
     $they += 30
 }
 OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
