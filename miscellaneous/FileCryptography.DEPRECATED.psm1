@@ -1,6 +1,8 @@
 ﻿<# 
-*** WARNING ***
-Such module is deprecated and automatically quarantined by Windows Defender
+****************************** [230510] WARNING *******************************
+* Such module is deprecated and automatically quarantined by Windows Defender *
+* (aka "Trpjan:PowerShell/Filecoder!MSR")                                     *
+*******************************************************************************
 #>
 
 function New-CryptographyKey()
