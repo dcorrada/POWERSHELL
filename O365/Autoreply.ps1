@@ -1,6 +1,6 @@
 <#
 Name......: Autoreply.ps1
-Version...: 21.10.1
+Version...: 22.12.1
 Author....: Dario CORRADA
 
 This script sets an autoreply message in Outlook. In the following example I will set an autoreply from 04:00pm to 09:00am of the day after. 
@@ -59,6 +59,13 @@ $ErrorActionPreference= 'Inquire'
 
 # get credentials
 $usrlogin = LoginWindow
+
+<#
+# If you need to set specific time zone you can list those locally stored in the registry as follows
+$TimeZone = Get-ChildItem "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Time zones" | foreach {Get-ItemProperty $_.PSPath}
+$TimeZone | sort Display | Format-Table -Auto PSChildname,Display
+#>
+Set-MailboxRegionalConfiguration -TimeZone 'UTC' -Identity $unique
 
 # setting autoreply
 $usrlogin.Username -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" | Out-Null
