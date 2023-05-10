@@ -49,9 +49,9 @@ $selmods = @{}
 foreach ($item in $halloffame) {
     $desc = $item.Name + ' v' + $item.Version + ' >>> v' + $upgradable[$item.Name]
     if ($item.Version -ne $upgradable[$item.Name]) {
-        $selmods[$item.Name] = CheckBox -form $adialog -checked $false -x 20 -y $they -text $desc
+        $selmods[$item.Name] = CheckBox -form $adialog -checked $false -x 20 -y $they -w 350 -text $desc
     } else {
-        $selmods[$item.Name] = CheckBox -form $adialog -checked $false -enabled $false -x 20 -y $they -text $desc
+        $selmods[$item.Name] = CheckBox -form $adialog -checked $false -enabled $false -x 20 -y $they -w 350 -text $desc
     }
     $they += 30 
 }

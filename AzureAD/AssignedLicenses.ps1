@@ -26,6 +26,10 @@ $ErrorActionPreference= 'Inquire'
 $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AssignedLicenses\.ps1$" > $null
 $workdir = $matches[1]
+<# for testing purposes
+$workdir = Get-Location
+$workdir = $workdir.Path
+#>
 
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
@@ -33,34 +37,21 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# function for killing Outlook instances
-function OutlookKiller {
-    $ErrorActionPreference= 'SilentlyContinue'
-    $outproc = Get-Process outlook
-    if ($outproc -ne $null) {
-        $ErrorActionPreference= 'Stop'
-        Try {
-            Stop-Process -ID $outproc.Id -Force
-            Start-Sleep 2
-        }
-        Catch { 
-            [System.Windows.MessageBox]::Show("Check out that all Oulook processes have been closed before go ahead",'TASK MANAGER','Ok','Warning') > $null
-        }
-    }
-    $ErrorActionPreference= 'Inquire'
-}
-
 # the db files
-$dbfile = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv.AES"
-$dbfile_unlocked = "C:\Users\$env:USERNAME\AppData\Local\PatrolDB.csv"
+$dbfile = $env:LOCALAPPDATA + '\AssignedLicenses.encrypted'
+$keyfile = $env:LOCALAPPDATA + '\AssignedLicenses.key'
 
+# looking for existing DB file
 if (Test-Path $dbfile -PathType Leaf) {
-    # reading current key
-    $adialog = FormBase -w 350 -h 200 -text "UNLOCK DB"
-    RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Enter the key for accessing to DB file" | Out-Null
-    $currentkey = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text ''
-    $cleanDB = RadioButton -form $adialog -checked $false -x 20 -y 80 -w 500 -h 30 -text "Clean existing DB file"
-    OKButton -form $adialog -x 100 -y 120 -text "Ok" | Out-Null
+    $adialog = FormBase -w 350 -h 170 -text "DATABASE"
+    if (Test-Path $keyfile -PathType Leaf) {
+        $enterDB = RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Enter the DB file"
+        $cleanDB = RadioButton -form $adialog -checked $false -x 20 -y 50 -w 500 -h 30 -text "Delete the DB file"
+    } else {
+        $enterDB = RadioButton -form $adialog -enabled $false -checked $false -x 20 -y 20 -w 500 -h 30 -text "Enter the DB file (NO key to decrypt!)"
+        $cleanDB = RadioButton -form $adialog -checked $true -x 20 -y 50 -w 500 -h 30 -text "Delete the DB file"
+    }
+    OKButton -form $adialog -x 100 -y 90 -text "Ok" | Out-Null
     $result = $adialog.ShowDialog()
     if ($cleanDB.Checked -eq $true) {
         $answ = [System.Windows.MessageBox]::Show("Really delete DB file?",'DELETE','YesNo','Warning')
@@ -70,112 +61,39 @@ if (Test-Path $dbfile -PathType Leaf) {
     }
 }
 
-Import-Module -Name "$workdir\Modules\FileCryptography.psm1"
-if (Test-Path $dbfile -PathType Leaf) {
-    # unlocking DB file
-    $ErrorActionPreference= 'Stop'
-    Try {
-        $chiave = ConvertTo-SecureString $currentkey.Text -AsPlainText -Force
-        Unprotect-File $dbfile -Algorithm AES -Key $chiave -RemoveSource | Out-Null
-        Write-Host -ForegroundColor Green "*** ACCESS GRANTED ***"
-        $ErrorActionPreference= 'Inquire'
+Import-Module -Name "$workdir\Modules\Gordian.psm1"
+if (!(Test-Path $dbfile -PathType Leaf)) {
+    # creating key file if not available
+    if (!(Test-Path $keyfile -PathType Leaf)) {
+        CreateKeyFile -keyfile "$keyfile" | Out-Null
     }
-    Catch {
-        Write-Host -ForegroundColor Red "*** AUTHENTICATION ERROR, aborting ***"
-        # Write-Output "`nError: $($error[0].ToString())"
-        Pause
-        exit
-    }
-} else {
+
     # creating DB file
     $adialog = FormBase -w 400 -h 300 -text "DB INIT"
-    Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Initialize your DB as follows" | Out-Null
+    Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Initialize your DB as follows (NO space allowed)" | Out-Null
     $dbcontent = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 150 -text ''
     $dbcontent.Multiline = $true;
     $dbcontent.Text = @'
+USR;PWD
 user1@foobar.baz;password1
 user2@foobar.baz;password2
 '@
     $dbcontent.AcceptsReturn = $true
     OKButton -form $adialog -x 100 -y 220 -text "Ok" | Out-Null
     $result = $adialog.ShowDialog()
-     'USR;PWD' | Out-File $dbfile_unlocked -Encoding ASCII -Append
-    $dbcontent.Text | Out-File $dbfile_unlocked -Encoding ASCII -Append
+    $tempusfile = $env:LOCALAPPDATA + '\AssignedLicenses.csv'
+    $dbcontent.Text | Out-File $tempusfile
+    EncryptFile -keyfile "$keyfile" -infile "$tempusfile" -outfile "$dbfile" | Out-Null
 }
 
 # reading DB file
-$filecontent = Get-Content -Path $dbfile_unlocked
+$filecontent = (DecryptFile -keyfile "$keyfile" -infile "$dbfile").Split(" ")
 $allowed = @{}
 foreach ($newline in $filecontent) {
     if ($newline -ne 'USR;PWD') {
         ($username, $passwd) = $newline.Split(';')
         $allowed[$username] = $passwd
     }
-}
-
-# locking DB file
-$newkey = New-CryptographyKey -Algorithm AES -AsPlainText
-$securekey = ConvertTo-SecureString $newkey -AsPlainText -Force
-$ErrorActionPreference= 'Stop'
-Try {
-    Protect-File $dbfile_unlocked -Algorithm AES -Key $securekey | Out-Null
-    Remove-Item -Path $dbfile_unlocked
-    $ErrorActionPreference= 'Inquire'
-}
-Catch {
-    Write-Host -ForegroundColor Red "*** ERROR LOCKING ***"
-    Write-Host -ForegroundColor Yellow "[$dbfile_unlocked] was not crypted"
-    # Write-Output "`nError: $($error[0].ToString())"
-    Pause
-    exit
-}
-
-# show crypto key
-$adialog = FormBase -w 400 -h 250 -text "LOCK DB"
-Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "The key for accessing to DB file will be" | Out-Null
-TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
-Label -form $adialog -x 20 -y 80 -w 500 -h 30 -text "Cut 'n' Paste such string somewhere, otherwise..." | Out-Null
-$sendme = CheckBox -form $adialog -x 20 -y 110 -checked $false -text "send me an email (Outook)"
-OKButton -form $adialog -x 100 -y 160 -text "Ok" | Out-Null
-$result = $adialog.ShowDialog()
-
-# send crypto key
-if ($sendme.Checked -eq $true) {
-    Write-Host -NoNewline "Sending crypto key..."
-    [System.Windows.MessageBox]::Show("Click Ok to close Outlook",'CLOSE','Ok','Warning') | Out-Null
-    OutlookKiller
-    $ErrorActionPreference= 'Stop'
-    Try {
-        $outlook = New-Object -ComObject Outlook.Application
-        $namespace = $outlook.GetNameSpace("MAPI")
-        $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
-        $InboxDef = $namespace.GetDefaultFolder($olFolders::olFolderInBox)
-        $InboxDef.FullFolderPath -match "^\\\\(.*@.*)\\(Inbox|Posta)" > $null
-        $recipient = $matches[1]
-        $email = $outlook.CreateItem(0)
-        $email.To = "$recipient"
-        $email.Subject = "Your Crypto Key"
-        $email.Body = "$newkey"
-        $email.Send()
-        $Outlook.Quit()
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
-        Start-Sleep 3
-        OutlookKiller
-        Write-Host -ForegroundColor Green " DONE"
-    }
-    Catch {
-        Write-Host -ForegroundColor Red " FAILED"
-        # Write-Output "`nError: $($error[0].ToString())"
-        $adialog = FormBase -w 400 -h 170 -text "WARNING"
-        Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Your crypto key was not sent" | Out-Null
-        TxtBox -form $adialog -x 20 -y 50 -w 300 -h 30 -text "$newkey" | Out-Null
-        OKButton -form $adialog -x 100 -y 80 -text "Ok" | Out-Null
-        $result = $adialog.ShowDialog()
-    }
-    $ErrorActionPreference= 'Inquire'
-    Start-Process outlook
-} else {
-    Write-Host -ForegroundColor Blue "Send crypto key by email disabled"
 }
 
 # select the account to access
@@ -188,7 +106,7 @@ foreach ($username in $allowed.Keys) {
     } else {
         $isfirst = $false
     }
-    $choices += RadioButton -form $adialog -x 20 -y $they -checked $isfirst -text $username
+    $choices += RadioButton -form $adialog -x 20 -y $they -w 300 -checked $isfirst -text $username
     $they += 30
 }
 OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
