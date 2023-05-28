@@ -76,7 +76,7 @@ New-Item -ItemType directory -Path "$tmppath\Safety" > $null
 New-Item -ItemType directory -Path "$tmppath\Updates" > $null
 New-Item -ItemType directory -Path "$tmppath\Upkeep" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Avira_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
+#DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Avira_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Ccleaner_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Malwarebytes_wrapper.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\SafetyScan.ps1' -DestinationPath "$tmppath\Safety"
@@ -112,13 +112,13 @@ Import-Module -Name "$tmppath\Modules\Forms.psm1"
 # pannello di controllo
 $swlist = @{}
 $form_panel = FormBase -w 350 -h 360 -text "CONTROL PANEL"
-$swlist['01-Avira'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "1. Avira software updater"
+$swlist['01-Avira'] = CheckBox -form $form_panel -enabled $false -checked $false -x 20 -y 20 -text "1. Avira software updater"
+$swlist['01-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "1. Ccleaner launcher"
 $swlist['02-o365'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "2. Office365 update"
-$swlist['03-Malwarebytes'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "3. Malwarebytes launcher"
-$swlist['04-MSERT'] = CheckBox -form $form_panel -checked $false -x 20 -y 110 -text "4. MS Safety Scanner"
-$swlist['05-Ccleaner'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "5. Ccleaner launcher"
-$swlist['07-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "6. Windows 10 updates"
-$swlist['06-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 200 -text "7. Storage cleaner"
+$swlist['03-Malwarebytes'] = CheckBox -form $form_panel -checked $false -x 20 -y 80 -text "3. Malwarebytes launcher"
+$swlist['04-MSERT'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "4. MS Safety Scanner"
+$swlist['07-Winupdate'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "5. Windows 10 updates"
+$swlist['06-Defrag'] = CheckBox -form $form_panel -checked $false -x 20 -y 200 -text "6. Storage cleaner"
 OKButton -form $form_panel -x 100 -y 250 -text "Ok"
 $result = $form_panel.ShowDialog()
 
@@ -131,7 +131,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq '02-o365') {
             PowerShell.exe "& ""$tmppath\O365\o365_update.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
-        } elseif ($item -eq '05-Ccleaner') {
+        } elseif ($item -eq '01-Ccleaner') {
             PowerShell.exe "& ""$tmppath\3rd_Parties\Ccleaner_wrapper.ps1"
             [System.Windows.MessageBox]::Show("Click Ok to next step...",'WAITING','Ok','Info') > $null
         } elseif ($item -eq '03-Malwarebytes') {
