@@ -1,6 +1,6 @@
 ﻿<#
 Name......: List_all_users.ps1
-Version...: 19.08.1
+Version...: 23.07.1
 Author....: Dario CORRADA
 
 This script retrieve a list of all users belonging to a domain and save it in a CSV file
@@ -20,42 +20,36 @@ Add-Type -AssemblyName PresentationFramework
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
 
 # retrieve user list
-Write-Host "Rtrieve user list..."
+Write-Host "Retrieve user list..."
 $user_list = Get-ADUser -Filter * -Property *
 Write-Host -ForegroundColor Green "Found" $user_list.Count "user"
 
 $rawdata = @{}
 $i = 1
-foreach ($user_name in $user_list.Name) {
+Write-Host -NoNewline "Retrieving..."
+foreach ($auser in $user_list) {
+    $user_name = $auser.Name
     
-    $ErrorActionPreference = 'SilentlyContinue'
+    Write-Host -NoNewline '.'
 
-    Clear-Host
-    Write-Host "Retrieving" $i "of" $user_list.Count
-
-    $infouser = Get-ADUser -Identity $user_name -Properties *
-    $infouser.CanonicalName -match "/(.+)/$user_name$" > $null
+    $auser.CanonicalName -match "(.+)/[a-zA-Z_\-\.\\\s0-9:]+$" > $null
     $ou = $matches[1]
 
-    $fullname = $infouser.DisplayName -replace ', ', ','
-
-    if (!($user_name -match "HealthMailbox")) {
-        $rawdata.$user_name = @{  
-            OrganizationalUnit = $ou         
-            Company = $infouser.Company
-            Created = $infouser.Created
-            Department = $infouser.Department
-            Description = $infouser.Description
-            DisplayName = $fullname
-            EmailAddress = $infouser.EmailAddress
-            LastLogonDate = $infouser.LastLogonDate
-            Office = $infouser.Office
-            Title = $infouser.Title
-        }
+    $rawdata.$user_name = @{  
+        OrganizationalUnit = $ou         
+        Company = $auser.Company
+        Created = $auser.Created
+        Department = $auser.Department
+        Description = $auser.Description
+        DisplayName = $fullname
+        EmailAddress = $auser.EmailAddress
+        LastLogonDate = $auser.LastLogonDate
+        Office = $auser.Office
+        Title = $auser.Title
     }
     $i++
 }
-
+Write-Host "DONE"
 $ErrorActionPreference= 'Inquire'
 
 $outfile = "C:\Users\$env:USERNAME\Desktop\AD_Users.csv"
