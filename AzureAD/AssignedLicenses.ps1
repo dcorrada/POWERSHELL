@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 22.10.2
+Version...: 23.05.1
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user

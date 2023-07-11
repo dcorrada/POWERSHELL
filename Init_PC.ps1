@@ -60,7 +60,7 @@ $result = $form_panel.ShowDialog()
 $download = New-Object net.webclient
 Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
 # see also https://phoenixnap.com/kb/install-winget
-$download.Downloadfile("https://github.com/microsoft/winget-cli/releases/download/v1.4.10173/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+$download.Downloadfile("https://github.com/microsoft/winget-cli/releases/download/v1.5.1572/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
 Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
 [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
 $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
@@ -138,8 +138,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
             #>
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
-            #Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z1900-x64.exe' -OutFile "$tmppath\7Zip.exe"
+            $download.Downloadfile("https://www.7-zip.org/a/7z2301-x64.exe", "$tmppath\7Zip.exe")
+            #Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z2301-x64.exe' -OutFile "$tmppath\7Zip.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
