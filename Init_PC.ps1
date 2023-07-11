@@ -81,12 +81,9 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
-            Write-Host -NoNewline "Download launcher..."
-            $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
-            #Invoke-WebRequest -Uri 'http://dl.google.com/chrome/install/375.126/chrome_installer.exe' -OutFile "$tmppath\ChromeSetup.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
+            Write-Host -NoNewline "Installing Google Chrome..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq 'Revo Uninstaller') {
             Write-Host -NoNewline "Download software..."
