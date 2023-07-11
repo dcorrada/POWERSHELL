@@ -138,8 +138,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
             #>
             Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://www.7-zip.org/a/7z1900-x64.exe", "$tmppath\7Zip.exe")
-            #Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z1900-x64.exe' -OutFile "$tmppath\7Zip.exe"
+            $download.Downloadfile("https://www.7-zip.org/a/7z2301-x64.exe", "$tmppath\7Zip.exe")
+            #Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z2301-x64.exe' -OutFile "$tmppath\7Zip.exe"
             Write-Host -ForegroundColor Green " DONE"
             Write-Host -NoNewline "Install software..."
             Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
