@@ -60,7 +60,13 @@ $result = $form_panel.ShowDialog()
 $download = New-Object net.webclient
 Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
 # see also https://phoenixnap.com/kb/install-winget
-$download.Downloadfile("https://github.com/microsoft/winget-cli/releases/download/v1.5.1572/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+$url = 'https://github.com/microsoft/winget-cli/releases/latest'
+$request = [System.Net.WebRequest]::Create($url)
+$response = $request.GetResponse()
+$realTagUrl = $response.ResponseUri.OriginalString
+$version = $realTagUrl.split('/')[-1]
+$fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
+$download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
 Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
 [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
 $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
@@ -71,16 +77,14 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $winget_opts
+            $chrome_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $chrome_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
-            Write-Host -NoNewline "Download launcher..."
-            $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
-            #Invoke-WebRequest -Uri 'http://dl.google.com/chrome/install/375.126/chrome_installer.exe' -OutFile "$tmppath\ChromeSetup.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
+            Write-Host -NoNewline "Installing Google Chrome..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq 'Revo Uninstaller') {
             Write-Host -NoNewline "Download software..."
