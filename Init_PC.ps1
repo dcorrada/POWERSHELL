@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 22.09.2
+Version...: 23.07.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
