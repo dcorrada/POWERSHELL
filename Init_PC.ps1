@@ -77,7 +77,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $winget_opts
+            $chrome_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $chrome_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
