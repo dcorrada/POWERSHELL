@@ -95,18 +95,21 @@ PowerShell.exe "& "'$tmppath\AD\Join2Domain.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
 "@ | Out-File "$tmppath\STEP01.cmd" -Encoding ASCII -Append
 
+
+<# [231018] Rimuovo dal templato il lancio di questi script, in attesa di aggiornamenti interni
+PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
+pause
+PowerShell.exe "& "'$tmppath\AD\JoinUser.ps1'
+pause
+PowerShell.exe "& "'$tmppath\AzureAD\CreateMSAccount.ps1'
+pause
+#>
 New-Item -ItemType file -Path "$tmppath\STEP02.cmd" > $null
 @"
 copy "$tmppath\STEP03.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 PowerShell.exe "& "'$tmppath\Check_NuGet.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
-pause
-PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
-pause
-PowerShell.exe "& "'$tmppath\AD\JoinUser.ps1'
-pause
-PowerShell.exe "& "'$tmppath\AzureAD\CreateMSAccount.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Updates\Update_Win10.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP02.cmd"
