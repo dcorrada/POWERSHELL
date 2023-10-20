@@ -97,8 +97,6 @@ del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Program
 
 
 <# [231018] Rimuovo dal templato il lancio di questi script, in attesa di aggiornamenti interni
-PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
-pause
 PowerShell.exe "& "'$tmppath\AD\JoinUser.ps1'
 pause
 PowerShell.exe "& "'$tmppath\AzureAD\CreateMSAccount.ps1'
@@ -110,6 +108,8 @@ copy "$tmppath\STEP03.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Win
 PowerShell.exe "& "'$tmppath\Check_NuGet.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
+pause
+PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Updates\Update_Win10.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP02.cmd"
