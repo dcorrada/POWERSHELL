@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 20.12.3
+Version...: 23.10.1
 Author....: Dario CORRADA
 
 This script install Wazuh agent
@@ -28,12 +28,18 @@ $ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 
 # fetch and install additional softwares
-# modify download paths according to updated software versions (updated on 2021/01/18)
 $tmppath = "C:\TEMPSOFTWARE"
 New-Item -ItemType directory -Path $tmppath > $null
 Write-Host -NoNewline "Download software..."
+$wazuh_uri = 'https://documentation.wazuh.com/current/installation-guide/wazuh-agent/wazuh-agent-package-windows.html'
+$wazuh_page = Invoke-WebRequest -Uri $wazuh_uri
+foreach ($item in $wazuh_page.Links) {
+    if ($item.innerText -eq 'Windows installer') {
+        $DownloadPage = $item.href
+    }
+}
 $download = New-Object net.webclient
-$download.Downloadfile("https://packages.wazuh.com/4.x/windows/wazuh-agent-4.1.5-1.msi", "$tmppath\wazuh-agent.msi")
+$download.Downloadfile("$DownloadPage", "$tmppath\wazuh-agent.msi")
 Write-Host -ForegroundColor Green " DONE"
 
 Write-Host -NoNewline "Install software..."
