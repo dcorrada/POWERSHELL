@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 23.10.1
+Version...: 23.10.2
 Author....: Dario CORRADA
 
 This script install Wazuh agent
@@ -32,9 +32,9 @@ $tmppath = "C:\TEMPSOFTWARE"
 New-Item -ItemType directory -Path $tmppath > $null
 Write-Host -NoNewline "Download software..."
 $wazuh_uri = 'https://documentation.wazuh.com/current/installation-guide/wazuh-agent/wazuh-agent-package-windows.html'
-$wazuh_page = Invoke-WebRequest -Uri $wazuh_uri
+$wazuh_page = Invoke-WebRequest -Uri $wazuh_uri -UseBasicParsing
 foreach ($item in $wazuh_page.Links) {
-    if ($item.innerText -eq 'Windows installer') {
+    if ($item -match 'Windows installer') {
         $DownloadPage = $item.href
     }
 }
