@@ -122,7 +122,52 @@ foreach ($item in $choices) {
 $pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
 $credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
 
-# import the MSOnline module
+# Looking for the Excel reference file
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$OpenFileDialog.Title = "Open Reference File"
+$OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+$OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+$OpenFileDialog.ShowDialog() | Out-Null
+$xlsx_file = $OpenFileDialog.filename
+
+
+# Importing the list of licenses of Microsoft365, the script will look for a 
+# worksheet called 'SkuCatalog' edited according to the contents published on:
+# https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
+$ErrorActionPreference= 'Stop'
+try {
+    Import-Module ImportExcel
+} catch {
+    Install-Module ImportExcel -Confirm:$False -Force
+    Import-Module ImportExcel
+}
+$ErrorActionPreference= 'Inquire'
+
+$ErrorActionPreference= 'Stop'
+try {
+    $licref = Import-Excel -Path $xlsx_file -WorksheetName 'SkuCatalog'
+    $license_catalog = @{}
+    foreach ($item in $licref) {
+        $license_catalog[$item.'GUID'] = @{
+            SKUID   =   $item.'GUID'
+            STRING  =   $item.'String ID'
+            DESC    =   $item.'Product name'
+        }
+    }
+} catch {
+    [System.Windows.MessageBox]::Show("Error loading licensing reference worksheet",'ERROR','Ok','Error')
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+    Pause
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+
+# initialize dataframe for collecting data
+$parseddata = @()
+
+# connect to the tenant
 $ErrorActionPreference= 'Stop'
 try {
     Import-Module MSOnline
@@ -132,32 +177,30 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
-# connect to Tenant
 $ErrorActionPreference= 'Stop'
 Try {
     Connect-MsolService -Credential $credits
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
-    Write-Host -ForegroundColor Red "*** ERROR ACCESSING TENANT ***"
-    # Write-Output "`nError: $($error[0].ToString())"
+    [System.Windows.MessageBox]::Show("Error accessng to the tenant",'ERROR','Ok','Error')
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
     Pause
     exit
 }
 
-# initialize dataframe for collecting data
-$parseddata = @()
-<#
-# available licenses
+# Retrieve the available licenses
 $avail_licenses = @{}
 $get_licenses = Get-MsolAccountSku
-foreach ($license in $get_licenses) { 
-    $label = $license.AccountSkuId.Split(":")[1]
+foreach ($license in $get_licenses) {
+    $akey = $license.SkuID.Guid 
+    $label = $license_catalog[$akey].STRING
     $avail = $license.ActiveUnits - $license.ConsumedUnits
     if (($avail -gt 0) -and ($avail -lt 9000)) { # excluding the likely free licenses
         $avail_licenses[$label] = $avail
     }
 }
+
 $adialog = FormBase -w 400 -h ((($avail_licenses.Count) * 30) + 120) -text "AVAILABLE LICENSES"
 $they = 20
 foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
@@ -185,12 +228,80 @@ foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
 }
 OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
-#>
 
-<#
-*** DEBUG ***
-sembra che alcune entry siano ridondanti...
-#>
+# retrieve all users that are licensed
+$Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" }
+
+foreach ($User in $Users) {
+    $licenses = 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import the MSOnline module
+$ErrorActionPreference= 'Stop'
+try {
+    Import-Module MSOnline
+} catch {
+    Install-Module MSOnline -Confirm:$False -Force
+    Import-Module MSOnline
+}
+$ErrorActionPreference= 'Inquire'
+
+# connect to Tenant
+$ErrorActionPreference= 'Stop'
+Try {
+    Connect-MsolService -Credential $credits
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    Write-Host -ForegroundColor Red "*** ERROR ACCESSING TENANT ***"
+    # Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+
+
+
 
 # retrieve all users that are licensed
 $Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" } | Sort-Object DisplayName
@@ -302,8 +413,20 @@ $parsebar[0].Close()
 
 
 
-<#
-*** REVISIONARE ***
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
@@ -372,12 +495,12 @@ $parsebar[0].Close()
 
 
 
-
+<#
 *** TODO ***
 Leggere il file Excel in input, se esiste, quindi aggiornarlo con nuovi reecord 
 creandone ulteriori con $newrecord.STATUS = "dismissed" se è stata tolta una 
 licenza ad un utente
-
+#>
 
 
 
@@ -451,4 +574,3 @@ $Myexcel.Quit()
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
 Write-Host -ForegroundColor Green "DONE"
 Pause
-#>
