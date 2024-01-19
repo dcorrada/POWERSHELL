@@ -35,14 +35,23 @@ $workdir = $workdir.Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
+
+# loading modules
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 Import-Module -Name "$workdir\Modules\Gordian.psm1"
+$ErrorActionPreference= 'Stop'
+try {
+    Import-Module MSOnline
+} catch {
+    Install-Module MSOnline -Confirm:$False -Force
+    Import-Module MSOnline
+}
+$ErrorActionPreference= 'Inquire'
 
-# the db files
+# looking for existing DB files
 $dbfile = $env:LOCALAPPDATA + '\AssignedLicenses.encrypted'
 $keyfile = $env:LOCALAPPDATA + '\AssignedLicenses.key'
 
-# looking for existing DB file
 if (Test-Path $dbfile -PathType Leaf) {
     $adialog = FormBase -w 350 -h 170 -text "DATABASE"
     if (Test-Path $keyfile -PathType Leaf) {
@@ -122,201 +131,10 @@ foreach ($item in $choices) {
 $pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
 $credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
 
-# Looking for the Excel reference file
-[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-$OpenFileDialog.Title = "Open Reference File"
-$OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
-$OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
-$OpenFileDialog.ShowDialog() | Out-Null
-$xlsx_file = $OpenFileDialog.filename
-
-
-# Importing the list of licenses of Microsoft365, the script will look for a 
-# worksheet called 'SkuCatalog' edited according to the contents published on:
+# Only a subset of licenses/plans of interest has been considered in this hash table.
+# A complete list is available on:
 # https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
-$ErrorActionPreference= 'Stop'
-try {
-    Import-Module ImportExcel
-} catch {
-    Install-Module ImportExcel -Confirm:$False -Force
-    Import-Module ImportExcel
-}
-$ErrorActionPreference= 'Inquire'
-
-$ErrorActionPreference= 'Stop'
-try {
-    $licref = Import-Excel -Path $xlsx_file -WorksheetName 'SkuCatalog'
-    $license_catalog = @{}
-    foreach ($item in $licref) {
-        $license_catalog[$item.'GUID'] = @{
-            SKUID   =   $item.'GUID'
-            STRING  =   $item.'String ID'
-            DESC    =   $item.'Product name'
-        }
-    }
-} catch {
-    [System.Windows.MessageBox]::Show("Error loading licensing reference worksheet",'ERROR','Ok','Error')
-    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-    Pause
-    exit
-}
-$ErrorActionPreference= 'Inquire'
-
-
-# initialize dataframe for collecting data
-$parseddata = @()
-
-# connect to the tenant
-$ErrorActionPreference= 'Stop'
-try {
-    Import-Module MSOnline
-} catch {
-    Install-Module MSOnline -Confirm:$False -Force
-    Import-Module MSOnline
-}
-$ErrorActionPreference= 'Inquire'
-
-$ErrorActionPreference= 'Stop'
-Try {
-    Connect-MsolService -Credential $credits
-    $ErrorActionPreference= 'Inquire'
-}
-Catch {
-    [System.Windows.MessageBox]::Show("Error accessng to the tenant",'ERROR','Ok','Error')
-    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-    Pause
-    exit
-}
-
-# Retrieve the available licenses
-$avail_licenses = @{}
-$get_licenses = Get-MsolAccountSku
-foreach ($license in $get_licenses) {
-    $akey = $license.SkuID.Guid 
-    $label = $license_catalog[$akey].STRING
-    $avail = $license.ActiveUnits - $license.ConsumedUnits
-    if (($avail -gt 0) -and ($avail -lt 9000)) { # excluding the likely free licenses
-        $avail_licenses[$label] = $avail
-    }
-}
-
-$adialog = FormBase -w 400 -h ((($avail_licenses.Count) * 30) + 120) -text "AVAILABLE LICENSES"
-$they = 20
-foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
-    $newrecord = @{
-        UPTIME   = Get-Date -format "yyyy/MM/dd"
-        USRNAME  = 'null'
-        USRTYPE  = 'null'
-        DISPNAME = 'null'
-        CREATED  = '1980/02/07'
-        BLOCKED  = 'null'
-        LICENSED = $item.Value
-        LICENSE  = $item.Name
-        PLUS     = 'null'
-        ASSIGNED = '1980/02/07'
-        STATUS   = 'available'
-    }
-    $parseddata += $newrecord    
-    $string = $item.Name + " = " + $item.Value
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(10,$they)
-    $label.Size = New-Object System.Drawing.Size(350,20)
-    $label.Text = $string
-    $adialog.Controls.Add($label)
-    $they += 30
-}
-OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
-$result = $adialog.ShowDialog()
-
-# retrieve all users that are licensed
-$Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" }
-
-foreach ($User in $Users) {
-    $licenses = 
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import the MSOnline module
-$ErrorActionPreference= 'Stop'
-try {
-    Import-Module MSOnline
-} catch {
-    Install-Module MSOnline -Confirm:$False -Force
-    Import-Module MSOnline
-}
-$ErrorActionPreference= 'Inquire'
-
-# connect to Tenant
-$ErrorActionPreference= 'Stop'
-Try {
-    Connect-MsolService -Credential $credits
-    $ErrorActionPreference= 'Inquire'
-}
-Catch {
-    Write-Host -ForegroundColor Red "*** ERROR ACCESSING TENANT ***"
-    # Write-Output "`nError: $($error[0].ToString())"
-    Pause
-    exit
-}
-
-
-
-
-# retrieve all users that are licensed
-$Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" } | Sort-Object DisplayName
-
-$tot = $Users.Count
-$usrcount = 0
-$parsebar = ProgressBar
-Clear-Host
-Write-Host -NoNewline "STEP01 - Collecting..."
-
-# Only a subset of frequently assigned licenses has been considered in this hash table.
-# The other ones not yet considered will be stored in the "PLUS" attribute of $newrecord.
-# A complete list of account sku is available on:
-# https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
-$license_catalog = @{
+$managed_licenses = @{
     "ENTERPRISEPACKPLUS_FACULTY"    =   "Office 365 A3 for Faculty"
     "EXCHANGESTANDARD"              =   "Exchange Online P1"
     "EXCHANGEENTERPRISE"            =   "Exchange Online P2"
@@ -339,238 +157,51 @@ $license_catalog = @{
     "Teams_Ess"                     =   "Microsoft Teams Essentials"
     "TEAMS_ESSENTIALS_AAD"          =   "Microsoft Teams Essentials"
     "TEAMS_EXPLORATORY"             =   "Microsoft Teams Exploratory"
+    "VISIOCLIENT"                   =   "Visio Online Plan 2"
     "VISIO_PLAN1_DEPT"              =   "Visio Plan 1"
     "VISIO_PLAN2_DEPT"              =   "Visio Plan 2"
 }
-foreach ($User in $Users) {
-    $usrcount ++
 
-    $licenses = (Get-MsolUser -UserPrincipalName $User.UserPrincipalName).Licenses.AccountSku | Sort-Object SkuPartNumber
-    if ($licenses.Count -ge 1) { # at least one license
-        foreach ($license in $licenses) {
+# Looking for currently distributed licenses and their availability
+Clear-Host
+Write-Host -ForegroundColor Yellow "STEP 00 - Available licenses"
 
-            $newrecord = @{
-                UPTIME   = Get-Date -format "yyyy/MM/dd"
-                USRNAME  = $User.UserPrincipalName
-                USRTYPE  = $User.UserType
-                DISPNAME = $User.DisplayName
-                CREATED  = $User.WhenCreated | Get-Date -format "yyyy/MM/dd"
-                BLOCKED  = $User.BlockCredential
-                LICENSED = $User.isLicensed
-                LICENSE  = 'null'
-                PLUS     = 'null'
-                ASSIGNED = '1980/02/07'
-                STATUS   = 'null'
-            }
-
-            $newlic = $license.SkuPartNumber
-            if ($license_catalog.ContainsKey("$newlic")) {
-                $newrecord.LICENSE = $license_catalog["$newlic"]
-                $newrecord.PLUS = 'null'
-            } else {
-                $newrecord.PLUS = "$newlic"
-                $newrecord.LICENSE = 'null'
-            }
-            $newrecord.STATUS = "assigned"
-            $parseddata += $newrecord
-        }
-    } else {
-        $newrecord = @{
-            UPTIME   = Get-Date -format "yyyy/MM/dd"
-            USRNAME  = $User.UserPrincipalName
-            USRTYPE  = $User.UserType
-            DISPNAME = $User.DisplayName
-            CREATED  = $User.WhenCreated | Get-Date -format "yyyy/MM/dd"
-            BLOCKED  = $User.BlockCredential
-            LICENSED = $User.isLicensed
-            LICENSE  = 'null'
-            PLUS     = 'null'
-            ASSIGNED = '1980/02/07'
-            STATUS   = 'null'
-        }
-
-        $parseddata += $newrecord
-    }
-
-    # progress
-    $percent = ($usrcount / $tot)*100
-    if ($percent -gt 100) {
-        $percent = 100
-    }
-    $formattato = '{0:0.0}' -f $percent
-    [int32]$progress = $percent   
-    $parsebar[2].Text = ("Record {0} out of {1} parsed [{2}%]" -f ($usrcount, $tot, $formattato))
-    if ($progress -ge 100) {
-        $parsebar[1].Value = 100
-    } else {
-        $parsebar[1].Value = $progress
-    }
-    [System.Windows.Forms.Application]::DoEvents()
-}
-Write-Host -ForegroundColor Green " DONE"
-$parsebar[0].Close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import the AzureAD module
-$ErrorActionPreference= 'Stop'
-try {
-    Import-Module AzureAD
-} catch {
-    Install-Module AzureAD -Confirm:$False -Force
-    Import-Module AzureAD
-}
-$ErrorActionPreference= 'Inquire'
-
-# connect to AzureAD
 $ErrorActionPreference= 'Stop'
 Try {
-    Connect-AzureAD -Credential $credits | Out-Null
+    Write-Host "* Connecting to the tenant"
+    Connect-MsolService -Credential $credits
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
-    Write-Host -ForegroundColor Red "*** ERROR ACCESSING TENANT ***"
-    # Write-Output "`nError: $($error[0].ToString())"
+    [System.Windows.MessageBox]::Show("Error accessng to the tenant",'ERROR','Ok','Error')
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
     Pause
     exit
 }
 
-Start-Sleep 2
-$tot = $Users.Count
-$usrcount = 0
-$parsebar = ProgressBar
-Clear-Host
-Write-Host -NoNewline "STEP02 - Finalizing..."
-foreach ($User in $Users) {
-    $usrcount ++
-
-    $username = $User.UserPrincipalName
-    $plans = (Get-AzureADUser -SearchString $username).AssignedPlans
-
-    foreach ($record in $plans) {
-        if ((($record.Service -eq 'MicrosoftOffice') -or ($record.Service -eq 'exchange')) -and ($record.CapabilityStatus -eq 'Enabled')){
-            $started = $record.AssignedTimestamp | Get-Date -format "yyyy/MM/dd"
-            if ($parseddata[$username].start -eq '') {
-                $parseddata[$username].start = $started
-            } elseif ($started -lt $parseddata[$username].start) {
-                $parseddata[$username].start = $started
-            }
+$curdist_licenses = @{}
+foreach ($license in (Get-MsolAccountSku)) {
+    $string = $license.SkuPartNumber
+    if ($managed_licenses.ContainsKey($string)) {
+        $curdist_licenses[$string] = $license.ActiveUnits - $license.ConsumedUnits
+    } elseif ($license.ActiveUnits -lt 10000) {
+        # alert in case you need to consider other licenses
+        $answ = [System.Windows.MessageBox]::Show("Unexpected license <$string>`nUpdate `$managed_licenses before proceed?",'ABORTING','YesNo','Warning')
+        if ($answ -eq "Yes") {    
+            exit
         }
     }
-    
-    # progress
-    $percent = ($usrcount / $tot)*100
-    if ($percent -gt 100) {
-        $percent = 100
-    }
-    $formattato = '{0:0.0}' -f $percent
-    [int32]$progress = $percent   
-    $parsebar[2].Text = ("Record {0} out of {1} parsed [{2}%]" -f ($usrcount, $tot, $formattato))
-    if ($progress -ge 100) {
-        $parsebar[1].Value = 100
-    } else {
-        $parsebar[1].Value = $progress
-    }
-    [System.Windows.Forms.Application]::DoEvents()
 }
-Write-Host -ForegroundColor Green " DONE"
-$parsebar[0].Close()
-
-
-
-
-<#
-*** TODO ***
-Leggere il file Excel in input, se esiste, quindi aggiornarlo con nuovi reecord 
-creandone ulteriori con $newrecord.STATUS = "dismissed" se è stata tolta una 
-licenza ad un utente
-#>
-
-
-
-
-# writing output file
-# see https://techexpert.tips/powershell/powershell-creating-excel-file/
-Clear-Host
-Write-Host -NoNewline "Writing output file... "
-[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-$OpenFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-$OpenFileDialog.Title = "Save File"
-$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
-$OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
-$OpenFileDialog.filename = 'licenses'
-$OpenFileDialog.ShowDialog() | Out-Null
-$outfile = $OpenFileDialog.filename
-$Myexcel = New-Object -ComObject excel.application
-$Myexcel.visible = $false
-$Myworkbook = $Myexcel.workbooks.add()
-$Sheet1 = $Myworkbook.worksheets.item(1)
-$Sheet1.name = "Assigned_Licenses"
-$i = 1
-foreach ($item in ('NAME','SURNAME','EMAIL','DATE','LICENSE','PLUS')) {
-    $Sheet1.cells.item(1,$i) = $item
-    $i++
+$adialog = FormBase -w 400 -h ((($curdist_licenses.Count) * 30) + 120) -text "AVAILABLE LICENSES"
+$they = 20
+foreach ($item in ($curdist_licenses.GetEnumerator() | Sort Value)) {
+    $string = $item.Name + " = " + $item.Value
+    $label = New-Object System.Windows.Forms.Label
+    $label.Location = New-Object System.Drawing.Point(10,$they)
+    $label.Size = New-Object System.Drawing.Size(350,20)
+    $label.Text = $string
+    $adialog.Controls.Add($label)
+    $they += 30
 }
-$Sheet1.Range("A1:F1").font.size = 12
-$Sheet1.Range("A1:F1").font.bold = $true
-$Sheet1.Range("A1:F1").font.ColorIndex = 2
-$Sheet1.Range("A1:F1").interior.colorindex = 1
-$i = 2
-$totrec = $parseddata.Keys.Count
-$parsebar = ProgressBar
-foreach ($item in $parseddata.Keys) {
-    $new_record = @(
-        $parseddata[$item].nome,
-        $parseddata[$item].cognome,
-        $parseddata[$item].email,
-        $parseddata[$item].start,
-        $parseddata[$item].licenza,
-        $parseddata[$item].pluslicenza
-    )
-    $j = 1
-    foreach ($value in $new_record) {
-        $Sheet1.cells.item($i,$j) = $value
-        $j++
-    }
-    $i++
-
-    # progress
-    $percent = (($i-1) / $totrec)*100
-    if ($percent -gt 100) {
-        $percent = 100
-    }
-    $formattato = '{0:0.0}' -f $percent
-    [int32]$progress = $percent   
-    $parsebar[2].Text = ("Writing {0} out of {1} records [{2}%]" -f (($i-1), $totrec, $formattato))
-    if ($progress -ge 100) {
-        $parsebar[1].Value = 100
-    } else {
-        $parsebar[1].Value = $progress
-    }
-    [System.Windows.Forms.Application]::DoEvents()    
-}
-$parsebar[0].Close()
-$Myworkbook.Activesheet.Cells.EntireColumn.Autofit()
-$Myexcel.displayalerts = $false
-$Myworkbook.Saveas($outfile)
-$Myexcel.displayalerts = $true
-$Myexcel.Quit()
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
-Write-Host -ForegroundColor Green "DONE"
-Pause
+OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
+$result = $adialog.ShowDialog()
