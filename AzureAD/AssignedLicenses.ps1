@@ -147,14 +147,14 @@ Catch {
 
 # initialize dataframe for collecting data
 $parseddata = @()
-
+<#
 # available licenses
 $avail_licenses = @{}
 $get_licenses = Get-MsolAccountSku
 foreach ($license in $get_licenses) { 
     $label = $license.AccountSkuId.Split(":")[1]
     $avail = $license.ActiveUnits - $license.ConsumedUnits
-    if (($avail -gt 0) -and ($avail -lt 9000)) { # escludo le licenze free
+    if (($avail -gt 0) -and ($avail -lt 9000)) { # excluding the likely free licenses
         $avail_licenses[$label] = $avail
     }
 }
@@ -185,6 +185,7 @@ foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
 }
 OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
+#>
 
 <#
 *** DEBUG ***
@@ -200,9 +201,9 @@ $parsebar = ProgressBar
 Clear-Host
 Write-Host -NoNewline "STEP01 - Collecting..."
 
-# Tutte le licenze non previste in questa hash table le andrò ad elencare, se assegnate, 
-# nella colonna PLUS del file Excel di riepilogo. 
-# Una lista completa delle licenze e' disponibile qui:
+# Only a subset of frequently assigned licenses has been considered in this hash table.
+# The other ones not yet considered will be stored in the "PLUS" attribute of $newrecord.
+# A complete list of account sku is available on:
 # https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
 $license_catalog = @{
     "ENTERPRISEPACKPLUS_FACULTY"    =   "Office 365 A3 for Faculty"
@@ -233,23 +234,24 @@ $license_catalog = @{
 foreach ($User in $Users) {
     $usrcount ++
 
-    $newrecord = @{
-        UPTIME   = Get-Date -format "yyyy/MM/dd"
-        USRNAME  = $User.UserPrincipalName
-        USRTYPE  = 'null'
-        DISPNAME = $User.DisplayName
-        CREATED  = $User.WhenCreated | Get-Date -format "yyyy/MM/dd"
-        BLOCKED  = $User.BlockCredential
-        LICENSED = $User.isLicensed
-        LICENSE  = 'null'
-        PLUS     = 'null'
-        ASSIGNED = '1980/02/07'
-        STATUS   = 'null'
-    }
-    
-    $licenses = (Get-MsolUser -UserPrincipalName $newrecord.USRNAME).Licenses.AccountSku | Sort-Object SkuPartNumber
+    $licenses = (Get-MsolUser -UserPrincipalName $User.UserPrincipalName).Licenses.AccountSku | Sort-Object SkuPartNumber
     if ($licenses.Count -ge 1) { # at least one license
         foreach ($license in $licenses) {
+
+            $newrecord = @{
+                UPTIME   = Get-Date -format "yyyy/MM/dd"
+                USRNAME  = $User.UserPrincipalName
+                USRTYPE  = $User.UserType
+                DISPNAME = $User.DisplayName
+                CREATED  = $User.WhenCreated | Get-Date -format "yyyy/MM/dd"
+                BLOCKED  = $User.BlockCredential
+                LICENSED = $User.isLicensed
+                LICENSE  = 'null'
+                PLUS     = 'null'
+                ASSIGNED = '1980/02/07'
+                STATUS   = 'null'
+            }
+
             $newlic = $license.SkuPartNumber
             if ($license_catalog.ContainsKey("$newlic")) {
                 $newrecord.LICENSE = $license_catalog["$newlic"]
@@ -262,6 +264,20 @@ foreach ($User in $Users) {
             $parseddata += $newrecord
         }
     } else {
+        $newrecord = @{
+            UPTIME   = Get-Date -format "yyyy/MM/dd"
+            USRNAME  = $User.UserPrincipalName
+            USRTYPE  = $User.UserType
+            DISPNAME = $User.DisplayName
+            CREATED  = $User.WhenCreated | Get-Date -format "yyyy/MM/dd"
+            BLOCKED  = $User.BlockCredential
+            LICENSED = $User.isLicensed
+            LICENSE  = 'null'
+            PLUS     = 'null'
+            ASSIGNED = '1980/02/07'
+            STATUS   = 'null'
+        }
+
         $parseddata += $newrecord
     }
 
@@ -286,7 +302,8 @@ $parsebar[0].Close()
 
 
 
-
+<#
+*** REVISIONARE ***
 
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
@@ -352,12 +369,17 @@ foreach ($User in $Users) {
 Write-Host -ForegroundColor Green " DONE"
 $parsebar[0].Close()
 
-<#
+
+
+
+
 *** TODO ***
 Leggere il file Excel in input, se esiste, quindi aggiornarlo con nuovi reecord 
 creandone ulteriori con $newrecord.STATUS = "dismissed" se è stata tolta una 
 licenza ad un utente
-#>
+
+
+
 
 
 # writing output file
@@ -429,3 +451,4 @@ $Myexcel.Quit()
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
 Write-Host -ForegroundColor Green "DONE"
 Pause
+#>
