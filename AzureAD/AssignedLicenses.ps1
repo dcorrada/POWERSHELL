@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 23.05.1
+Version...: 24.01.1
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user
@@ -36,6 +36,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Gordian.psm1"
 
 # the db files
 $dbfile = $env:LOCALAPPDATA + '\AssignedLicenses.encrypted'
@@ -61,7 +62,6 @@ if (Test-Path $dbfile -PathType Leaf) {
     }
 }
 
-Import-Module -Name "$workdir\Modules\Gordian.psm1"
 if (!(Test-Path $dbfile -PathType Leaf)) {
     # creating key file if not available
     if (!(Test-Path $keyfile -PathType Leaf)) {
@@ -122,7 +122,7 @@ foreach ($item in $choices) {
 $pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
 $credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
 
-# import the AzureAD module
+# import the MSOnline module
 $ErrorActionPreference= 'Stop'
 try {
     Import-Module MSOnline
@@ -145,17 +145,36 @@ Catch {
     exit
 }
 
+# initialize dataframe for collecting data
+$parseddata = @()
+
 # available licenses
 $avail_licenses = @{}
 $get_licenses = Get-MsolAccountSku
-foreach ($license in $get_licenses) {
-    $label = $license.AccountSkuId
+foreach ($license in $get_licenses) { 
+    $label = $license.AccountSkuId.Split(":")[1]
     $avail = $license.ActiveUnits - $license.ConsumedUnits
-    $avail_licenses[$label] = $avail
+    if (($avail -gt 0) -and ($avail -lt 9000)) { # escludo le licenze free
+        $avail_licenses[$label] = $avail
+    }
 }
 $adialog = FormBase -w 400 -h ((($avail_licenses.Count) * 30) + 120) -text "AVAILABLE LICENSES"
 $they = 20
 foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
+    $newrecord = @{
+        UPTIME   = Get-Date -format "yyyy/MM/dd"
+        USRNAME  = 'null'
+        USRTYPE  = 'null'
+        DISPNAME = 'null'
+        CREATED  = '1980/02/07'
+        BLOCKED  = 'null'
+        LICENSED = $item.Value
+        LICENSE  = $item.Name
+        PLUS     = 'null'
+        ASSIGNED = '1980/02/07'
+        STATUS   = 'available'
+    }
+    $parseddata += $newrecord    
     $string = $item.Name + " = " + $item.Value
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Point(10,$they)
@@ -167,54 +186,83 @@ foreach ($item in $avail_licenses.GetEnumerator() | Sort Value) {
 OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
 
+<#
+*** DEBUG ***
+sembra che alcune entry siano ridondanti...
+#>
+
 # retrieve all users that are licensed
 $Users = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" } | Sort-Object DisplayName
-
-# initialize dataframe for collecting data
-$parseddata = @{}
 
 $tot = $Users.Count
 $usrcount = 0
 $parsebar = ProgressBar
 Clear-Host
 Write-Host -NoNewline "STEP01 - Collecting..."
+
+# Tutte le licenze non previste in questa hash table le andrò ad elencare, se assegnate, 
+# nella colonna PLUS del file Excel di riepilogo. 
+# Una lista completa delle licenze e' disponibile qui:
+# https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
+$license_catalog = @{
+    "ENTERPRISEPACKPLUS_FACULTY"    =   "Office 365 A3 for Faculty"
+    "EXCHANGESTANDARD"              =   "Exchange Online P1"
+    "EXCHANGEENTERPRISE"            =   "Exchange Online P2"
+    "INTUNE_A"                      =   "Intune"
+    "M365EDU_A3_FACULTY"            =   "Office 365 A3 for Students"
+    "O365_BUSINESS"                 =   "Microsoft 365 Apps for Business"
+    "O365_BUSINESS_ESSENTIALS"      =   "Microsoft 365 Business Basic"
+    "O365_BUSINESS_PREMIUM"         =   "Microsoft 365 Business Standard"
+    "PROJECTCLIENT"                 =   "Project for Office 365"
+    "PROJECTESSENTIALS"             =   "Project Online Essentials"
+    "PROJECTPREMIUM"                =   "Project Online Premium"
+    "PROJECT_P1"                    =   "Project Plan 1"
+    "PROJECTPROFESSIONAL"           =   "Project Plan 3"
+    "SHAREPOINTSTORAGE"             =   "Office 365 Extra File Storage"
+    "SMB_BUSINESS"                  =   "Microsoft 365 Apps for Business"
+    "SMB_BUSINESS_ESSENTIALS"       =   "Microsoft 365 Business Basic"
+    "SPB"                           =   "Microsoft 365 Business Premium"
+    "STANDARDWOFFPACK_FACULTY"      =   "Office 365 A1 for Faculty"
+    "STANDARDWOFFPACK_STUDENT"      =   "Office 365 A1 for Students"
+    "Teams_Ess"                     =   "Microsoft Teams Essentials"
+    "TEAMS_ESSENTIALS_AAD"          =   "Microsoft Teams Essentials"
+    "TEAMS_EXPLORATORY"             =   "Microsoft Teams Exploratory"
+    "VISIO_PLAN1_DEPT"              =   "Visio Plan 1"
+    "VISIO_PLAN2_DEPT"              =   "Visio Plan 2"
+}
 foreach ($User in $Users) {
     $usrcount ++
 
-    $username = $User.UserPrincipalName
-    $fullname = $User.DisplayName
-
-    # for the AccountSku list see https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference 
-    $licenses = (Get-MsolUser -UserPrincipalName $username).Licenses.AccountSku | Sort-Object SkuPartNumber
+    $newrecord = @{
+        UPTIME   = Get-Date -format "yyyy/MM/dd"
+        USRNAME  = $User.UserPrincipalName
+        USRTYPE  = 'null'
+        DISPNAME = $User.DisplayName
+        CREATED  = $User.WhenCreated | Get-Date -format "yyyy/MM/dd"
+        BLOCKED  = $User.BlockCredential
+        LICENSED = $User.isLicensed
+        LICENSE  = 'null'
+        PLUS     = 'null'
+        ASSIGNED = '1980/02/07'
+        STATUS   = 'null'
+    }
+    
+    $licenses = (Get-MsolUser -UserPrincipalName $newrecord.USRNAME).Licenses.AccountSku | Sort-Object SkuPartNumber
     if ($licenses.Count -ge 1) { # at least one license
         foreach ($license in $licenses) {
-            $license = $license.SkuPartNumber
-            $splitted = $fullname.Split(' ')
-            $parseddata[$username] = @{
-                'nome' = $splitted[0]
-                'cognome' = $splitted[1]
-                'email' = $username
-                'licenza' = ''
-                'pluslicenza' = ''
-                'start' = ''
-            }
-
-            if ($license -match "O365_BUSINESS_PREMIUM") {
-                $parseddata[$username].licenza += "*Standard"
-            } elseif ($license -match "O365_BUSINESS_ESSENTIALS") {
-                $parseddata[$username].licenza += "*Basic"
-            } elseif ($license -match "EXCHANGESTANDARD") {
-                $parseddata[$username].licenza += "*Exchange"   
-            } elseif ($license -match "ENTERPRISEPACKPLUS_FACULTY") {
-                $parseddata[$username].licenza += "*A3_EnterprisePackPlus"
-            } elseif ($license -match "M365EDU_A3_FACULTY") {
-                $parseddata[$username].licenza += "*A3_EDU"
-            } elseif ($license -match "STANDARDWOFFPACK_FACULTY") {
-                $parseddata[$username].licenza += "*A1"
+            $newlic = $license.SkuPartNumber
+            if ($license_catalog.ContainsKey("$newlic")) {
+                $newrecord.LICENSE = $license_catalog["$newlic"]
+                $newrecord.PLUS = 'null'
             } else {
-                $parseddata[$username].pluslicenza += "*$license"
+                $newrecord.PLUS = "$newlic"
+                $newrecord.LICENSE = 'null'
             }
+            $newrecord.STATUS = "assigned"
+            $parseddata += $newrecord
         }
+    } else {
+        $parseddata += $newrecord
     }
 
     # progress
@@ -234,6 +282,11 @@ foreach ($User in $Users) {
 }
 Write-Host -ForegroundColor Green " DONE"
 $parsebar[0].Close()
+
+
+
+
+
 
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
@@ -298,6 +351,14 @@ foreach ($User in $Users) {
 }
 Write-Host -ForegroundColor Green " DONE"
 $parsebar[0].Close()
+
+<#
+*** TODO ***
+Leggere il file Excel in input, se esiste, quindi aggiornarlo con nuovi reecord 
+creandone ulteriori con $newrecord.STATUS = "dismissed" se è stata tolta una 
+licenza ad un utente
+#>
+
 
 # writing output file
 # see https://techexpert.tips/powershell/powershell-creating-excel-file/
