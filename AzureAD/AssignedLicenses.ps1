@@ -263,7 +263,7 @@ foreach ($item in $avail_lics.Keys) {
     )
 }
 if ($UseRefFile -eq "Yes") { # appending older data
-    Write-Host -NoNewline "Merging [Licenses_Pool] data..."
+    Write-Host "Merging [Licenses_Pool] data..."
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool')) {
         $Licenses_Pool_dataframe += ,@(
             ($history.UPTIME | Get-Date -format "yyyy/MM/dd"),
@@ -272,25 +272,24 @@ if ($UseRefFile -eq "Yes") { # appending older data
             $history.TOTAL
         )
     }
-    Write-Host -ForegroundColor Green 'Ok'
 }
 
 # [Assigned_Licenses]
 if ($UseRefFile -eq "Yes") {
-    Write-Host -NoNewline "Merging [Assigned_Licenses] data..."
+    Write-Host "Analyzing [Assigned_Licenses] data..."
     # Retrieve UsrData stored in the reference file
     $MsolUsrData_OLD = @{}
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
         $akey = $history.USRNAME
         if ($MsolUsrData_OLD.ContainsKey($akey)) { # add further license
-            <# add license record #>
+            $MsolUsrData_OLD[$akey].LICENSES["$($history.LICENSE)"] = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
         } else { # init new record
             $MsolUsrData_OLD[$akey] = @{
                 BLOCKED         = $history.BLOCKED
                 DESC            = $history.DESC
                 USRNAME         = $history.USRNAME
                 LICENSED        = $history.LICENSED
-                LICENSES        = @{ # default values assuming no license assigned
+                LICENSES        = @{ 
                     "$($history.LICENSE)"        = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
                 }
                 USRTYPE         = $history.USRTYPE
@@ -299,19 +298,23 @@ if ($UseRefFile -eq "Yes") {
         }
     }
 
-    # integrating UsrData info
+    # integrating UsrData info   
     foreach ($currentUsrname in ($MsolUsrData.Keys)) {
-        foreach ($currentLicense in ($MsolUsrData[$currentUsrname].LICENSES.Keys)) {
-            if ($MsolUsrData_OLD[$currentUsrname].LICENSES.ContainsKey($currentLicense)) {
-                $OLDtime = $MsolUsrData_OLD[$currentUsrname].LICENSES[$currentLicense]
-                $NEWtime = $MsolUsrData[$currentUsrname].LICENSES[$currentLicense]
-                if ($OLDtime -lt $NEWtime) {
-                    $MsolUsrData[$currentUsrname].LICENSES[$currentLicense] = $OLDtime
+        $ErrorActionPreference= 'Inquire'
+        if ($MsolUsrData_OLD.ContainsKey($currentUsrname)) {
+            foreach ($currentLicense in ($MsolUsrData[$currentUsrname].LICENSES.Keys)) {
+                if (($MsolUsrData_OLD[$currentUsrname].LICENSES).ContainsKey($currentLicense)) {
+                    $OLDtime = $MsolUsrData_OLD[$currentUsrname].LICENSES[$currentLicense]
+                    $NEWtime = $MsolUsrData[$currentUsrname].LICENSES[$currentLicense]
+                    if ($OLDtime -lt $NEWtime) {
+                        Write-Host -ForegroundColor Blue "Merging data for [$currentUsrname]->[$currentLicense]"
+                        $ErrorActionPreference= 'SilentlyContinue'
+                        $MsolUsrData[$currentUsrname].LICENSES[$currentLicense] = $OLDtime
+                    }
                 }
             }
         }
     }
-    Write-Host -ForegroundColor Green 'Ok'
 }
 $Assigned_Licenses_dataframe = @()
 foreach ($item in $MsolUsrData.Keys) {
