@@ -9,6 +9,10 @@ For more details about AzureAD cmdlets see:
 https://docs.microsoft.com/en-us/powershell/module/azuread
 #>
 
+
+<# *******************************************************************************
+                                    HEADER
+******************************************************************************* #>
 # elevated script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
@@ -36,22 +40,31 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# loading modules
-Import-Module -Name "$workdir\Modules\Forms.psm1"
-Import-Module -Name "$workdir\Modules\Gordian.psm1"
+# importing modules
 $ErrorActionPreference= 'Stop'
 try {
+    Import-Module -Name "$workdir\Modules\Gordian.psm1"
+    Import-Module -Name "$workdir\Modules\Forms.psm1"
     Import-Module MSOnline
+    Import-Module ImportExcel
 } catch {
-    Install-Module MSOnline -Confirm:$False -Force
-    Import-Module MSOnline
+    [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+    Pause
+    exit
 }
 $ErrorActionPreference= 'Inquire'
 
-# looking for existing DB files
+
+
+<# *******************************************************************************
+                            CREDENTIALS MANAGEMENT
+******************************************************************************* #>
+# the db files
 $dbfile = $env:LOCALAPPDATA + '\AssignedLicenses.encrypted'
 $keyfile = $env:LOCALAPPDATA + '\AssignedLicenses.key'
 
+# looking for existing DB file
 if (Test-Path $dbfile -PathType Leaf) {
     $adialog = FormBase -w 350 -h 170 -text "DATABASE"
     if (Test-Path $keyfile -PathType Leaf) {
@@ -121,6 +134,11 @@ foreach ($username in $allowed.Keys) {
 OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
 
+
+
+<# *******************************************************************************
+                            FETCHING DATA FROM TENANT
+******************************************************************************* #>
 # get credentials for accessing
 foreach ($item in $choices) {
     if ($item.Checked) {
@@ -131,77 +149,281 @@ foreach ($item in $choices) {
 $pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
 $credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
 
-# Only a subset of licenses/plans of interest has been considered in this hash table.
-# A complete list is available on:
-# https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
-$managed_licenses = @{
-    "ENTERPRISEPACKPLUS_FACULTY"    =   "Office 365 A3 for Faculty"
-    "EXCHANGESTANDARD"              =   "Exchange Online P1"
-    "EXCHANGEENTERPRISE"            =   "Exchange Online P2"
-    "INTUNE_A"                      =   "Intune"
-    "M365EDU_A3_FACULTY"            =   "Office 365 A3 for Students"
-    "O365_BUSINESS"                 =   "Microsoft 365 Apps for Business"
-    "O365_BUSINESS_ESSENTIALS"      =   "Microsoft 365 Business Basic"
-    "O365_BUSINESS_PREMIUM"         =   "Microsoft 365 Business Standard"
-    "PROJECTCLIENT"                 =   "Project for Office 365"
-    "PROJECTESSENTIALS"             =   "Project Online Essentials"
-    "PROJECTPREMIUM"                =   "Project Online Premium"
-    "PROJECT_P1"                    =   "Project Plan 1"
-    "PROJECTPROFESSIONAL"           =   "Project Plan 3"
-    "SHAREPOINTSTORAGE"             =   "Office 365 Extra File Storage"
-    "SMB_BUSINESS"                  =   "Microsoft 365 Apps for Business"
-    "SMB_BUSINESS_ESSENTIALS"       =   "Microsoft 365 Business Basic"
-    "SPB"                           =   "Microsoft 365 Business Premium"
-    "STANDARDWOFFPACK_FACULTY"      =   "Office 365 A1 for Faculty"
-    "STANDARDWOFFPACK_STUDENT"      =   "Office 365 A1 for Students"
-    "Teams_Ess"                     =   "Microsoft Teams Essentials"
-    "TEAMS_ESSENTIALS_AAD"          =   "Microsoft Teams Essentials"
-    "TEAMS_EXPLORATORY"             =   "Microsoft Teams Exploratory"
-    "VISIOCLIENT"                   =   "Visio Online Plan 2"
-    "VISIO_PLAN1_DEPT"              =   "Visio Plan 1"
-    "VISIO_PLAN2_DEPT"              =   "Visio Plan 2"
-}
-
-# Looking for currently distributed licenses and their availability
-Clear-Host
-Write-Host -ForegroundColor Yellow "STEP 00 - Available licenses"
-
+# connect to Tenant
+Write-Host -NoNewline "Connecting to the Tenant..."
 $ErrorActionPreference= 'Stop'
 Try {
-    Write-Host "* Connecting to the tenant"
     Connect-MsolService -Credential $credits
+    Write-Host -ForegroundColor Green "Ok"
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
-    [System.Windows.MessageBox]::Show("Error accessng to the tenant",'ERROR','Ok','Error')
+    [System.Windows.MessageBox]::Show("Error connecting to the Tenant",'ABORTING','Ok','Error')
     Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
     Pause
     exit
 }
 
-$curdist_licenses = @{}
-foreach ($license in (Get-MsolAccountSku)) {
-    $string = $license.SkuPartNumber
-    if ($managed_licenses.ContainsKey($string)) {
-        $curdist_licenses[$string] = $license.ActiveUnits - $license.ConsumedUnits
-    } elseif ($license.ActiveUnits -lt 10000) {
-        # alert in case you need to consider other licenses
-        $answ = [System.Windows.MessageBox]::Show("Unexpected license <$string>`nUpdate `$managed_licenses before proceed?",'ABORTING','YesNo','Warning')
-        if ($answ -eq "Yes") {    
-            exit
+# retrieve the available licenses, complete list of possible account sku is available on:
+# https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
+Write-Host -NoNewline "Looking for available licenses..."
+$avail_lics = @{}
+$AccountName = (Get-MsolAccountSku)[1].AccountName
+foreach ($item in (Get-MsolAccountSku)) {
+    if ($item.ActiveUnits -lt 10000) { # excluding the broadest licenses
+        $avail_lics[$item.SkuPartNumber] = @{
+            TOTAL   = $item.ActiveUnits
+            AVAIL   = ($item.ActiveUnits - $item.ConsumedUnits) 
         }
     }
 }
-$adialog = FormBase -w 400 -h ((($curdist_licenses.Count) * 30) + 120) -text "AVAILABLE LICENSES"
-$they = 20
-foreach ($item in ($curdist_licenses.GetEnumerator() | Sort Value)) {
-    $string = $item.Name + " = " + $item.Value
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(10,$they)
-    $label.Size = New-Object System.Drawing.Size(350,20)
-    $label.Text = $string
-    $adialog.Controls.Add($label)
-    $they += 30
+Write-Host " Found $($avail_lics.Count) active SKU"
+
+# retrieve all users list
+$MsolUsrData = @{} 
+$tot = (Get-MsolUser -All).Count
+$usrcount = 0
+$parsebar = ProgressBar
+foreach ($item in (Get-MsolUser -All | Sort-Object DisplayName)) {
+    $usrcount ++
+    Write-Host -NoNewline "Getting data from [$($item.DisplayName)]... "     
+
+    $MsolUsrData[$item.UserPrincipalName] = @{
+        BLOCKED         = $item.BlockCredential
+        DESC            = $item.DisplayName
+        USRNAME         = $item.UserPrincipalName
+        LICENSED        = $item.IsLicensed
+        LICENSES        = @{ # default values assuming no license assigned
+            'NONE'        = Get-Date -format "yyyy/MM/dd"
+        }
+        USRTYPE         = $item.UserType
+        CREATED         = $item.WhenCreated | Get-Date -format "yyyy/MM/dd"
+    }
+
+    if ($MsolUsrData[$item.UserPrincipalName].LICENSED -eq "True") {
+        $MsolUsrData[$item.UserPrincipalName].LICENSES = @{} # re-init for updating licenses
+        foreach ($accountsku in $item.Licenses.AccountSku.SkuPartNumber) {
+            if ($avail_lics.ContainsKey($accountsku)) { # filtering only managed licenses
+                $MsolUsrData[$item.UserPrincipalName].LICENSES[$accountsku] = Get-Date -format "yyyy/MM/dd"
+            }
+        }
+        Write-Host -ForegroundColor Blue "$($MsolUsrData[$item.UserPrincipalName].LICENSES.Count) license(s) assigned"
+    } else {
+        Write-Host -ForegroundColor Yellow "NO license assigned"
+    }
+
+    # progressbar
+    $percent = ($usrcount / $tot)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
+    $formattato = '{0:0.0}' -f $percent
+    [int32]$progress = $percent   
+    $parsebar[2].Text = ("User {0} out of {1} parsed [{2}%]" -f ($usrcount, $tot, $formattato))
+    if ($progress -ge 100) {
+        $parsebar[1].Value = 100
+    } else {
+        $parsebar[1].Value = $progress
+    }
+    [System.Windows.Forms.Application]::DoEvents()
 }
-OKButton -form $adialog -x 75 -y ($they + 10) -text "Ok" | Out-Null
-$result = $adialog.ShowDialog()
+Write-Host -ForegroundColor Green " DONE"
+$parsebar[0].Close()
+
+
+
+<# *******************************************************************************
+                            CREATING UPDATED DATAFRAMES
+******************************************************************************* #>
+# looking for Excel reference file
+$UseRefFile = [System.Windows.MessageBox]::Show("Would you load an existing Excel reference file?",'UPDATING','YesNo','Info')
+if ($UseRefFile -eq "Yes") {
+    [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+    $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $OpenFileDialog.Title = "Open File"
+    $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+    $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+    $OpenFileDialog.ShowDialog() | Out-Null
+    $xlsx_file = $OpenFileDialog.filename
+} else {
+    $xlsx_file = "C:$env:HOMEPATH\Downloads\$($AccountName)_licenses.xlsx"
+    [System.Windows.MessageBox]::Show("File [$xlsx_file] will be created",'CREATING','Ok','Info') | Out-Null
+}
+Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
+
+
+# [Licenses_Pool]
+$Licenses_Pool_dataframe = @()
+foreach ($item in $avail_lics.Keys) {
+    $Licenses_Pool_dataframe += ,@(
+        (Get-Date -format "yyyy/MM/dd"),
+        $item,
+        $avail_lics[$item].AVAIL,
+        $avail_lics[$item].TOTAL
+    )
+}
+if ($UseRefFile -eq "Yes") { # appending older data
+    Write-Host -NoNewline "Merging [Licenses_Pool] data..."
+    foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool')) {
+        $Licenses_Pool_dataframe += ,@(
+            ($history.UPTIME | Get-Date -format "yyyy/MM/dd"),
+            $history.LICENSE,
+            $history.AVAILABLE,
+            $history.TOTAL
+        )
+    }
+    Write-Host -ForegroundColor Green 'Ok'
+}
+
+# [Assigned_Licenses]
+if ($UseRefFile -eq "Yes") {
+    Write-Host -NoNewline "Merging [Assigned_Licenses] data..."
+    # Retrieve UsrData stored in the reference file
+    $MsolUsrData_OLD = @{}
+    foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
+        $akey = $history.USRNAME
+        if ($MsolUsrData_OLD.ContainsKey($akey)) { # add further license
+            <# add license record #>
+        } else { # init new record
+            $MsolUsrData_OLD[$akey] = @{
+                BLOCKED         = $history.BLOCKED
+                DESC            = $history.DESC
+                USRNAME         = $history.USRNAME
+                LICENSED        = $history.LICENSED
+                LICENSES        = @{ # default values assuming no license assigned
+                    "$($history.LICENSE)"        = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
+                }
+                USRTYPE         = $history.USRTYPE
+                CREATED         = $history.CREATED | Get-Date -format "yyyy/MM/dd"
+            }
+        }
+    }
+
+    # integrating UsrData info
+    foreach ($currentUsrname in ($MsolUsrData.Keys)) {
+        foreach ($currentLicense in ($MsolUsrData[$currentUsrname].LICENSES.Keys)) {
+            if ($MsolUsrData_OLD[$currentUsrname].LICENSES.ContainsKey($currentLicense)) {
+                $OLDtime = $MsolUsrData_OLD[$currentUsrname].LICENSES[$currentLicense]
+                $NEWtime = $MsolUsrData[$currentUsrname].LICENSES[$currentLicense]
+                if ($OLDtime -lt $NEWtime) {
+                    $MsolUsrData[$currentUsrname].LICENSES[$currentLicense] = $OLDtime
+                }
+            }
+        }
+    }
+    Write-Host -ForegroundColor Green 'Ok'
+}
+$Assigned_Licenses_dataframe = @()
+foreach ($item in $MsolUsrData.Keys) {
+    foreach ($subitem in $MsolUsrData[$item].LICENSES.Keys) {
+        $Assigned_Licenses_dataframe += ,@(
+            $MsolUsrData[$item].USRNAME,
+            $MsolUsrData[$item].DESC,
+            $MsolUsrData[$item].USRTYPE.ToString(),
+            $MsolUsrData[$item].CREATED.ToString(),
+            $MsolUsrData[$item].BLOCKED.ToString(),
+            $MsolUsrData[$item].LICENSED.ToString(),
+            $subitem,
+            $MsolUsrData[$item].LICENSES[$subitem]
+        )
+    }
+}
+
+
+<# *******************************************************************************
+                            WRITING REFERENCE FILE
+******************************************************************************* #>
+$Myexcel = New-Object -ComObject excel.application
+$Myexcel.Visible = $false
+$Myexcel.DisplayAlerts = $false
+if ($UseRefFile -eq 'Yes') { # remove older worksheets
+    $Myworkbook = $Myexcel.Workbooks.Open($xlsx_file)
+    foreach ($currentSheet in ($Myworkbook.Worksheets)) {
+        if (($currentSheet.Name -eq 'Assigned_Licenses') -or ($currentSheet.Name -eq 'Licenses_Pool')) {
+            $currentSheet.Delete()
+        }        
+    }
+} else { # create new file
+    $Myworkbook = $Myexcel.Workbooks.Add()
+}
+
+# writing Licenses_Pool worksheet
+Write-Host -NoNewline "Writing worksheet [Licenses_Pool]..."
+$Sheet1 = $Myworkbook.Worksheets.add()
+$Sheet1.name = "Licenses_Pool"
+$i = 1
+foreach ($item in ('UPTIME','LICENSE','AVAILABLE','TOTAL')) {
+    $Sheet1.cells.item(1,$i) = $item
+    $i++        
+}
+$i = 2
+foreach ($new_record in $Licenses_Pool_dataframe) {
+    $j = 1
+    foreach ($value in $new_record) {
+        $Sheet1.cells.item($i,$j) = $value
+        $j++
+    }
+    $i++
+}
+$i--
+$Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
+$Table1 = $Sheet1.ListObjects.Add(
+[Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
+$Sheet1.Range("A1:D$i"), "Licenses_Pool",
+[Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
+)
+$Table1.name = "Licenses_Pool"
+Write-Host -ForegroundColor Green "Ok"
+
+# writing Assigned_Licenses worksheet
+Write-Host -NoNewline "Writing worksheet [Assigned_Licenses]..."
+$Sheet2 = $Myworkbook.Worksheets.add()
+$Sheet2.name = "Assigned_Licenses"
+$i = 1
+foreach ($item in ('USRNAME','DESC','USRTYPE','CREATED', 'BLOCKED', 'LICENSED', 'LICENSE', 'TIMESTAMP')) {
+    $Sheet2.cells.item(1,$i) = $item
+    $i++        
+}
+$i = 2
+$tot = $Assigned_Licenses_dataframe.Count
+$usrcount = 0
+$parsebar = ProgressBar
+foreach ($new_record in $Assigned_Licenses_dataframe) {
+    $j = 1
+    foreach ($value in $new_record) {
+        $Sheet2.cells.item($i,$j) = $value
+        $j++
+    }
+    $i++
+
+    # progressbar
+    $usrcount++
+    $percent = ($usrcount / $tot)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
+    $formattato = '{0:0.0}' -f $percent
+    [int32]$progress = $percent   
+    $parsebar[2].Text = ("Record {0} out of {1} written [{2}%]" -f ($usrcount, $tot, $formattato))
+    if ($progress -ge 100) {
+        $parsebar[1].Value = 100
+    } else {
+        $parsebar[1].Value = $progress
+    }
+    [System.Windows.Forms.Application]::DoEvents()
+}
+$parsebar[0].Close()
+$i--
+$Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
+$Table2 = $Sheet2.ListObjects.Add(
+[Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
+$Sheet2.Range("A1:H$i"), "Assigned_Licenses",
+[Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
+)
+$Table2.name = "Assigned_Licenses"
+Write-Host -ForegroundColor Green "Ok"
+
+$Myworkbook.Saveas($xlsx_file)
+$Myworkbook.Close($true)
+$Myexcel.Quit()
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
