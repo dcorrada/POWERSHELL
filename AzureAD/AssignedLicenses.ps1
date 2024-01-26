@@ -4,9 +4,6 @@ Version...: 24.01.1
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a list of which license(s) are assigned to each user
-
-For more details about AzureAD cmdlets see:
-https://docs.microsoft.com/en-us/powershell/module/azuread
 #>
 
 
@@ -339,16 +336,94 @@ foreach ($item in $MsolUsrData.Keys) {
 $Myexcel = New-Object -ComObject excel.application
 $Myexcel.Visible = $false
 $Myexcel.DisplayAlerts = $false
+$FetchSkuCatalog = $false
 if ($UseRefFile -eq 'Yes') { # remove older worksheets
+    $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
+    if ($ReplaceSkuCatalog -eq 'Yes') {
+        $FetchSkuCatalog = $true
+    }
     $Myworkbook = $Myexcel.Workbooks.Open($xlsx_file)
     foreach ($currentSheet in ($Myworkbook.Worksheets)) {
         if (($currentSheet.Name -eq 'Assigned_Licenses') -or ($currentSheet.Name -eq 'Licenses_Pool')) {
             $currentSheet.Delete()
-        }        
+        } 
+        if (($ReplaceSkuCatalog -eq 'Yes') -and ($currentSheet.Name -match "SkuCatalog")) {
+            $currentSheet.Delete()
+        }       
     }
 } else { # create new file
     $Myworkbook = $Myexcel.Workbooks.Add()
+    $FetchSkuCatalog = $true
 }
+
+# writing SkuCatalog worksheet
+if ($FetchSkuCatalog -eq $true) {
+    $label = 'SkuCatalog_' + (Get-Date -Format "yyMMdd")
+    $csvdestfile = "C:$($env:HOMEPATH)\Downloads\$label.csv"
+    Invoke-WebRequest -Uri 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv' -OutFile "$csvdestfile"
+    $SkuCatalog_rawdata = @{}
+    foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
+        if (!($SkuCatalog_rawdata.ContainsKey("$($currentItem.GUID)"))) {
+            $SkuCatalog_rawdata["$($currentItem.GUID)"] = @{
+                SKUID   = "$($currentItem.String_Id)"
+                DESC    = "$($currentItem.Product_Display_Name)"
+            }
+        }
+    }
+    Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $Sheet3 = $Myworkbook.Worksheets.add()
+    $Sheet3.name = "$label"
+    $i = 1
+    foreach ($item in ('ID','SKU','DESCRIPTION')) {
+        $Sheet3.cells.item(1,$i) = $item
+        $i++        
+    }
+    $i = 2
+    $tot = $SkuCatalog_rawdata.Keys.Count
+    $usrcount = 0
+    $parsebar = ProgressBar
+    foreach ($currentID in $SkuCatalog_rawdata.Keys) {
+        $new_record = @(
+            "$currentID",
+            "$($SkuCatalog_rawdata[$currentID].SKUID)",
+            "$($SkuCatalog_rawdata[$currentID].DESC)"
+        )
+        $j = 1
+        foreach ($value in $new_record) {
+            $Sheet3.cells.item($i,$j) = $value
+            $j++
+        }
+        $i++
+
+        # progressbar
+        $usrcount++
+        $percent = ($usrcount / $tot)*100
+        if ($percent -gt 100) {
+            $percent = 100
+        }
+        $formattato = '{0:0.0}' -f $percent
+        [int32]$progress = $percent   
+        $parsebar[2].Text = ("Record {0} out of {1} written [{2}%]" -f ($usrcount, $tot, $formattato))
+        if ($progress -ge 100) {
+            $parsebar[1].Value = 100
+        } else {
+            $parsebar[1].Value = $progress
+        }
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+    $parsebar[0].Close()
+    $i--
+    $Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
+    $Table3 = $Sheet3.ListObjects.Add(
+    [Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
+    $Sheet3.Range("A1:C$i"), "$label",
+    [Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
+    )
+    $Table3.name = "SkuCatalog"
+    Write-Host -ForegroundColor Green "Ok"
+}
+
 
 # writing Licenses_Pool worksheet
 Write-Host -NoNewline "Writing worksheet [Licenses_Pool]..."
