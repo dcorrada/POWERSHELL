@@ -251,14 +251,6 @@ Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 
 # [Licenses_Pool]
 $Licenses_Pool_dataframe = @()
-foreach ($item in $avail_lics.Keys) {
-    $Licenses_Pool_dataframe += ,@(
-        (Get-Date -format "yyyy/MM/dd"),
-        $item,
-        $avail_lics[$item].AVAIL,
-        $avail_lics[$item].TOTAL
-    )
-}
 if ($UseRefFile -eq "Yes") { # appending older data
     Write-Host "Merging [Licenses_Pool] data..."
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool')) {
@@ -270,46 +262,35 @@ if ($UseRefFile -eq "Yes") { # appending older data
         )
     }
 }
+foreach ($item in $avail_lics.Keys) {
+    $Licenses_Pool_dataframe += ,@(
+        (Get-Date -format "yyyy/MM/dd"),
+        $item,
+        $avail_lics[$item].AVAIL,
+        $avail_lics[$item].TOTAL
+    )
+}
 
 # [Assigned_Licenses]
 if ($UseRefFile -eq "Yes") {
-    Write-Host "Analyzing [Assigned_Licenses] data..."
-    # Retrieve UsrData stored in the reference file
-    $MsolUsrData_OLD = @{}
+    Write-Host "Merging [Assigned_Licenses] data..."
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
-        $akey = $history.USRNAME
-        if ($MsolUsrData_OLD.ContainsKey($akey)) { # add further license
-            $MsolUsrData_OLD[$akey].LICENSES["$($history.LICENSE)"] = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
-        } else { # init new record
-            $MsolUsrData_OLD[$akey] = @{
-                BLOCKED         = $history.BLOCKED
-                DESC            = $history.DESC
-                USRNAME         = $history.USRNAME
-                LICENSED        = $history.LICENSED
-                LICENSES        = @{ 
-                    "$($history.LICENSE)"        = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
+        $aUser = $history.USRNAME
+        if ($MsolUsrData.ContainsKey($aUser)) {
+            $aLicense = $history.LICENSE
+            if ($MsolUsrData[$aUser].LICENSES.ContainsKey($aLicense)) {
+                $OldTime = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
+                $NewTime = $MsolUsrData[$aUser].LICENSES[$aLicense]
+                if ($OldTime -lt $NewTime) {
+                    $MsolUsrData[$aUser].LICENSES[$aLicense] = $OldTime
                 }
-                USRTYPE         = $history.USRTYPE
-                CREATED         = $history.CREATED | Get-Date -format "yyyy/MM/dd"
+            } else {
+                Write-Host -ForegroundColor Yellow "[$aLicense] no longer assigned to [$aUser]"
+                Pause
             }
-        }
-    }
-
-    # integrating UsrData info   
-    foreach ($currentUsrname in ($MsolUsrData.Keys)) {
-        $ErrorActionPreference= 'Inquire'
-        if ($MsolUsrData_OLD.ContainsKey($currentUsrname)) {
-            foreach ($currentLicense in ($MsolUsrData[$currentUsrname].LICENSES.Keys)) {
-                if (($MsolUsrData_OLD[$currentUsrname].LICENSES).ContainsKey($currentLicense)) {
-                    $OLDtime = $MsolUsrData_OLD[$currentUsrname].LICENSES[$currentLicense]
-                    $NEWtime = $MsolUsrData[$currentUsrname].LICENSES[$currentLicense]
-                    if ($OLDtime -lt $NEWtime) {
-                        Write-Host -ForegroundColor Blue "Merging data for [$currentUsrname]->[$currentLicense]"
-                        $ErrorActionPreference= 'SilentlyContinue'
-                        $MsolUsrData[$currentUsrname].LICENSES[$currentLicense] = $OLDtime
-                    }
-                }
-            }
+        } else {
+            Write-Host -ForegroundColor Yellow "[$aUser] no longer exists on tenant"
+            Pause
         }
     }
 }
