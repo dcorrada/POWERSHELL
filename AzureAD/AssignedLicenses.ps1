@@ -272,6 +272,7 @@ foreach ($item in $avail_lics.Keys) {
 }
 
 # [Assigned_Licenses]
+$orphanedrecords = @()
 if ($UseRefFile -eq "Yes") {
     Write-Host "Merging [Assigned_Licenses] data..."
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
@@ -286,11 +287,29 @@ if ($UseRefFile -eq "Yes") {
                 }
             } else {
                 Write-Host -ForegroundColor Yellow "[$aLicense] no longer assigned to [$aUser]"
-                Pause
+                $orphanedrecords += ,@(
+                    $history.USRNAME,
+                    $history.DESC,
+                    $history.USRTYPE,
+                    ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
+                    $history.BLOCKED,
+                    $history.LICENSED,
+                    $history.LICENSE,
+                    (Get-Date -format "yyyy/MM/dd")
+                )
             }
         } else {
             Write-Host -ForegroundColor Yellow "[$aUser] no longer exists on tenant"
-            Pause
+            $orphanedrecords += ,@(
+                $history.USRNAME,
+                $history.DESC,
+                $history.USRTYPE,
+                ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
+                'NULL',
+                'NULL',
+                'NONE',
+                (Get-Date -format "yyyy/MM/dd")
+            )
         }
     }
 }
@@ -307,6 +326,33 @@ foreach ($item in $MsolUsrData.Keys) {
             $subitem,
             $MsolUsrData[$item].LICENSES[$subitem]
         )
+    }
+}
+
+# [Orphaned]
+$newOrphans = $false
+if (($orphanedrecords.Count) -ge 1) {
+    $newOrphans = $true
+    if ($UseRefFile -eq "Yes") {
+        $ErrorActionPreference= 'Stop'
+        try {
+            foreach ($currentRec in (Import-Excel -Path $xlsx_file -WorksheetName 'Orphaned')) {
+                $orphanedrecords += ,@(
+                    $currentRec.USRNAME,
+                    $currentRec.DESC,
+                    $currentRec.USRTYPE,
+                    ($currentRec.CREATED | Get-Date -format "yyyy/MM/dd"),
+                    $currentRec.BLOCKED,
+                    $currentRec.LICENSED,
+                    $currentRec.LICENSE,
+                    ($cuurentRec.TIMESTAMP | Get-Date -format "yyyy/MM/dd")
+                )
+            }
+        }
+        catch {
+            Write-Host -ForegroundColor Magenta "No [Orphaned] worksheet found"
+        }
+        $ErrorActionPreference= 'Inquire'
     }
 }
 
@@ -329,6 +375,9 @@ if ($UseRefFile -eq 'Yes') { # remove older worksheets
             $currentSheet.Delete()
         } 
         if (($ReplaceSkuCatalog -eq 'Yes') -and ($currentSheet.Name -match "SkuCatalog")) {
+            $currentSheet.Delete()
+        }
+        if (($newOrphans -eq $true) -and ($currentSheet.Name -match "Orphaned")) {
             $currentSheet.Delete()
         }       
     }
@@ -405,6 +454,35 @@ if ($FetchSkuCatalog -eq $true) {
     Write-Host -ForegroundColor Green "Ok"
 }
 
+# writing Orphaned worksheet
+if ($newOrphans -eq $true) {
+    Write-Host -NoNewline "Writing worksheet [Orphaned]..."
+    $Sheet4 = $Myworkbook.Worksheets.add()
+    $Sheet4.name = "Orphaned"
+    $i = 1
+    foreach ($item in ('USRNAME','DESC','USRTYPE','CREATED', 'BLOCKED', 'LICENSED', 'LICENSE', 'TIMESTAMP')) {
+        $Sheet4.cells.item(1,$i) = $item
+        $i++        
+    }
+    $i = 2
+    foreach ($new_record in $orphanedrecords) {
+        $j = 1
+        foreach ($value in $new_record) {
+            $Sheet4.cells.item($i,$j) = $value
+            $j++
+        }
+        $i++
+    }
+    $i--
+    $Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
+    $Table4 = $Sheet4.ListObjects.Add(
+    [Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
+    $Sheet4.Range("A1:H$i"), "Orphaned",
+    [Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
+    )
+    $Table4.name = "Orphaned"
+    Write-Host -ForegroundColor Green "Ok"
+}
 
 # writing Licenses_Pool worksheet
 Write-Host -NoNewline "Writing worksheet [Licenses_Pool]..."
