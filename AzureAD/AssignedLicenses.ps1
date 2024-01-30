@@ -3,7 +3,17 @@ Name......: AssignedLicenses.ps1
 Version...: 24.01.1
 Author....: Dario CORRADA
 
-This script will connect to Azure AD and query a list of which license(s) are assigned to each user
+This script will connect to the Microsoft 365 tenant and query a list of which 
+license(s) are assigned to each user, then create/edit an excel report file.
+
+
+*** TODO LIST: ***
+
+-> adopt the PSExcel module to wrote excel file, instead of using COM object.
+    https://ramblingcookiemonster.github.io/PSExcel-Intro/
+    https://www.powershellgallery.com/packages/PSExcel
+
+-> add pivot tables int excel file
 #>
 
 
@@ -45,13 +55,22 @@ try {
     Import-Module MSOnline
     Import-Module ImportExcel
 } catch {
-    [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
-    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-    Pause
-    exit
+    if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
+        Install-Module MSOnline -Confirm:$False -Force
+        [System.Windows.MessageBox]::Show("Installed [MSOnline] module: please restart the script",'RESTART','Ok','warning')
+        exit
+    } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
+        Install-Module ImportExcel -Confirm:$False -Force
+        [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: please restart the script",'RESTART','Ok','warning')
+        exit
+    } else {
+        [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
+        Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+        Pause
+        exit
+    }
 }
 $ErrorActionPreference= 'Inquire'
-
 
 
 <# *******************************************************************************
