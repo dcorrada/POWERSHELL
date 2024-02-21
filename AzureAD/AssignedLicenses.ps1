@@ -314,7 +314,8 @@ if ($UseRefFile -eq "Yes") {
                     $history.BLOCKED,
                     $history.LICENSED,
                     $history.LICENSE,
-                    (Get-Date -format "yyyy/MM/dd")
+                    (Get-Date -format "yyyy/MM/dd"),
+                    'assignment changed for this user'
                 )
             }
         } else {
@@ -327,7 +328,8 @@ if ($UseRefFile -eq "Yes") {
                 'NULL',
                 'NULL',
                 'NONE',
-                (Get-Date -format "yyyy/MM/dd")
+                (Get-Date -format "yyyy/MM/dd"),
+                'user no longer exists on tenant'
             )
         }
     }
@@ -364,7 +366,8 @@ if (($orphanedrecords.Count) -ge 1) {
                     $currentRec.BLOCKED,
                     $currentRec.LICENSED,
                     $currentRec.LICENSE,
-                    ($cuurentRec.TIMESTAMP | Get-Date -format "yyyy/MM/dd")
+                    ($cuurentRec.TIMESTAMP | Get-Date -format "yyyy/MM/dd"),
+                    $currentRec.NOTES
                 )
             }
         }
@@ -479,7 +482,7 @@ if ($newOrphans -eq $true) {
     $Sheet4 = $Myworkbook.Worksheets.add()
     $Sheet4.name = "Orphaned"
     $i = 1
-    foreach ($item in ('USRNAME','DESC','USRTYPE','CREATED', 'BLOCKED', 'LICENSED', 'LICENSE', 'TIMESTAMP')) {
+    foreach ($item in ('USRNAME','DESC','USRTYPE','CREATED', 'BLOCKED', 'LICENSED', 'LICENSE', 'TIMESTAMP', 'NOTES')) {
         $Sheet4.cells.item(1,$i) = $item
         $i++        
     }
@@ -496,7 +499,7 @@ if ($newOrphans -eq $true) {
     $Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
     $Table4 = $Sheet4.ListObjects.Add(
     [Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
-    $Sheet4.Range("A1:H$i"), "Orphaned",
+    $Sheet4.Range("A1:I$i"), "Orphaned",
     [Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
     )
     $Table4.name = "Orphaned"
