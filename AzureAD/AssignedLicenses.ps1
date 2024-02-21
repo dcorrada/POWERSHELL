@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.01.1
+Version...: 24.02.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -306,6 +306,11 @@ if ($UseRefFile -eq "Yes") {
                 }
             } else {
                 Write-Host -ForegroundColor Yellow "[$aLicense] no longer assigned to [$aUser]"
+                if ($history.LICENSE -eq 'NONE') {
+                    $anote = 'assigned license(s) to this user'
+                } else {
+                    $anote = 'license dismissed for this user'
+                }
                 $orphanedrecords += ,@(
                     $history.USRNAME,
                     $history.DESC,
@@ -315,7 +320,7 @@ if ($UseRefFile -eq "Yes") {
                     $history.LICENSED,
                     $history.LICENSE,
                     (Get-Date -format "yyyy/MM/dd"),
-                    'assignment changed for this user'
+                    $anote
                 )
             }
         } else {
