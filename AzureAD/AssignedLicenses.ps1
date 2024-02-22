@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.02.1
+Version...: 24.02.2
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -13,7 +13,7 @@ license(s) are assigned to each user, then create/edit an excel report file.
     https://ramblingcookiemonster.github.io/PSExcel-Intro/
     https://www.powershellgallery.com/packages/PSExcel
 
--> add pivot tables int excel file
+-> add pivot tables into excel file
 #>
 
 
@@ -77,6 +77,7 @@ $ErrorActionPreference= 'Inquire'
                             CREDENTIALS MANAGEMENT
 ******************************************************************************* #>
 # the db files
+$usedb = $true
 $dbfile = $env:LOCALAPPDATA + '\AssignedLicenses.encrypted'
 $keyfile = $env:LOCALAPPDATA + '\AssignedLicenses.key'
 
@@ -101,69 +102,81 @@ if (Test-Path $dbfile -PathType Leaf) {
 }
 
 if (!(Test-Path $dbfile -PathType Leaf)) {
-    # creating key file if not available
-    if (!(Test-Path $keyfile -PathType Leaf)) {
-        CreateKeyFile -keyfile "$keyfile" | Out-Null
-    }
+    $answacc = [System.Windows.MessageBox]::Show("No DB file found.`nDo you want accessing tenant directly?",'ACCESS','YesNo','Info')
+    if ($answacc -eq "Yes") {    
+        $usedb = $false
+        $singlelogin = LoginWindow
+    } else {
+            # creating key file if not available
+        if (!(Test-Path $keyfile -PathType Leaf)) {
+            CreateKeyFile -keyfile "$keyfile" | Out-Null
+        }
 
-    # creating DB file
-    $adialog = FormBase -w 400 -h 300 -text "DB INIT"
-    Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Initialize your DB as follows (NO space allowed)" | Out-Null
-    $dbcontent = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 150 -text ''
-    $dbcontent.Multiline = $true;
-    $dbcontent.Text = @'
+        # creating DB file
+        $adialog = FormBase -w 400 -h 300 -text "DB INIT"
+        Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Initialize your DB as follows (NO space allowed)" | Out-Null
+        $dbcontent = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 150 -text ''
+        $dbcontent.Multiline = $true;
+        $dbcontent.Text = @'
 USR;PWD
 user1@foobar.baz;password1
 user2@foobar.baz;password2
 '@
-    $dbcontent.AcceptsReturn = $true
-    OKButton -form $adialog -x 100 -y 220 -text "Ok" | Out-Null
+        $dbcontent.AcceptsReturn = $true
+        OKButton -form $adialog -x 100 -y 220 -text "Ok" | Out-Null
+        $result = $adialog.ShowDialog()
+        $tempusfile = $env:LOCALAPPDATA + '\AssignedLicenses.csv'
+        $dbcontent.Text | Out-File $tempusfile
+        EncryptFile -keyfile "$keyfile" -infile "$tempusfile" -outfile "$dbfile" | Out-Null
+    }
+}
+
+if ($usedb -eq $true) {
+    # reading DB file
+    $filecontent = (DecryptFile -keyfile "$keyfile" -infile "$dbfile").Split(" ")
+    $allowed = @{}
+    foreach ($newline in $filecontent) {
+        if ($newline -ne 'USR;PWD') {
+            ($username, $passwd) = $newline.Split(';')
+            $allowed[$username] = $passwd
+        }
+    }
+
+    # select the account to access
+    $adialog = FormBase -w 350 -h (($allowed.Count * 30) + 120) -text "SELECT AN ACCOUNT"
+    $they = 20
+    $choices = @()
+    foreach ($username in $allowed.Keys) {
+        if ($they -eq 20) {
+            $isfirst = $true
+        } else {
+            $isfirst = $false
+        }
+        $choices += RadioButton -form $adialog -x 20 -y $they -w 300 -checked $isfirst -text $username
+        $they += 30
+    }
+    OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
     $result = $adialog.ShowDialog()
-    $tempusfile = $env:LOCALAPPDATA + '\AssignedLicenses.csv'
-    $dbcontent.Text | Out-File $tempusfile
-    EncryptFile -keyfile "$keyfile" -infile "$tempusfile" -outfile "$dbfile" | Out-Null
 }
-
-# reading DB file
-$filecontent = (DecryptFile -keyfile "$keyfile" -infile "$dbfile").Split(" ")
-$allowed = @{}
-foreach ($newline in $filecontent) {
-    if ($newline -ne 'USR;PWD') {
-        ($username, $passwd) = $newline.Split(';')
-        $allowed[$username] = $passwd
-    }
-}
-
-# select the account to access
-$adialog = FormBase -w 350 -h (($allowed.Count * 30) + 120) -text "SELECT AN ACCOUNT"
-$they = 20
-$choices = @()
-foreach ($username in $allowed.Keys) {
-    if ($they -eq 20) {
-        $isfirst = $true
-    } else {
-        $isfirst = $false
-    }
-    $choices += RadioButton -form $adialog -x 20 -y $they -w 300 -checked $isfirst -text $username
-    $they += 30
-}
-OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
-$result = $adialog.ShowDialog()
-
 
 
 <# *******************************************************************************
                             FETCHING DATA FROM TENANT
 ******************************************************************************* #>
 # get credentials for accessing
-foreach ($item in $choices) {
-    if ($item.Checked) {
-        $usr = $item.Text
-        $plain_pwd = $allowed[$usr]
+if ($usedb -eq $true) {
+    foreach ($item in $choices) {
+        if ($item.Checked) {
+            $usr = $item.Text
+            $plain_pwd = $allowed[$usr]
+        }
     }
+    $pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
+    $credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
+} else {
+    $credits = $singlelogin
 }
-$pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
-$credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
+
 
 # connect to Tenant
 Write-Host -NoNewline "Connecting to the Tenant..."
