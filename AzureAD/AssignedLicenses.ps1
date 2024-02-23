@@ -384,7 +384,7 @@ if (($orphanedrecords.Count) -ge 1) {
                     $currentRec.BLOCKED,
                     $currentRec.LICENSED,
                     $currentRec.LICENSE,
-                    ($cuurentRec.TIMESTAMP | Get-Date -format "yyyy/MM/dd"),
+                    ($currentRec.TIMESTAMP | Get-Date -format "yyyy/MM/dd"),
                     $currentRec.NOTES
                 )
             }
