@@ -49,3 +49,13 @@ try {
     }
 }
 $ErrorActionPreference= 'Inquire'
+
+<#
+Find AzureAD/MSOnline equivalent cmdlets for Graph on:
+
+https://learn.microsoft.com/en-us/powershell/microsoftgraph/azuread-msoline-cmdlet-map?view=graph-powershell-1.0
+
+E.g.: how to extract all user list (aka old Get-AzureADUser)
+Connect-MgGraph -Scopes 'User.Read.All'
+Get-MgUser -ConsistencyLevel eventual -Count userCount -Filter "startsWith(DisplayName, 'a')" -Top 1
+#>
