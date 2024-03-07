@@ -1,6 +1,6 @@
 <#
 Name......: RCloner.ps1
-Version...: 24.02.1
+Version...: 24.03.1
 Author....: Dario CORRADA
 
 This script performs a total synchronized backup from your local device to a 
@@ -24,6 +24,10 @@ $ErrorActionPreference= 'Inquire'
 $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\RCloner\\RCloner\.ps1$" > $null
 $repopath = $matches[1]
+<# for testing purposes
+$repopath = Get-Location
+$repopath = $repopath.Path
+#>
 
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
@@ -91,8 +95,18 @@ Label -form $form -x 10 -y 60 -w 80 -h 30 -text 'Remote target:' | Out-Null
 $rmtpath = TxtBox -form $form -x 90 -y 60 -w 250 -h 30 -text '[write here your path]'
 OKButton -form $form -x 100 -y 100 -text 'Ok' | Out-Null
 $result = $form.ShowDialog()
-$source = '"' + $srcpath.Text + '"' # considering strings of path including spaces
+$source = $srcpath.Text
 $target = -join($selected_remote, $rmtpath.Text)
+
+# considering strings of path including spaces
+if ($source -match ' ') {
+    $source = '"' + $source + '"'
+}
+if ($target -match ' ') {
+    $target = '"' + $target + '"'
+}
+
+
 if ($target -match 'write here your path') {
     [System.Windows.MessageBox]::Show("No defined path for [$selected_remote]",'ERROR','Ok','Error') > $null
     Exit
