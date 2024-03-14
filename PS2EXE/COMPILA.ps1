@@ -38,7 +38,7 @@ $form.Controls.Add($label1)
 $textBox1 = New-Object System.Windows.Forms.TextBox
 $textBox1.Location = New-Object System.Drawing.Point(10,60)
 $textBox1.Size = New-Object System.Drawing.Size(450,30)
-$textBox1.Text = "AGM Solutions"
+$textBox1.Text = "FooBarBaz inc."
 $form.Controls.Add($textBox1)
             
 $label2 = New-Object System.Windows.Forms.Label

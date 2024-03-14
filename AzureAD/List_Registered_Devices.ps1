@@ -48,9 +48,9 @@ foreach ($user in $userlist) {
     Clear-Host
     Write-Host "Processing $usrcount users out of $tot..."
 
-    # user data
+    # user data (edit your domain name)
     $fullname = $user.DisplayName
-    $user.Mail -match "(.+)@agmsolutions\.net$" > $null
+    $user.Mail -match "(.+)@([a-zA-Z0-9:]+)\.([a-zA-Z]+)$" > $null
     $username = $matches[1]
 
     # check device(s) assigned to user
