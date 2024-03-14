@@ -79,7 +79,8 @@ Connect-MsolService
 # check for existing account
 $ErrorActionPreference= 'Stop'
 try {
-    Get-MsolUser -UserPrincipalName "$username@agmsolutions.net"
+    # re-edit your current domain suffix before running this script
+    Get-MsolUser -UserPrincipalName "$username@foobarbaz.net"
     [System.Windows.MessageBox]::Show("$username already exists! Aborting...",'WARNING','Ok','Warning')
     Exit
 }

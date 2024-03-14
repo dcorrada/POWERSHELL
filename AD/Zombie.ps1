@@ -92,7 +92,8 @@ foreach ($item in ($rawdata.Keys | Sort-Object)) {
     Write-Host -NoNewline "Checking [$item]..."
     $ErrorActionPreference= 'Stop'
     try {
-        Get-MsolUser -UserPrincipalName "$item@agmsolutions.net" > $null
+        # re-edit your current domain suffix before running this script
+        Get-MsolUser -UserPrincipalName "$item@foobarbaz.net" > $null
         Write-Host -ForegroundColor Green " OK"
     }
     catch {

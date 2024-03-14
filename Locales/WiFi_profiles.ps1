@@ -45,7 +45,7 @@ if ($result -eq "OK") {
         $source = $FolderBrowser.SelectedPath
         Write-Host "Import WiFi profiles..."
         $wifi_profile_list = Get-ChildItem $source
-        $exclude_list = ("Wi-Fi-AGM.xml")
+        $exclude_list = @('foo.xml', 'bar.xml', 'baz.xml')
         foreach ($wifi_profile in $wifi_profile_list) {
             if ($exclude_list -contains $wifi_profile) {
                 Write-Host "Skip $wifi_profile"
