@@ -1,18 +1,17 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.02.2
+Version...: 24.04.alfa
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
 
-
-*** TODO LIST: ***
-
+*** ONGOING: ***
 -> adopt the PSExcel module to wrote excel file, instead of using COM object.
     https://ramblingcookiemonster.github.io/PSExcel-Intro/
     https://www.powershellgallery.com/packages/PSExcel
 
+*** TODO LIST: ***
 -> add pivot tables into excel file
 #>
 
@@ -53,15 +52,15 @@ try {
     Import-Module -Name "$workdir\Modules\Gordian.psm1"
     Import-Module -Name "$workdir\Modules\Forms.psm1"
     Import-Module MSOnline
-    Import-Module ImportExcel
+    Import-Module PSExcel
 } catch {
     if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
         Install-Module MSOnline -Confirm:$False -Force
         [System.Windows.MessageBox]::Show("Installed [MSOnline] module: please restart the script",'RESTART','Ok','warning')
         exit
-    } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
-        Install-Module ImportExcel -Confirm:$False -Force
-        [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: please restart the script",'RESTART','Ok','warning')
+    } elseif (!(((Get-InstalledModule).Name) -contains 'PSExcel')) {
+        Install-Module PSExcel -Confirm:$False -Force
+        [System.Windows.MessageBox]::Show("Installed [PSExcel] module: please restart the script",'RESTART','Ok','warning')
         exit
     } else {
         [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
@@ -280,18 +279,25 @@ if ($UseRefFile -eq "Yes") {
 }
 Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 
+# Open Excel reference file
+$XlsxObj = New-Excel -Path $xlsx_file
+$Worksheet_list = $XlsxObj | Get-Worksheet
 
 # [Licenses_Pool]
 $Licenses_Pool_dataframe = @()
 if ($UseRefFile -eq "Yes") { # appending older data
-    Write-Host "Merging [Licenses_Pool] data..."
-    foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool')) {
-        $Licenses_Pool_dataframe += ,@(
-            ($history.UPTIME | Get-Date -format "yyyy/MM/dd"),
-            $history.LICENSE,
-            $history.AVAILABLE,
-            $history.TOTAL
-        )
+    if ($Worksheet_list.Name -contains 'Licenses_Pool') {
+        Write-Host "Appending [Licenses_Pool] data..."
+        foreach ($history in (Import-XLSX -Path $xlsx_file -Sheet 'Licenses_Pool')) {
+            $Licenses_Pool_dataframe += ,@(
+                ($history.UPTIME | Get-Date -format "yyyy/MM/dd"),
+                $history.LICENSE,
+                $history.AVAILABLE,
+                $history.TOTAL
+            )
+        }
+    } else {
+        Write-Host -ForegroundColor Magenta "No [Licenses_Pool] worksheet found"
     }
 }
 foreach ($item in $avail_lics.Keys) {
@@ -306,50 +312,54 @@ foreach ($item in $avail_lics.Keys) {
 # [Assigned_Licenses]
 $orphanedrecords = @()
 if ($UseRefFile -eq "Yes") {
-    Write-Host "Merging [Assigned_Licenses] data..."
-    foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
-        $aUser = $history.USRNAME
-        if ($MsolUsrData.ContainsKey($aUser)) {
-            $aLicense = $history.LICENSE
-            if ($MsolUsrData[$aUser].LICENSES.ContainsKey($aLicense)) {
-                $OldTime = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
-                $NewTime = $MsolUsrData[$aUser].LICENSES[$aLicense]
-                if ($OldTime -lt $NewTime) {
-                    $MsolUsrData[$aUser].LICENSES[$aLicense] = $OldTime
+    if ($Worksheet_list.Name -contains 'Assigned_Licenses') {
+        Write-Host "Merging [Assigned_Licenses] data..."
+        foreach ($history in (Import-XLSX -Path $xlsx_file -Sheet 'Assigned_Licenses')) {
+            $aUser = $history.USRNAME
+            if ($MsolUsrData.ContainsKey($aUser)) {
+                $aLicense = $history.LICENSE
+                if ($MsolUsrData[$aUser].LICENSES.ContainsKey($aLicense)) {
+                    $OldTime = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
+                    $NewTime = $MsolUsrData[$aUser].LICENSES[$aLicense]
+                    if ($OldTime -lt $NewTime) {
+                        $MsolUsrData[$aUser].LICENSES[$aLicense] = $OldTime
+                    }
+                } else {
+                    Write-Host -ForegroundColor Yellow "[$aLicense] no longer assigned to [$aUser]"
+                    if ($history.LICENSE -eq 'NONE') {
+                        $anote = 'assigned license(s) to this user'
+                    } else {
+                        $anote = 'license dismissed for this user'
+                    }
+                    $orphanedrecords += ,@(
+                        $history.USRNAME,
+                        $history.DESC,
+                        $history.USRTYPE,
+                        ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
+                        $history.BLOCKED,
+                        $history.LICENSED,
+                        $history.LICENSE,
+                        (Get-Date -format "yyyy/MM/dd"),
+                        $anote
+                    )
                 }
             } else {
-                Write-Host -ForegroundColor Yellow "[$aLicense] no longer assigned to [$aUser]"
-                if ($history.LICENSE -eq 'NONE') {
-                    $anote = 'assigned license(s) to this user'
-                } else {
-                    $anote = 'license dismissed for this user'
-                }
+                Write-Host -ForegroundColor Yellow "[$aUser] no longer exists on tenant"
                 $orphanedrecords += ,@(
                     $history.USRNAME,
                     $history.DESC,
                     $history.USRTYPE,
                     ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
-                    $history.BLOCKED,
-                    $history.LICENSED,
-                    $history.LICENSE,
+                    'NULL',
+                    'NULL',
+                    'NONE',
                     (Get-Date -format "yyyy/MM/dd"),
-                    $anote
+                    'user no longer exists on tenant'
                 )
             }
-        } else {
-            Write-Host -ForegroundColor Yellow "[$aUser] no longer exists on tenant"
-            $orphanedrecords += ,@(
-                $history.USRNAME,
-                $history.DESC,
-                $history.USRTYPE,
-                ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
-                'NULL',
-                'NULL',
-                'NONE',
-                (Get-Date -format "yyyy/MM/dd"),
-                'user no longer exists on tenant'
-            )
         }
+    } else {
+        Write-Host -ForegroundColor Magenta "No [Assigned_Licenses] worksheet found"
     }
 }
 $Assigned_Licenses_dataframe = @()
@@ -373,9 +383,8 @@ $newOrphans = $false
 if (($orphanedrecords.Count) -ge 1) {
     $newOrphans = $true
     if ($UseRefFile -eq "Yes") {
-        $ErrorActionPreference= 'Stop'
-        try {
-            foreach ($currentRec in (Import-Excel -Path $xlsx_file -WorksheetName 'Orphaned')) {
+        if ($Worksheet_list.Name -contains 'Orphaned') {
+            foreach ($currentRec in (Import-XLSX -Path $xlsx_file -Sheet 'Orphaned')) {
                 $orphanedrecords += ,@(
                     $currentRec.USRNAME,
                     $currentRec.DESC,
@@ -388,11 +397,9 @@ if (($orphanedrecords.Count) -ge 1) {
                     $currentRec.NOTES
                 )
             }
-        }
-        catch {
+        } else {
             Write-Host -ForegroundColor Magenta "No [Orphaned] worksheet found"
         }
-        $ErrorActionPreference= 'Inquire'
     }
 }
 
@@ -604,3 +611,6 @@ $Myworkbook.Saveas($xlsx_file)
 $Myworkbook.Close($true)
 $Myexcel.Quit()
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
+
+# Close Excel reference file
+$XlsxObj | Close-Excel -Save
