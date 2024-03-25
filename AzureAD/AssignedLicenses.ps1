@@ -65,7 +65,6 @@ try {
     } else {
         [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
         Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-        Pause
         exit
     }
 }
@@ -254,6 +253,8 @@ foreach ($item in (Get-MsolUser -All | Sort-Object DisplayName)) {
         $parsebar[1].Value = $progress
     }
     [System.Windows.Forms.Application]::DoEvents()
+
+    Start-Sleep -Milliseconds 10
 }
 Write-Host -ForegroundColor Green " DONE"
 $parsebar[0].Close()
@@ -407,99 +408,99 @@ if (($orphanedrecords.Count) -ge 1) {
 <# *******************************************************************************
                             WRITING REFERENCE FILE
 ******************************************************************************* #>
-$Myexcel = New-Object -ComObject excel.application
-$Myexcel.Visible = $false
-$Myexcel.DisplayAlerts = $false
+<# *** TO PATCH ***
+Nel cmdlet Export-XLSX e' dipsonibile l'opzione -ClearSheet che dovrebbe pulire
+il foglio di lavoro esistente prima di editarlo.
+
+In questo modo non sarebbe piu necessario cancellare i fogli 'Assigned_Licenses',
+'Licenses_Pool' e 'Orphaned'.
+
+Il foglio di "SkuCatalog_yyyy-MM-dd", invece, lo cancellerei e lo ricreerei ogni 
+volta: la nomenclatura dello sheet terrebbe conto di quanto tempo fa risale
+#>
 $FetchSkuCatalog = $false
 if ($UseRefFile -eq 'Yes') { # remove older worksheets
     $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
     if ($ReplaceSkuCatalog -eq 'Yes') {
         $FetchSkuCatalog = $true
     }
-    $Myworkbook = $Myexcel.Workbooks.Open($xlsx_file)
-    foreach ($currentSheet in ($Myworkbook.Worksheets)) {
+    foreach ($currentSheet in ($Worksheet_list)) {
         if (($currentSheet.Name -eq 'Assigned_Licenses') -or ($currentSheet.Name -eq 'Licenses_Pool')) {
-            $currentSheet.Delete()
+            $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
         } 
         if (($ReplaceSkuCatalog -eq 'Yes') -and ($currentSheet.Name -match "SkuCatalog")) {
-            $currentSheet.Delete()
+            $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
         }
-        if (($newOrphans -eq $true) -and ($currentSheet.Name -match "Orphaned")) {
-            $currentSheet.Delete()
+        if (($newOrphans -eq $true) -and ($currentSheet.Name -eq 'Orphaned')) {
+            $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
         }       
     }
-} else { # create new file
-    $Myworkbook = $Myexcel.Workbooks.Add()
+} else {
     $FetchSkuCatalog = $true
 }
 
 # writing SkuCatalog worksheet
 if ($FetchSkuCatalog -eq $true) {
-    $label = 'SkuCatalog_' + (Get-Date -Format "yyMMdd")
-    $csvdestfile = "C:$($env:HOMEPATH)\Downloads\$label.csv"
-    Invoke-WebRequest -Uri 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv' -OutFile "$csvdestfile"
-    $SkuCatalog_rawdata = @{}
-    foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
-        if (!($SkuCatalog_rawdata.ContainsKey("$($currentItem.GUID)"))) {
-            $SkuCatalog_rawdata["$($currentItem.GUID)"] = @{
-                SKUID   = "$($currentItem.String_Id)"
-                DESC    = "$($currentItem.Product_Display_Name)"
+    $ErrorActionPreference= 'Stop'
+    try {
+        $label = 'SkuCatalog_' + (Get-Date -Format "yyMMdd")
+        $csvdestfile = "C:$($env:HOMEPATH)\Downloads\$label.csv"
+        Invoke-WebRequest -Uri 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv' -OutFile "$csvdestfile"
+        $SkuCatalog_rawdata = @{}
+        foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
+            if (!($SkuCatalog_rawdata.ContainsKey("$($currentItem.GUID)"))) {
+                $SkuCatalog_rawdata["$($currentItem.GUID)"] = @{
+                    SKUID   = "$($currentItem.String_Id)"
+                    DESC    = "$($currentItem.Product_Display_Name)"
+                }
             }
         }
-    }
-    Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
-    Write-Host -NoNewline "Writing worksheet [$label]..."
-    $Sheet3 = $Myworkbook.Worksheets.add()
-    $Sheet3.name = "$label"
-    $i = 1
-    foreach ($item in ('ID','SKU','DESCRIPTION')) {
-        $Sheet3.cells.item(1,$i) = $item
-        $i++        
-    }
-    $i = 2
-    $tot = $SkuCatalog_rawdata.Keys.Count
-    $usrcount = 0
-    $parsebar = ProgressBar
-    foreach ($currentID in $SkuCatalog_rawdata.Keys) {
-        $new_record = @(
-            "$currentID",
-            "$($SkuCatalog_rawdata[$currentID].SKUID)",
-            "$($SkuCatalog_rawdata[$currentID].DESC)"
-        )
-        $j = 1
-        foreach ($value in $new_record) {
-            $Sheet3.cells.item($i,$j) = $value
-            $j++
-        }
-        $i++
+        Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
 
-        # progressbar
-        $usrcount++
-        $percent = ($usrcount / $tot)*100
-        if ($percent -gt 100) {
-            $percent = 100
+        Write-Host -NoNewline "Writing worksheet [$label]..."
+        $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
+            Write-Host -NoNewline '.'        
+            New-Object -TypeName PSObject -Property @{
+                ID = "$_"
+                SKU = "$($SkuCatalog_rawdata[$_].SKUID)"
+                DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
+            } | Select ID, SKU, DESCRIPTION
         }
-        $formattato = '{0:0.0}' -f $percent
-        [int32]$progress = $percent   
-        $parsebar[2].Text = ("Record {0} out of {1} written [{2}%]" -f ($usrcount, $tot, $formattato))
-        if ($progress -ge 100) {
-            $parsebar[1].Value = 100
-        } else {
-            $parsebar[1].Value = $progress
-        }
-        [System.Windows.Forms.Application]::DoEvents()
+        $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium1
+        Write-Host -ForegroundColor Green ' DONE'
+    } catch {
+        [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+        Write-Host -ForegroundColor Red ' DONE'
+        Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+        exit
     }
-    $parsebar[0].Close()
-    $i--
-    $Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
-    $Table3 = $Sheet3.ListObjects.Add(
-    [Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
-    $Sheet3.Range("A1:C$i"), "$label",
-    [Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
-    )
-    $Table3.name = "SkuCatalog"
-    Write-Host -ForegroundColor Green "Ok"
+    $ErrorActionPreference= 'Inquire'
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+$Myexcel = New-Object -ComObject excel.application
+$Myexcel.Visible = $false
+$Myexcel.DisplayAlerts = $false
+$Myworkbook = $Myexcel.Workbooks.Open($xlsx_file)
 
 # writing Orphaned worksheet
 if ($newOrphans -eq $true) {
@@ -613,4 +614,4 @@ $Myexcel.Quit()
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
 
 # Close Excel reference file
-$XlsxObj | Close-Excel -Save
+$XlsxObj | Close-Excel
