@@ -15,13 +15,13 @@ license(s) are assigned to each user, then create/edit an excel report file.
 
 
 *** TODO LIST ***
-->  generate summarizing pivot tables into excel reference file.
-
-
-*** PLEASE NOTE ***
-->  PSExcel module is no longer mantained
+->  PSExcel module is no longer mantained, let's switch to EPPlus 
+    (aka ImportExcel): one project is forked from the other 
+    or viceversa (???)
     https://github.com/RamblingCookieMonster/PSExcel
+    https://www.powershellgallery.com/packages/ImportExcel
 
+->  generate summarizing pivot tables into excel reference file.
 #>
 
 
