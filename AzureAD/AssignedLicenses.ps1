@@ -10,7 +10,8 @@ license(s) are assigned to each user, then create/edit an excel report file.
 ->  PSExcel cmdlets seem to be unable to edit xlsx files already manually 
     edited (aka edited files won't to be saved, raising an error). 
     I found such behaviour for those files in which I have previuously added
-    a worksheet of summarizing pivot tables.
+    a worksheet of summarizing pivot tables. Here there are similar issues:
+    https://github.com/RamblingCookieMonster/PSExcel/issues/18
 
 
 *** TODO LIST ***
