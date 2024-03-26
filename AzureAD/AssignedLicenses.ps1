@@ -1,18 +1,26 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.alfa
+Version...: 24.04.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
 
-*** ONGOING: ***
--> adopt the PSExcel module to wrote excel file, instead of using COM object.
-    https://ramblingcookiemonster.github.io/PSExcel-Intro/
-    https://www.powershellgallery.com/packages/PSExcel
+*** BUG TO FIX ***
+->  PSExcel cmdlets seem to be unable to edit xlsx files already manually 
+    edited (aka edited files won't to be saved, raising an error). 
+    I found such behaviour for those files in which I have previuously added
+    a worksheet of summarizing pivot tables.
 
-*** TODO LIST: ***
--> add pivot tables into excel file
+
+*** TODO LIST ***
+->  generate summarizing pivot tables into excel reference file.
+
+
+*** PLEASE NOTE ***
+->  PSExcel module is no longer mantained
+    https://github.com/RamblingCookieMonster/PSExcel
+
 #>
 
 
@@ -181,7 +189,7 @@ Write-Host -NoNewline "Connecting to the Tenant..."
 $ErrorActionPreference= 'Stop'
 Try {
     Connect-MsolService -Credential $credits
-    Write-Host -ForegroundColor Green "Ok"
+    Write-Host -ForegroundColor Green " OK"
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
@@ -204,7 +212,7 @@ foreach ($item in (Get-MsolAccountSku)) {
         }
     }
 }
-Write-Host " Found $($avail_lics.Count) active SKU"
+Write-Host -ForegroundColor Cyan " Found $($avail_lics.Count) active SKU"
 
 # retrieve all users list
 $MsolUsrData = @{} 
@@ -283,6 +291,7 @@ Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 # Open Excel reference file
 $XlsxObj = New-Excel -Path $xlsx_file
 $Worksheet_list = $XlsxObj | Get-Worksheet
+$XlsxObj | Close-Excel
 
 # [Licenses_Pool]
 $Licenses_Pool_dataframe = @()
@@ -408,23 +417,15 @@ if (($orphanedrecords.Count) -ge 1) {
 <# *******************************************************************************
                             WRITING REFERENCE FILE
 ******************************************************************************* #>
-<# *** TO PATCH ***
-Nel cmdlet Export-XLSX e' dipsonibile l'opzione -ClearSheet che dovrebbe pulire
-il foglio di lavoro esistente prima di editarlo.
-
-In questo modo non sarebbe piu necessario cancellare i fogli 'Assigned_Licenses',
-'Licenses_Pool' e 'Orphaned'.
-
-Il foglio di "SkuCatalog_yyyy-MM-dd", invece, lo cancellerei e lo ricreerei ogni 
-volta: la nomenclatura dello sheet terrebbe conto di quanto tempo fa risale
-#>
+$XlsxObj = New-Excel -Path $xlsx_file
+$Worksheet_list = $XlsxObj | Get-Worksheet
 $FetchSkuCatalog = $false
 if ($UseRefFile -eq 'Yes') { # remove older worksheets
     $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
     if ($ReplaceSkuCatalog -eq 'Yes') {
         $FetchSkuCatalog = $true
     }
-    foreach ($currentSheet in ($Worksheet_list)) {
+    foreach ($currentSheet in $Worksheet_list) {
         if (($currentSheet.Name -eq 'Assigned_Licenses') -or ($currentSheet.Name -eq 'Licenses_Pool')) {
             $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
         } 
@@ -435,9 +436,12 @@ if ($UseRefFile -eq 'Yes') { # remove older worksheets
             $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
         }       
     }
+    # Close Excel reference object and save rtelated file
+    $XlsxObj | Close-Excel -Save     
 } else {
     $FetchSkuCatalog = $true
 }
+
 
 # writing SkuCatalog worksheet
 if ($FetchSkuCatalog -eq $true) {
@@ -470,148 +474,91 @@ if ($FetchSkuCatalog -eq $true) {
         Write-Host -ForegroundColor Green ' DONE'
     } catch {
         [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
-        Write-Host -ForegroundColor Red ' DONE'
+        Write-Host -ForegroundColor Red ' FAIL'
         Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
         exit
     }
     $ErrorActionPreference= 'Inquire'
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-$Myexcel = New-Object -ComObject excel.application
-$Myexcel.Visible = $false
-$Myexcel.DisplayAlerts = $false
-$Myworkbook = $Myexcel.Workbooks.Open($xlsx_file)
-
-# writing Orphaned worksheet
-if ($newOrphans -eq $true) {
-    Write-Host -NoNewline "Writing worksheet [Orphaned]..."
-    $Sheet4 = $Myworkbook.Worksheets.add()
-    $Sheet4.name = "Orphaned"
-    $i = 1
-    foreach ($item in ('USRNAME','DESC','USRTYPE','CREATED', 'BLOCKED', 'LICENSED', 'LICENSE', 'TIMESTAMP', 'NOTES')) {
-        $Sheet4.cells.item(1,$i) = $item
-        $i++        
-    }
-    $i = 2
-    foreach ($new_record in $orphanedrecords) {
-        $j = 1
-        foreach ($value in $new_record) {
-            $Sheet4.cells.item($i,$j) = $value
-            $j++
-        }
-        $i++
-    }
-    $i--
-    $Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
-    $Table4 = $Sheet4.ListObjects.Add(
-    [Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
-    $Sheet4.Range("A1:I$i"), "Orphaned",
-    [Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
-    )
-    $Table4.name = "Orphaned"
-    Write-Host -ForegroundColor Green "Ok"
-}
-
 # writing Licenses_Pool worksheet
-Write-Host -NoNewline "Writing worksheet [Licenses_Pool]..."
-$Sheet1 = $Myworkbook.Worksheets.add()
-$Sheet1.name = "Licenses_Pool"
-$i = 1
-foreach ($item in ('UPTIME','LICENSE','AVAILABLE','TOTAL')) {
-    $Sheet1.cells.item(1,$i) = $item
-    $i++        
-}
-$i = 2
-foreach ($new_record in $Licenses_Pool_dataframe) {
-    $j = 1
-    foreach ($value in $new_record) {
-        $Sheet1.cells.item($i,$j) = $value
-        $j++
+$ErrorActionPreference= 'Stop'
+try {
+    $label = 'Licenses_Pool'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $inData = 0..($Licenses_Pool_dataframe.Count - 1) | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            UPTIME      = $Licenses_Pool_dataframe[$_][0]
+            LICENSE     = $Licenses_Pool_dataframe[$_][1]
+            AVAILABLE   = $Licenses_Pool_dataframe[$_][2]
+            TOTAL       = $Licenses_Pool_dataframe[$_][3]
+        } | Select UPTIME, LICENSE, AVAILABLE, TOTAL
     }
-    $i++
+    $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium2
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
 }
-$i--
-$Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
-$Table1 = $Sheet1.ListObjects.Add(
-[Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
-$Sheet1.Range("A1:D$i"), "Licenses_Pool",
-[Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
-)
-$Table1.name = "Licenses_Pool"
-Write-Host -ForegroundColor Green "Ok"
+$ErrorActionPreference= 'Inquire'
 
 # writing Assigned_Licenses worksheet
-Write-Host -NoNewline "Writing worksheet [Assigned_Licenses]..."
-$Sheet2 = $Myworkbook.Worksheets.add()
-$Sheet2.name = "Assigned_Licenses"
-$i = 1
-foreach ($item in ('USRNAME','DESC','USRTYPE','CREATED', 'BLOCKED', 'LICENSED', 'LICENSE', 'TIMESTAMP')) {
-    $Sheet2.cells.item(1,$i) = $item
-    $i++        
+$ErrorActionPreference= 'Stop'
+try {
+    $label = 'Assigned_Licenses'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $inData = 0..($Assigned_Licenses_dataframe.Count - 1) | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            USRNAME     = $Assigned_Licenses_dataframe[$_][0]
+            DESC        = $Assigned_Licenses_dataframe[$_][1]
+            USRTYPE     = $Assigned_Licenses_dataframe[$_][2]
+            CREATED     = $Assigned_Licenses_dataframe[$_][3]
+            BLOCKED     = $Assigned_Licenses_dataframe[$_][4]
+            LICENSED    = $Assigned_Licenses_dataframe[$_][5]
+            LICENSE     = $Assigned_Licenses_dataframe[$_][6]
+            TIMESTAMP   = $Assigned_Licenses_dataframe[$_][7]
+        } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP
+    }
+    $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium2
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
 }
-$i = 2
-$tot = $Assigned_Licenses_dataframe.Count
-$usrcount = 0
-$parsebar = ProgressBar
-foreach ($new_record in $Assigned_Licenses_dataframe) {
-    $j = 1
-    foreach ($value in $new_record) {
-        $Sheet2.cells.item($i,$j) = $value
-        $j++
-    }
-    $i++
+$ErrorActionPreference= 'Inquire'
 
-    # progressbar
-    $usrcount++
-    $percent = ($usrcount / $tot)*100
-    if ($percent -gt 100) {
-        $percent = 100
+
+# writing Orphaned worksheet
+$ErrorActionPreference= 'Stop'
+try {
+    $label = 'Orphaned'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $inData = 0..($orphanedrecords.Count - 1) | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            USRNAME     = $orphanedrecords[$_][0]
+            DESC        = $orphanedrecords[$_][1]
+            USRTYPE     = $orphanedrecords[$_][2]
+            CREATED     = $orphanedrecords[$_][3]
+            BLOCKED     = $orphanedrecords[$_][4]
+            LICENSED    = $orphanedrecords[$_][5]
+            LICENSE     = $orphanedrecords[$_][6]
+            TIMESTAMP   = $orphanedrecords[$_][7]
+            NOTES       = $orphanedrecords[$_][8]
+        } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP, NOTES
     }
-    $formattato = '{0:0.0}' -f $percent
-    [int32]$progress = $percent   
-    $parsebar[2].Text = ("Record {0} out of {1} written [{2}%]" -f ($usrcount, $tot, $formattato))
-    if ($progress -ge 100) {
-        $parsebar[1].Value = 100
-    } else {
-        $parsebar[1].Value = $progress
-    }
-    [System.Windows.Forms.Application]::DoEvents()
+    $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium3
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
 }
-$parsebar[0].Close()
-$i--
-$Myworkbook.Activesheet.Cells.EntireColumn.Autofit() | Out-Null
-$Table2 = $Sheet2.ListObjects.Add(
-[Microsoft.Office.Interop.Excel.XlListObjectSourceType]::xlSrcRange,
-$Sheet2.Range("A1:H$i"), "Assigned_Licenses",
-[Microsoft.Office.Interop.Excel.XlYesNoGuess]::xlYes
-)
-$Table2.name = "Assigned_Licenses"
-Write-Host -ForegroundColor Green "Ok"
-
-$Myworkbook.Saveas($xlsx_file)
-$Myworkbook.Close($true)
-$Myexcel.Quit()
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
-
-# Close Excel reference file
-$XlsxObj | Close-Excel
+$ErrorActionPreference= 'Inquire'
