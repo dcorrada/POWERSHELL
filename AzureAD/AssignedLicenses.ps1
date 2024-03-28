@@ -1,26 +1,13 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.1
+Version...: 24.04.2
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
 
-*** BUG TO FIX ***
-->  PSExcel cmdlets seem to be unable to edit xlsx files already manually 
-    edited (aka edited files won't to be saved, raising an error). 
-    I found such behaviour for those files in which I have previuously added
-    a worksheet of summarizing pivot tables. Here there are similar issues:
-    https://github.com/RamblingCookieMonster/PSExcel/issues/18
-
-
 *** TODO LIST ***
-->  PSExcel module is no longer mantained, let's switch to EPPlus 
-    (aka ImportExcel): one project is forked from the other 
-    or viceversa (???)
-    https://github.com/RamblingCookieMonster/PSExcel
-    https://www.powershellgallery.com/packages/ImportExcel
-
+->  sort worksheets of the xlsx reference file
 ->  generate summarizing pivot tables into excel reference file.
 #>
 
@@ -61,15 +48,15 @@ try {
     Import-Module -Name "$workdir\Modules\Gordian.psm1"
     Import-Module -Name "$workdir\Modules\Forms.psm1"
     Import-Module MSOnline
-    Import-Module PSExcel
+    Import-Module ImportExcel
 } catch {
     if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
         Install-Module MSOnline -Confirm:$False -Force
         [System.Windows.MessageBox]::Show("Installed [MSOnline] module: please restart the script",'RESTART','Ok','warning')
         exit
-    } elseif (!(((Get-InstalledModule).Name) -contains 'PSExcel')) {
-        Install-Module PSExcel -Confirm:$False -Force
-        [System.Windows.MessageBox]::Show("Installed [PSExcel] module: please restart the script",'RESTART','Ok','warning')
+    } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
+        Install-Module ImportExcel -Confirm:$False -Force
+        [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: please restart the script",'RESTART','Ok','warning')
         exit
     } else {
         [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
@@ -283,23 +270,27 @@ if ($UseRefFile -eq "Yes") {
     $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
     $OpenFileDialog.ShowDialog() | Out-Null
     $xlsx_file = $OpenFileDialog.filename
+    $Worksheet_list = Get-ExcelSheetInfo -Path $xlsx_file
 } else {
     $xlsx_file = "C:$env:HOMEPATH\Downloads\$($AccountName)_licenses.xlsx"
     [System.Windows.MessageBox]::Show("File [$xlsx_file] will be created",'CREATING','Ok','Info') | Out-Null
+
+    # *** TEMPORARY CHUNK ***
+    $excel = New-Object -ComObject excel.application
+    $excel.visible = $True
+    $workbook = $excel.Workbooks.Add()
+    $workbook.SaveAs($xlsx_file)
+    $excel.Quit()
+    # *** KNUHC YRAROPMET ***
 }
 Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
-
-# Open Excel reference file
-$XlsxObj = New-Excel -Path $xlsx_file
-$Worksheet_list = $XlsxObj | Get-Worksheet
-$XlsxObj | Close-Excel
 
 # [Licenses_Pool]
 $Licenses_Pool_dataframe = @()
 if ($UseRefFile -eq "Yes") { # appending older data
     if ($Worksheet_list.Name -contains 'Licenses_Pool') {
         Write-Host "Appending [Licenses_Pool] data..."
-        foreach ($history in (Import-XLSX -Path $xlsx_file -Sheet 'Licenses_Pool')) {
+        foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool')) {
             $Licenses_Pool_dataframe += ,@(
                 ($history.UPTIME | Get-Date -format "yyyy/MM/dd"),
                 $history.LICENSE,
@@ -325,7 +316,7 @@ $orphanedrecords = @()
 if ($UseRefFile -eq "Yes") {
     if ($Worksheet_list.Name -contains 'Assigned_Licenses') {
         Write-Host "Merging [Assigned_Licenses] data..."
-        foreach ($history in (Import-XLSX -Path $xlsx_file -Sheet 'Assigned_Licenses')) {
+        foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
             $aUser = $history.USRNAME
             if ($MsolUsrData.ContainsKey($aUser)) {
                 $aLicense = $history.LICENSE
@@ -395,7 +386,7 @@ if (($orphanedrecords.Count) -ge 1) {
     $newOrphans = $true
     if ($UseRefFile -eq "Yes") {
         if ($Worksheet_list.Name -contains 'Orphaned') {
-            foreach ($currentRec in (Import-XLSX -Path $xlsx_file -Sheet 'Orphaned')) {
+            foreach ($currentRec in (Import-Excel -Path $xlsx_file -WorksheetName 'Orphaned')) {
                 $orphanedrecords += ,@(
                     $currentRec.USRNAME,
                     $currentRec.DESC,
@@ -418,8 +409,6 @@ if (($orphanedrecords.Count) -ge 1) {
 <# *******************************************************************************
                             WRITING REFERENCE FILE
 ******************************************************************************* #>
-$XlsxObj = New-Excel -Path $xlsx_file
-$Worksheet_list = $XlsxObj | Get-Worksheet
 $FetchSkuCatalog = $false
 if ($UseRefFile -eq 'Yes') { # remove older worksheets
     $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
@@ -427,18 +416,13 @@ if ($UseRefFile -eq 'Yes') { # remove older worksheets
         $FetchSkuCatalog = $true
     }
     foreach ($currentSheet in $Worksheet_list) {
-        if (($currentSheet.Name -eq 'Assigned_Licenses') -or ($currentSheet.Name -eq 'Licenses_Pool')) {
-            $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
-        } 
-        if (($ReplaceSkuCatalog -eq 'Yes') -and ($currentSheet.Name -match "SkuCatalog")) {
-            $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
-        }
-        if (($newOrphans -eq $true) -and ($currentSheet.Name -eq 'Orphaned')) {
-            $XlsxObj.Workbook.Worksheets.Delete($currentSheet)
-        }       
-    }
-    # Close Excel reference object and save rtelated file
-    $XlsxObj | Close-Excel -Save     
+        if (($currentSheet.Name -eq 'Assigned_Licenses') `
+        -or ($currentSheet.Name -eq 'Licenses_Pool') `
+        -or (($newOrphans -eq $true) -and ($currentSheet.Name -eq 'Orphaned')) `
+        -or (($ReplaceSkuCatalog -eq 'Yes') -and ($currentSheet.Name -match "SkuCatalog"))) {
+            Remove-Worksheet -Path $xlsx_file -WorksheetName $currentSheet.Name
+        }    
+    }  
 } else {
     $FetchSkuCatalog = $true
 }
@@ -448,7 +432,7 @@ if ($UseRefFile -eq 'Yes') { # remove older worksheets
 if ($FetchSkuCatalog -eq $true) {
     $ErrorActionPreference= 'Stop'
     try {
-        $label = 'SkuCatalog_' + (Get-Date -Format "yyMMdd")
+        $label = 'SkuCatalog'
         $csvdestfile = "C:$($env:HOMEPATH)\Downloads\$label.csv"
         Invoke-WebRequest -Uri 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv' -OutFile "$csvdestfile"
         $SkuCatalog_rawdata = @{}
@@ -463,15 +447,17 @@ if ($FetchSkuCatalog -eq $true) {
         Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
 
         Write-Host -NoNewline "Writing worksheet [$label]..."
+        $now = Get-Date -Format "yyMMdd"
         $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
             Write-Host -NoNewline '.'        
             New-Object -TypeName PSObject -Property @{
-                ID = "$_"
-                SKU = "$($SkuCatalog_rawdata[$_].SKUID)"
+                TIMESTAMP   = "$now"
+                ID          = "$_"
+                SKU         = "$($SkuCatalog_rawdata[$_].SKUID)"
                 DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
-            } | Select ID, SKU, DESCRIPTION
+            } | Select TIMESTAMP, ID, SKU, DESCRIPTION
         }
-        $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium1
+        $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize
         Write-Host -ForegroundColor Green ' DONE'
     } catch {
         [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
@@ -496,7 +482,7 @@ try {
             TOTAL       = $Licenses_Pool_dataframe[$_][3]
         } | Select UPTIME, LICENSE, AVAILABLE, TOTAL
     }
-    $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium2
+    $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize
     Write-Host -ForegroundColor Green ' DONE'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
@@ -524,7 +510,7 @@ try {
             TIMESTAMP   = $Assigned_Licenses_dataframe[$_][7]
         } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP
     }
-    $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium2
+    $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize
     Write-Host -ForegroundColor Green ' DONE'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
@@ -538,24 +524,26 @@ $ErrorActionPreference= 'Inquire'
 # writing Orphaned worksheet
 $ErrorActionPreference= 'Stop'
 try {
-    $label = 'Orphaned'
-    Write-Host -NoNewline "Writing worksheet [$label]..."
-    $inData = 0..($orphanedrecords.Count - 1) | Foreach-Object{
-        Write-Host -NoNewline '.'        
-        New-Object -TypeName PSObject -Property @{
-            USRNAME     = $orphanedrecords[$_][0]
-            DESC        = $orphanedrecords[$_][1]
-            USRTYPE     = $orphanedrecords[$_][2]
-            CREATED     = $orphanedrecords[$_][3]
-            BLOCKED     = $orphanedrecords[$_][4]
-            LICENSED    = $orphanedrecords[$_][5]
-            LICENSE     = $orphanedrecords[$_][6]
-            TIMESTAMP   = $orphanedrecords[$_][7]
-            NOTES       = $orphanedrecords[$_][8]
-        } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP, NOTES
+    if ($orphanedrecords.Count -ge 1) {
+        $label = 'Orphaned'
+        Write-Host -NoNewline "Writing worksheet [$label]..."
+        $inData = 0..($orphanedrecords.Count - 1) | Foreach-Object{
+            Write-Host -NoNewline '.'        
+            New-Object -TypeName PSObject -Property @{
+                USRNAME     = $orphanedrecords[$_][0]
+                DESC        = $orphanedrecords[$_][1]
+                USRTYPE     = $orphanedrecords[$_][2]
+                CREATED     = $orphanedrecords[$_][3]
+                BLOCKED     = $orphanedrecords[$_][4]
+                LICENSED    = $orphanedrecords[$_][5]
+                LICENSE     = $orphanedrecords[$_][6]
+                TIMESTAMP   = $orphanedrecords[$_][7]
+                NOTES       = $orphanedrecords[$_][8]
+            } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP, NOTES
+        }
+        $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize
+        Write-Host -ForegroundColor Green ' DONE'
     }
-    $inData | Export-XLSX -Path $xlsx_file -WorksheetName $label -AutoFit -Table -TableStyle Medium3
-    Write-Host -ForegroundColor Green ' DONE'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
     Write-Host -ForegroundColor Red ' FAIL'
