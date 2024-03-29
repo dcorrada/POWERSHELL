@@ -7,6 +7,7 @@ This script will connect to the Microsoft 365 tenant and query a list of which
 license(s) are assigned to each user, then create/edit an excel report file.
 
 *** TODO LIST ***
+->  creating new xlsx file: replace ComObject instance (lines 279-292) with Import-Excel cmdlets
 ->  sort worksheets of the xlsx reference file
 ->  generate summarizing pivot tables into excel reference file.
 #>
@@ -276,11 +277,18 @@ if ($UseRefFile -eq "Yes") {
     [System.Windows.MessageBox]::Show("File [$xlsx_file] will be created",'CREATING','Ok','Info') | Out-Null
 
     # *** TEMPORARY CHUNK ***
-    $excel = New-Object -ComObject excel.application
-    $excel.visible = $True
-    $workbook = $excel.Workbooks.Add()
-    $workbook.SaveAs($xlsx_file)
-    $excel.Quit()
+    $Myexcel = New-Object -ComObject excel.application
+    $Myexcel.Visible = $false
+    $Myexcel.DisplayAlerts = $false
+    $Myworkbook = $Myexcel.Workbooks.Add()
+    foreach ($currentItemName in ('SkuCatalog', 'Licenses_Pool', 'Assigned_Licenses', 'Orphaned')) {
+        $Mysheet = $Myworkbook.Worksheets.add()
+        $Mysheet.name = "$currentItemName"
+    }
+    $Myworkbook.Saveas($xlsx_file)
+    $Myworkbook.Close($true)
+    $Myexcel.Quit()
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
     # *** KNUHC YRAROPMET ***
 }
 Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
