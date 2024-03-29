@@ -1,13 +1,12 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.2
+Version...: 24.04.3
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
 
 *** TODO LIST ***
-->  creating new xlsx file: replace ComObject instance (lines 279-292) with Import-Excel cmdlets
 ->  sort worksheets of the xlsx reference file
 ->  generate summarizing pivot tables into excel reference file.
 #>
@@ -275,21 +274,6 @@ if ($UseRefFile -eq "Yes") {
 } else {
     $xlsx_file = "C:$env:HOMEPATH\Downloads\$($AccountName)_licenses.xlsx"
     [System.Windows.MessageBox]::Show("File [$xlsx_file] will be created",'CREATING','Ok','Info') | Out-Null
-
-    # *** TEMPORARY CHUNK ***
-    $Myexcel = New-Object -ComObject excel.application
-    $Myexcel.Visible = $false
-    $Myexcel.DisplayAlerts = $false
-    $Myworkbook = $Myexcel.Workbooks.Add()
-    foreach ($currentItemName in ('SkuCatalog', 'Licenses_Pool', 'Assigned_Licenses', 'Orphaned')) {
-        $Mysheet = $Myworkbook.Worksheets.add()
-        $Mysheet.name = "$currentItemName"
-    }
-    $Myworkbook.Saveas($xlsx_file)
-    $Myworkbook.Close($true)
-    $Myexcel.Quit()
-    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Myexcel) | Out-Null
-    # *** KNUHC YRAROPMET ***
 }
 Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 
@@ -430,9 +414,11 @@ if ($UseRefFile -eq 'Yes') { # remove older worksheets
         -or (($ReplaceSkuCatalog -eq 'Yes') -and ($currentSheet.Name -match "SkuCatalog"))) {
             Remove-Worksheet -Path $xlsx_file -WorksheetName $currentSheet.Name
         }    
-    }  
+    }
+    $XlsPkg = Open-ExcelPackage -Path $xlsx_file
 } else {
     $FetchSkuCatalog = $true
+    $XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 }
 
 
@@ -465,7 +451,7 @@ if ($FetchSkuCatalog -eq $true) {
                 DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
             } | Select TIMESTAMP, ID, SKU, DESCRIPTION
         }
-        $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize
+        $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
         Write-Host -ForegroundColor Green ' DONE'
     } catch {
         [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
@@ -490,7 +476,7 @@ try {
             TOTAL       = $Licenses_Pool_dataframe[$_][3]
         } | Select UPTIME, LICENSE, AVAILABLE, TOTAL
     }
-    $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
     Write-Host -ForegroundColor Green ' DONE'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
@@ -518,7 +504,7 @@ try {
             TIMESTAMP   = $Assigned_Licenses_dataframe[$_][7]
         } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP
     }
-    $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
     Write-Host -ForegroundColor Green ' DONE'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
@@ -549,7 +535,7 @@ try {
                 NOTES       = $orphanedrecords[$_][8]
             } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP, NOTES
         }
-        $inData | Export-Excel -Path $xlsx_file -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize
+        $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize -PassThru
         Write-Host -ForegroundColor Green ' DONE'
     }
 } catch {
@@ -559,3 +545,7 @@ try {
     exit
 }
 $ErrorActionPreference= 'Inquire'
+
+
+
+Close-ExcelPackage -ExcelPackage $XlsPkg
