@@ -1,13 +1,12 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.3
+Version...: 24.04.4
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
 
 *** TODO LIST ***
-->  sort worksheets of the xlsx reference file
 ->  generate summarizing pivot tables into excel reference file.
 #>
 
@@ -402,7 +401,12 @@ if (($orphanedrecords.Count) -ge 1) {
                             WRITING REFERENCE FILE
 ******************************************************************************* #>
 $FetchSkuCatalog = $false
-if ($UseRefFile -eq 'Yes') { # remove older worksheets
+if ($UseRefFile -eq 'Yes') { 
+    # create backup file    
+    $bkp_file = $xlsx_file + '.bkp'
+    Copy-Item -Path $xlsx_file -Destination $bkp_file
+
+    # remove older worksheets
     $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
     if ($ReplaceSkuCatalog -eq 'Yes') {
         $FetchSkuCatalog = $true
@@ -441,7 +445,7 @@ if ($FetchSkuCatalog -eq $true) {
         Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
 
         Write-Host -NoNewline "Writing worksheet [$label]..."
-        $now = Get-Date -Format "yyMMdd"
+        $now = Get-Date -Format  "yyyy/MM/dd"
         $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
             Write-Host -NoNewline '.'        
             New-Object -TypeName PSObject -Property @{
@@ -546,6 +550,16 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
-
+# resorting worksheets
+$XlsPkg.Workbook.Worksheets.MoveToStart('SkuCatalog')
+$XlsPkg.Workbook.Worksheets.MoveAfter('Licenses_Pool', 'Skucatalog')
+$XlsPkg.Workbook.Worksheets.MoveAfter('Assigned_Licenses', 'Licenses_Pool')
+if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
+    $XlsPkg.Workbook.Worksheets.MoveAfter('Orphaned', 'Assigned_Licenses')
+}
 
 Close-ExcelPackage -ExcelPackage $XlsPkg
+
+if ($UseRefFile -eq 'Yes') { # remove backup file 
+    Remove-Item -Path $bkp_file -Force
+}
