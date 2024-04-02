@@ -564,12 +564,12 @@ if ($UseRefFile -eq 'No') {
     -PivotRows 'LICENSE' -PivotColumns 'UPTIME' -PivotData @{AVAILABLE="Sum";TOTAL="Sum"} `
     -PivotTableStyle 'Medium7' -PivotTotals 'Rows'
     # ***HINT*** with -Address option I could insert more pivots into the same worksheet
+    # see also https://www.powershellgallery.com/packages/ImportExcel/7.8.5/Content/Public%5CAdd-PivotTable.ps1 
 }
 
 # keep edited file or rollback?
 Close-ExcelPackage -ExcelPackage $XlsPkg -Show
-
-if ($UseRefFile -eq 'Yes') { # remove backup file 
+if ($UseRefFile -eq 'Yes') {
     $answ = [System.Windows.MessageBox]::Show("Remove teporary backup?",'DELETE','YesNo','Warning')
     if ($answ -eq "Yes") {    
         Remove-Item -Path $bkp_file -Force
