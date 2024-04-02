@@ -404,7 +404,7 @@ $FetchSkuCatalog = $false
 if ($UseRefFile -eq 'Yes') { 
     # create backup file    
     $bkp_file = $xlsx_file + '.bkp'
-    Copy-Item -Path $xlsx_file -Destination $bkp_file
+    Copy-Item -Path $xlsx_file -Destination $bkp_file -Force
 
     # remove older worksheets
     $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
@@ -558,8 +558,20 @@ if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
     $XlsPkg.Workbook.Worksheets.MoveAfter('Orphaned', 'Assigned_Licenses')
 }
 
-Close-ExcelPackage -ExcelPackage $XlsPkg
+# brand new pivot example for freshly new excel files
+if ($UseRefFile -eq 'No') { 
+    Add-PivotTable -PivotTableName "SUMMARY" -ExcelPackage $XlsPkg -SourceWorksheet 'Licenses_Pool' `
+    -PivotRows 'LICENSE' -PivotColumns 'UPTIME' -PivotData @{AVAILABLE="Sum";TOTAL="Sum"} `
+    -PivotTableStyle 'Medium7' -PivotTotals 'Rows'
+    # ***HINT*** with -Address option I could insert more pivots into the same worksheet
+}
+
+# keep edited file or rollback?
+Close-ExcelPackage -ExcelPackage $XlsPkg -Show
 
 if ($UseRefFile -eq 'Yes') { # remove backup file 
-    Remove-Item -Path $bkp_file -Force
+    $answ = [System.Windows.MessageBox]::Show("Remove teporary backup?",'DELETE','YesNo','Warning')
+    if ($answ -eq "Yes") {    
+        Remove-Item -Path $bkp_file -Force
+    }
 }
