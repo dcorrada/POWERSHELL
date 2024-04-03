@@ -1,13 +1,10 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.4
+Version...: 24.04.5
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
-
-*** TODO LIST ***
-->  generate summarizing pivot tables into excel reference file.
 #>
 
 
@@ -560,15 +557,30 @@ if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
 
 # brand new pivot example for freshly new excel files
 if ($UseRefFile -eq 'No') { 
-    Add-PivotTable -PivotTableName "SUMMARY" -ExcelPackage $XlsPkg -SourceWorksheet 'Licenses_Pool' `
+    Add-Worksheet -ExcelPackage $XlsPkg -WorksheetName 'SUMMARY' > $null
+    
+    Add-PivotTable -ExcelPackage $XlsPkg `
+    -PivotTableName 'POOL' -Address $XlsPkg.SUMMARY.cells["B3"] `
+    -SourceWorksheet 'Licenses_Pool' `
     -PivotRows 'LICENSE' -PivotColumns 'UPTIME' -PivotData @{AVAILABLE="Sum";TOTAL="Sum"} `
-    -PivotTableStyle 'Medium7' -PivotTotals 'Rows'
-    # ***HINT*** with -Address option I could insert more pivots into the same worksheet
-    # see also https://www.powershellgallery.com/packages/ImportExcel/7.8.5/Content/Public%5CAdd-PivotTable.ps1 
+    -PivotTableStyle 'Dark7' -PivotTotals 'Rows'
+
+    $placeholder = ($avail_lics.Count * 3) + 11
+    Add-PivotTable -ExcelPackage $XlsPkg `
+    -PivotTableName 'ASSIGNED' -Address $XlsPkg.SUMMARY.cells["B$placeholder"] `
+    -SourceWorksheet 'Assigned_Licenses' `
+    -PivotRows ('LICENSE', 'DESC') -PivotColumns 'TIMESTAMP' -PivotData 'LICENSE' `
+    -PivotTableStyle 'Dark3' -PivotTotals 'Rows'
 }
 
-# keep edited file or rollback?
-Close-ExcelPackage -ExcelPackage $XlsPkg -Show
+# show the final result and/or keep temporary backup
+$ErrorActionPreference= 'Stop'
+try {
+    Close-ExcelPackage -ExcelPackage $XlsPkg -Show
+} catch {
+    Close-ExcelPackage -ExcelPackage $XlsPkg
+}
+$ErrorActionPreference= 'Inquire'
 if ($UseRefFile -eq 'Yes') {
     $answ = [System.Windows.MessageBox]::Show("Remove teporary backup?",'DELETE','YesNo','Warning')
     if ($answ -eq "Yes") {    
