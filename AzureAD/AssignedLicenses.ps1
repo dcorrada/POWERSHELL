@@ -407,6 +407,7 @@ if ($UseRefFile -eq 'Yes') {
     $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
     if ($ReplaceSkuCatalog -eq 'Yes') {
         $FetchSkuCatalog = $true
+        $tot += 540
     }
     foreach ($currentSheet in $Worksheet_list) {
         if (($currentSheet.Name -eq 'Assigned_Licenses') `
@@ -446,7 +447,7 @@ if ($FetchSkuCatalog -eq $true) {
         $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
             Write-Host -NoNewline '.'        
             New-Object -TypeName PSObject -Property @{
-                TIMESTAMP   = "$now"
+                TIMESTAMP   = [DateTime]$now
                 ID          = "$_"
                 SKU         = "$($SkuCatalog_rawdata[$_].SKUID)"
                 DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
@@ -471,7 +472,7 @@ try {
     $inData = 0..($Licenses_Pool_dataframe.Count - 1) | Foreach-Object{
         Write-Host -NoNewline '.'        
         New-Object -TypeName PSObject -Property @{
-            UPTIME      = $Licenses_Pool_dataframe[$_][0]
+            UPTIME      = [DateTime]$Licenses_Pool_dataframe[$_][0]
             LICENSE     = $Licenses_Pool_dataframe[$_][1]
             AVAILABLE   = $Licenses_Pool_dataframe[$_][2]
             TOTAL       = $Licenses_Pool_dataframe[$_][3]
@@ -498,11 +499,11 @@ try {
             USRNAME     = $Assigned_Licenses_dataframe[$_][0]
             DESC        = $Assigned_Licenses_dataframe[$_][1]
             USRTYPE     = $Assigned_Licenses_dataframe[$_][2]
-            CREATED     = $Assigned_Licenses_dataframe[$_][3]
+            CREATED     = [DateTime]$Assigned_Licenses_dataframe[$_][3]
             BLOCKED     = $Assigned_Licenses_dataframe[$_][4]
             LICENSED    = $Assigned_Licenses_dataframe[$_][5]
             LICENSE     = $Assigned_Licenses_dataframe[$_][6]
-            TIMESTAMP   = $Assigned_Licenses_dataframe[$_][7]
+            TIMESTAMP   = [DateTime]$Assigned_Licenses_dataframe[$_][7]
         } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
@@ -514,7 +515,6 @@ try {
     exit
 }
 $ErrorActionPreference= 'Inquire'
-
 
 # writing Orphaned worksheet
 $ErrorActionPreference= 'Stop'
@@ -528,11 +528,11 @@ try {
                 USRNAME     = $orphanedrecords[$_][0]
                 DESC        = $orphanedrecords[$_][1]
                 USRTYPE     = $orphanedrecords[$_][2]
-                CREATED     = $orphanedrecords[$_][3]
+                CREATED     = [DateTime]$orphanedrecords[$_][3]
                 BLOCKED     = $orphanedrecords[$_][4]
                 LICENSED    = $orphanedrecords[$_][5]
                 LICENSE     = $orphanedrecords[$_][6]
-                TIMESTAMP   = $orphanedrecords[$_][7]
+                TIMESTAMP   = [DateTime]$orphanedrecords[$_][7]
                 NOTES       = $orphanedrecords[$_][8]
             } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP, NOTES
         }
