@@ -595,7 +595,7 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 if ($UseRefFile -eq 'Yes') {
-    $answ = [System.Windows.MessageBox]::Show("Remove teporary backup?",'DELETE','YesNo','Warning')
+    $answ = [System.Windows.MessageBox]::Show("Remove temporary backup?",'DELETE','YesNo','Warning')
     if ($answ -eq "Yes") {    
         Remove-Item -Path $bkp_file -Force
     }
