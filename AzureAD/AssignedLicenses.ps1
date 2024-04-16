@@ -600,3 +600,10 @@ if ($UseRefFile -eq 'Yes') {
         Remove-Item -Path $bkp_file -Force
     }
 }
+
+# remove renmants
+$twodots = Split-Path -Parent $xlsx_file | Split-Path -Parent
+$filename = Split-Path -Leaf $xlsx_file
+if (Test-Path "$twodots/$filename" -PathType Leaf) {
+    Remove-Item -Path "$twodots/$filename" -Force
+}
