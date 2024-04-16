@@ -34,10 +34,9 @@ Add-Type -AssemblyName PresentationFramework
 # importing modules
 $ErrorActionPreference= 'Stop'
 try {
-    Import-Module -Name "$workdir\Modules\Forms.psm1"
-    Import-Module FOOBARBAZ
+    Import-Module -Name "$workdir\Modules\Forms.psm1"    
 } catch {
-    if (!(((Get-InstalledModule).Name) -contains 'FOOBARBAZ')) {
+    if (!(((Get-InstalledModule).Name) -contains 'Microsoft.Graph')) {
         Install-Module Microsoft.Graph -Scope AllUsers
         [System.Windows.MessageBox]::Show("Installed [MIcrosoft.Graph] module: please restart the script",'RESTART','Ok','warning')
         exit
