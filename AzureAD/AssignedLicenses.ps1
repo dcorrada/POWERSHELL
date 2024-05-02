@@ -362,7 +362,7 @@ if ($UseRefFile -eq "Yes") {
                     ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
                     'NULL',
                     'NULL',
-                    'NONE',
+                    $history.LICENSE,
                     (Get-Date -format "yyyy/MM/dd"),
                     'user no longer exists on tenant'
                 )
