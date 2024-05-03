@@ -274,22 +274,24 @@ if ($UseRefFile -eq "Yes") {
 Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 
 # [Licenses_Pool]
-$timeline = Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool' | Select UPTIME | Get-Unique -AsString
-$adialog = FormBase -w 250 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
-Label -form $adialog -x 20 -y 20 -w 200 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
-$they = 40
-$choices = @()
-foreach ($adate in $timeline) {
-    $choices += CheckBox -form $adialog -checked $true -x 50 -y $they -w 150 -text $($adate.UPTIME | Get-Date -Format "dd-MM-yyyy")
-    $they += 30
-}
-OKButton -form $adialog -x 60 -y ($they + 15) -text "Ok" | Out-Null
-$result = $adialog.ShowDialog()
-$SaveTheDate = @()
-foreach ($item in $choices) {
-    if ($item.Checked) {
-        $SaveTheDate += $item.Text
+if ($UseRefFile -eq "Yes") {
+    $timeline = Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool' | Select UPTIME | Get-Unique -AsString
+    $adialog = FormBase -w 250 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
+    Label -form $adialog -x 20 -y 20 -w 200 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
+    $they = 40
+    $choices = @()
+    foreach ($adate in $timeline) {
+        $choices += CheckBox -form $adialog -checked $true -x 50 -y $they -w 150 -text $($adate.UPTIME | Get-Date -Format "dd-MM-yyyy")
+        $they += 30
     }
+    OKButton -form $adialog -x 60 -y ($they + 15) -text "Ok" | Out-Null
+    $result = $adialog.ShowDialog()
+    $SaveTheDate = @()
+    foreach ($item in $choices) {
+        if ($item.Checked) {
+            $SaveTheDate += $item.Text
+        }
+    }    
 }
 
 $Licenses_Pool_dataframe = @()
