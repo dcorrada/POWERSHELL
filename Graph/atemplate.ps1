@@ -49,12 +49,47 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
+Connect-MgGraph -Scopes 'User.Read.All'
+<#
+Alternativamente a questo cmdlet possibile accedere a Graph tramite 
+un'app di autorizzazione Azure AD.
+
+*** Creare un'applicazione nell'Azure Portal ***
+Accedi al servizio Azure AD B2C e seleziona "Registrazioni per l'app":
+https://portal.azure.com/#view/Microsoft_AAD_B2CAdmin/TenantManagementMenuBlade/~/overview
+
+Crea una nuova registrazione dell'applicazione, limitando l'accesso solo ad 
+"Account solo in questa directory dell'organizzazione (Tenant singolo)".
+
+*** Memorizza le credenziali dell'applicazione ***
+Dopo aver creato l'applicazione, prendi nota di "ID applicazione" (Client ID) e 
+genera un segreto (Client Secret) cliccando sulla voce "Credenziali client".
+
+*** Concedi autorizzazioni all'applicazione ***
+Assicurati che l'applicazione abbia le autorizzazioni appropriate per accedere 
+alle informazioni utente tramite Microsoft Graph (ie scope "User.Read.All"). 
+Puoi farlo nelle impostazioni delle autorizzazioni dell'applicazione (click su 
+voce "Autorizzazioni API").
+
+*** Utilizza le credenziali dell'applicazione per l'autenticazione ***
+Nel tuo script PowerShell, utilizza le credenziali dell'applicazione per 
+ottenere un token di accesso tramite il flusso Client Credentials:
+
+# Credenziali dell'applicazione
+$clientId = "Your-Client-Id"
+$clientSecret = "Your-Client-Secret"
+$tenantId = "Your-Tenant-Id"
+# Autenticazione e ottenimento del token di accesso
+$token = Get-MgAccessToken -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId -Scopes "https://graph.microsoft.com/.default"
+# Imposta il token di accesso per l'utilizzo nelle richieste
+Set-MgAccessToken -AccessToken $token.AccessToken
+# Esegui le operazioni su Microsoft Graph
+Get-MgUser -All
+#>
+
+
+Get-MgUser -All -Top 30
 <#
 Find AzureAD/MSOnline equivalent cmdlets for Graph on:
-
 https://learn.microsoft.com/en-us/powershell/microsoftgraph/azuread-msoline-cmdlet-map?view=graph-powershell-1.0
-
-E.g.: how to extract all user list (aka old Get-AzureADUser)
-Connect-MgGraph -Scopes 'User.Read.All'
-Get-MgUser -ConsistencyLevel eventual -Count userCount -Filter "startsWith(DisplayName, 'a')" -Top 1
 #>
