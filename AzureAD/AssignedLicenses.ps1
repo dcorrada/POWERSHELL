@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.5
+Version...: 24.04.6
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -274,17 +274,39 @@ if ($UseRefFile -eq "Yes") {
 Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 
 # [Licenses_Pool]
+if ($UseRefFile -eq "Yes") {
+    $timeline = Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool' | Select UPTIME | Get-Unique -AsString
+    $adialog = FormBase -w 250 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
+    Label -form $adialog -x 20 -y 20 -w 200 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
+    $they = 40
+    $choices = @()
+    foreach ($adate in $timeline) {
+        $choices += CheckBox -form $adialog -checked $true -x 50 -y $they -w 150 -text $($adate.UPTIME | Get-Date -Format "dd-MM-yyyy")
+        $they += 30
+    }
+    OKButton -form $adialog -x 60 -y ($they + 15) -text "Ok" | Out-Null
+    $result = $adialog.ShowDialog()
+    $SaveTheDate = @()
+    foreach ($item in $choices) {
+        if ($item.Checked) {
+            $SaveTheDate += $item.Text
+        }
+    }    
+}
+
 $Licenses_Pool_dataframe = @()
 if ($UseRefFile -eq "Yes") { # appending older data
     if ($Worksheet_list.Name -contains 'Licenses_Pool') {
         Write-Host "Appending [Licenses_Pool] data..."
         foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool')) {
-            $Licenses_Pool_dataframe += ,@(
-                ($history.UPTIME | Get-Date -format "yyyy/MM/dd"),
-                $history.LICENSE,
-                $history.AVAILABLE,
-                $history.TOTAL
-            )
+            if ($SaveTheDate -contains ($history.UPTIME | Get-Date -format "dd-MM-yyyy")) {
+                $Licenses_Pool_dataframe += ,@(
+                    ($history.UPTIME | Get-Date -format "yyyy/MM/dd"),
+                    $history.LICENSE,
+                    $history.AVAILABLE,
+                    $history.TOTAL
+                )
+            }
         }
     } else {
         Write-Host -ForegroundColor Magenta "No [Licenses_Pool] worksheet found"
@@ -342,7 +364,7 @@ if ($UseRefFile -eq "Yes") {
                     ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
                     'NULL',
                     'NULL',
-                    'NONE',
+                    $history.LICENSE,
                     (Get-Date -format "yyyy/MM/dd"),
                     'user no longer exists on tenant'
                 )
@@ -397,72 +419,65 @@ if (($orphanedrecords.Count) -ge 1) {
 <# *******************************************************************************
                             WRITING REFERENCE FILE
 ******************************************************************************* #>
-$FetchSkuCatalog = $false
 if ($UseRefFile -eq 'Yes') { 
     # create backup file    
     $bkp_file = $xlsx_file + '.bkp'
     Copy-Item -Path $xlsx_file -Destination $bkp_file -Force
 
     # remove older worksheets
-    $ReplaceSkuCatalog = [System.Windows.MessageBox]::Show("Update [SkuCatalog] worksheet",'UPDATING','YesNo','Info')
-    if ($ReplaceSkuCatalog -eq 'Yes') {
-        $FetchSkuCatalog = $true
-        $tot += 540
-    }
     foreach ($currentSheet in $Worksheet_list) {
         if (($currentSheet.Name -eq 'Assigned_Licenses') `
         -or ($currentSheet.Name -eq 'Licenses_Pool') `
         -or (($newOrphans -eq $true) -and ($currentSheet.Name -eq 'Orphaned')) `
-        -or (($ReplaceSkuCatalog -eq 'Yes') -and ($currentSheet.Name -match "SkuCatalog"))) {
+        -or ($currentSheet.Name -match "SkuCatalog")) {
             Remove-Worksheet -Path $xlsx_file -WorksheetName $currentSheet.Name
         }    
     }
     $XlsPkg = Open-ExcelPackage -Path $xlsx_file
 } else {
-    $FetchSkuCatalog = $true
     $XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 }
 
 
 # writing SkuCatalog worksheet
-if ($FetchSkuCatalog -eq $true) {
-    $ErrorActionPreference= 'Stop'
-    try {
-        $label = 'SkuCatalog'
-        $csvdestfile = "C:$($env:HOMEPATH)\Downloads\$label.csv"
-        Invoke-WebRequest -Uri 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv' -OutFile "$csvdestfile"
-        $SkuCatalog_rawdata = @{}
-        foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
-            if (!($SkuCatalog_rawdata.ContainsKey("$($currentItem.GUID)"))) {
-                $SkuCatalog_rawdata["$($currentItem.GUID)"] = @{
-                    SKUID   = "$($currentItem.String_Id)"
-                    DESC    = "$($currentItem.Product_Display_Name)"
-                }
+$ErrorActionPreference= 'Stop'
+try {
+    $label = 'SkuCatalog'
+    $csvdestfile = "C:$($env:HOMEPATH)\Downloads\$label.csv"
+    if (Test-Path -Path $csvdestfile -PathType Leaf) { Remove-Item -Path $csvdestfile -Force }
+    Invoke-WebRequest -Uri 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv' -OutFile "$csvdestfile"
+    $SkuCatalog_rawdata = @{}
+    foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
+        if (!($SkuCatalog_rawdata.ContainsKey("$($currentItem.GUID)"))) {
+            $SkuCatalog_rawdata["$($currentItem.GUID)"] = @{
+                SKUID   = "$($currentItem.String_Id)"
+                DESC    = "$($currentItem.Product_Display_Name)"
             }
         }
-        Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
-
-        Write-Host -NoNewline "Writing worksheet [$label]..."
-        $now = Get-Date -Format  "yyyy/MM/dd"
-        $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
-            Write-Host -NoNewline '.'        
-            New-Object -TypeName PSObject -Property @{
-                TIMESTAMP   = [DateTime]$now
-                ID          = "$_"
-                SKU         = "$($SkuCatalog_rawdata[$_].SKUID)"
-                DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
-            } | Select TIMESTAMP, ID, SKU, DESCRIPTION
-        }
-        $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
-        Write-Host -ForegroundColor Green ' DONE'
-    } catch {
-        [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
-        Write-Host -ForegroundColor Red ' FAIL'
-        Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
-        exit
     }
-    $ErrorActionPreference= 'Inquire'
+    Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
+
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $now = Get-Date -Format  "yyyy/MM/dd"
+    $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            TIMESTAMP   = [DateTime]$now
+            ID          = "$_"
+            SKU         = "$($SkuCatalog_rawdata[$_].SKUID)"
+            DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
+        } | Select TIMESTAMP, ID, SKU, DESCRIPTION
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
 }
+$ErrorActionPreference= 'Inquire'
+
 
 # writing Licenses_Pool worksheet
 $ErrorActionPreference= 'Stop'
@@ -582,7 +597,7 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 if ($UseRefFile -eq 'Yes') {
-    $answ = [System.Windows.MessageBox]::Show("Remove teporary backup?",'DELETE','YesNo','Warning')
+    $answ = [System.Windows.MessageBox]::Show("Remove temporary backup?",'DELETE','YesNo','Warning')
     if ($answ -eq "Yes") {    
         Remove-Item -Path $bkp_file -Force
     }
