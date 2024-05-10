@@ -40,26 +40,29 @@ Add-Type -AssemblyName PresentationFramework
 
 # importing modules
 $ErrorActionPreference= 'Stop'
-try {
-    Import-Module -Name "$workdir\Modules\Gordian.psm1"
-    Import-Module -Name "$workdir\Modules\Forms.psm1"
-    Import-Module MSOnline
-    Import-Module ImportExcel
-} catch {
-    if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
-        Install-Module MSOnline -Confirm:$False -Force
-        [System.Windows.MessageBox]::Show("Installed [MSOnline] module: please restart the script",'RESTART','Ok','warning')
-        exit
-    } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
-        Install-Module ImportExcel -Confirm:$False -Force
-        [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: please restart the script",'RESTART','Ok','warning')
-        exit
-    } else {
-        [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
-        Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-        exit
+do {
+    try {
+        Import-Module -Name "$workdir\Modules\Gordian.psm1"
+        Import-Module -Name "$workdir\Modules\Forms.psm1"
+        Import-Module MSOnline
+        Import-Module ImportExcel
+        $ThirdParty = 'Ok'
+    } catch {
+        if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
+            Install-Module MSOnline -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [MSOnline] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
+            $ThirdParty = 'Ko'
+        } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
+            Install-Module ImportExcel -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
+            $ThirdParty = 'Ko'
+        } else {
+            [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error') > $null
+            Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+            exit
+        }
     }
-}
+} while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
 
