@@ -91,3 +91,114 @@ try {
     }
 }
 $ErrorActionPreference= 'Inquire'
+
+
+<# *******************************************************************************
+                                INITIALIZATION
+******************************************************************************* #>
+$cryptofile = $env:LOCALAPPDATA + '\PSWallet.encrypted'
+$dbfile = $env:LOCALAPPDATA + '\PSWallet.sqlite'
+do {
+    if (!(Test-Path $cryptofile -PathType Leaf)) {
+        # create Key file if no DB file exists
+        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+        $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+        $SaveFileDialog.Title = "Save Key File"
+        $SaveFileDialog.initialDirectory = "$env:LOCALAPPDATA"
+        $SaveFileDialog.FileName = 'PSWallet.key'
+        $SaveFileDialog.filter = 'Key file (*.key)| *.key'
+        $SaveFileDialog.ShowDialog() | Out-Null
+        $keyfile = $SaveFileDialog.filename
+        CreateKeyFile -keyfile "$keyfile" | Out-Null
+    } else {
+        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+        $OpenFileDialog.Title = "Open Key File"
+        $OpenFileDialog.initialDirectory = "$env:LOCALAPPDATA"
+        $OpenFileDialog.filter = 'Key file (*.key)| *.key'
+        $OpenFileDialog.ShowDialog() | Out-Null
+        $keyfile = $OpenFileDialog.filename   
+    }
+} while ([string]::IsNullOrEmpty($keyfile))
+
+
+Write-Host -NoNewline 'Accessing DB file... '
+$ErrorActionPreference= 'Stop'
+try {
+    if (Test-Path $cryptofile -PathType Leaf) {
+        DecryptFile -keyfile "$keyfile" -infile "$cryptofile" | Out-File -FilePath "$dbfile"
+        $SQLiteConnection = New-SQLiteConnection -DataSource $dbfile
+    } else {
+        Write-Host -NoNewline -ForegroundColor Yellow 'No DB found, create it '
+        $SQLiteConnection = New-SQLiteConnection -DataSource $dbfile
+
+        <# spostare qui il blocco di creazione tabelle #>
+
+    }
+
+    <# spostare qui il blocco di login #>
+
+    Write-Host -ForegroundColor Green 'Ok'
+} catch {
+    Write-Host -ForegroundColor Red 'Ko'
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+    [System.Windows.MessageBox]::Show("Error accessing database",'ABORTING','Ok','Error')
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+# creating DB schema if not exists
+if (!(Test-Path $cryptofile -PathType Leaf)) {
+    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @'
+CREATE TABLE `Logs` (
+    `USER` varchar(80),
+    `HOST` varchar(80),
+    `ACTION` varchar(80),
+    `UPTIME` datetime,
+    `DESC` text
+);
+'@
+}
+
+# login
+Invoke-SqliteQuery -SQLiteConnection $Connection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'login',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+
+
+
+<# *******************************************************************************
+                                CLOSURE
+******************************************************************************* #>
+Write-Host -NoNewline 'Closing DB file... '
+$ErrorActionPreference= 'Stop'
+try {
+    # logout
+    Invoke-SqliteQuery -SQLiteConnection $Connection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'logout',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+
+    $SQLiteConnection.Close()
+    EncryptFile -keyfile "$keyfile" -infile "$dbfile" -outfile "$cryptofile" | Out-Null
+    Write-Host -ForegroundColor Green 'Ok'
+} catch {
+    Write-Host -ForegroundColor Red 'Ko'
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+    [System.Windows.MessageBox]::Show("Error closing database",'ABORTING','Ok','Error')
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+
