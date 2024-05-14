@@ -54,10 +54,20 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# setting script execution policy
-$ErrorActionPreference= 'SilentlyContinue'
+# check execution policy
+if (!((Get-ExecutionPolicy LocalMachine) -eq 'Bypass')) {
+    Write-Host -ForegroundColor Yellow @"
+Before run this script open a shell with admin privileges
+and launch the following command:
+
+"@
+    Write-Host -ForegroundColor Cyan @"
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
+
+"@
+    Pause
+    exit
+}
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
@@ -132,11 +142,28 @@ try {
         Write-Host -NoNewline -ForegroundColor Yellow 'No DB found, create it '
         $SQLiteConnection = New-SQLiteConnection -DataSource $dbfile
 
-        <# spostare qui il blocco di creazione tabelle #>
-
+        # creating DB schema
+        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @'
+CREATE TABLE `Logs` (
+    `USER` varchar(80),
+    `HOST` varchar(80),
+    `ACTION` varchar(80),
+    `UPTIME` datetime,
+    `DESC` text
+);
+'@
     }
 
-    <# spostare qui il blocco di login #>
+    # login
+    Invoke-SqliteQuery -SQLiteConnection $Connection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'login',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
 
     Write-Host -ForegroundColor Green 'Ok'
 } catch {
@@ -147,29 +174,12 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
-# creating DB schema if not exists
-if (!(Test-Path $cryptofile -PathType Leaf)) {
-    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @'
-CREATE TABLE `Logs` (
-    `USER` varchar(80),
-    `HOST` varchar(80),
-    `ACTION` varchar(80),
-    `UPTIME` datetime,
-    `DESC` text
-);
-'@
-}
 
-# login
-Invoke-SqliteQuery -SQLiteConnection $Connection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
-VALUES (
-    '$($env:USERNAME)',
-    '$($env:COMPUTERNAME)',
-    'login',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
-);
-"@
+
+
+
+
+
 
 
 
