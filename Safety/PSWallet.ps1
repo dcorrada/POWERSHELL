@@ -54,20 +54,10 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# check execution policy
-if (!((Get-ExecutionPolicy LocalMachine) -eq 'Bypass')) {
-    Write-Host -ForegroundColor Yellow @"
-Before run this script open a shell with admin privileges
-and launch the following command:
-
-"@
-    Write-Host -ForegroundColor Cyan @"
+# setting script execution policy
+$ErrorActionPreference= 'SilentlyContinue'
 Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-
-"@
-    Pause
-    exit
-}
+$ErrorActionPreference= 'Inquire'
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
