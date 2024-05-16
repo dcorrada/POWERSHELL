@@ -6,13 +6,6 @@ Author....: Dario CORRADA
 This script reconfigure network settings to DHCP
 #>
 
-# header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
-$WarningPreference = 'SilentlyContinue'
-
 # setting DHCP profile
 $dhcp_check = Get-NetIPInterface
 foreach ($item in $dhcp_check) {

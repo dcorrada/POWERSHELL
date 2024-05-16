@@ -14,11 +14,6 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# setting script execution policy
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
-
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
 try {
