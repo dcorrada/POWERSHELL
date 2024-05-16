@@ -14,16 +14,7 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# get working directory
-$fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\CreateMSAccount\.ps1$" > $null
-$workdir = $matches[1]
-
 # header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing

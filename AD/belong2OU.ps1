@@ -6,13 +6,6 @@ Author....: Dario CORRADA
 This script get computer list belonging to a specific OU
 #>
 
-# header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
-$WarningPreference = 'SilentlyContinue'
-
 # import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
 

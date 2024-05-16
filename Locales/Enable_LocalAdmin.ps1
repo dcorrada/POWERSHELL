@@ -22,10 +22,6 @@ $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Locales\\Enable_LocalAdmin\.ps1$" > 
 $workdir = $matches[1]
 
 # header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing

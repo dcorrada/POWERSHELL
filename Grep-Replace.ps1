@@ -7,10 +7,6 @@ This script recursively look for .ps1 files, grep and replace a string inside th
 #>
 
 # header
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -19,7 +15,7 @@ $workdir = Get-Location
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # asking search path
-[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms")
+[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
 $foldername = New-Object System.Windows.Forms.FolderBrowserDialog
 $foldername.RootFolder = "MyComputer"
 $foldername.ShowDialog() > $null
