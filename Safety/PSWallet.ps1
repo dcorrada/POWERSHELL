@@ -1,3 +1,7 @@
+Param([string]$ExtDesc='NULL', 
+    [string]$ExtUsr=$env:USERNAME, [string]$ExtHost=$env:COMPUTERNAME,
+    [string]$ExtUptime=(Get-Date -format "yyyy-MM-dd HH:mm:ss"), [string]$ExtAction='read')
+
 <#
 Name......: PSWallet.ps1
 Version...: 24.05.a
@@ -6,22 +10,15 @@ Author....: Dario CORRADA
 PSWallet aims to be the credential manager tool in order to handle the various 
 login attempts required alongside the scripts of this git repository. 
 It will store, fetch and update credential onto a SQLite database.
+
+Refs:
+* https://github.com/RamblingCookieMonster/PSSQLite
+* https://www.powershellgallery.com/packages/PSSQLite/1.1.0
+
 #>
 
 
 <# !!! TODO LIST !!!
-
-1) Implementare e testare cmdlet per interfacciarsi su SQLite, vedi refs:
-    * https://sqldocs.org/sqlite/sqlite-with-powershell/
-    * https://github.com/RamblingCookieMonster/PSSQLite
-    * https://www.powershellgallery.com/packages/PSSQLite/1.1.0
-
-2) La prima tabella da creare sara' un log degli accessi che traccera':
-    * timestamp    
-    * username
-    * hostname
-    * script che invoca il wallet
-    * tipologia di azione (lettura, edit, indel, ...)
 
 3) Determinare i flussi IO sul wallet:
     * in input dagli script che lo invocano 
@@ -33,7 +30,8 @@ It will store, fetch and update credential onto a SQLite database.
         + creare un behaviour dedicato (ie su AssignedLicenses.ps1 viene 
           buttata fuori solo una lista di credenziali da scegliere)
 
-4) criptare l'intero file del DB o i singoli record?
+4) Cifrare, on th fly, le password nelle tabelle inserite come SecureString.
+   Aggiornare Gordian.psm1 con funzioni per criptare/decriptare testo.
 
 5) Versioning: una volta terminato lo sbozzamento dello script rimuoverlo dal 
    branch "tempus" e creare un branch proprio di testing "PSWallet", facendolo 
@@ -70,35 +68,42 @@ Add-Type -AssemblyName PresentationFramework
 
 # importing modules
 $ErrorActionPreference= 'Stop'
-try {
-    Import-Module -Name "$workdir\Modules\Gordian.psm1"
-    Import-Module -Name "$workdir\Modules\Forms.psm1"
-    Import-Module PSSQLite
-} catch {
-    if (!(((Get-InstalledModule).Name) -contains 'PSSQLite')) {
-        Install-Module PSSQLite -Confirm:$False -Force
-        [System.Windows.MessageBox]::Show("Installed [PSSQLite] module: please restart the script",'RESTART','Ok','warning')
-        exit
-    } else {
-        [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
-        Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-        exit
+do {
+    try {
+        Import-Module -Name "$workdir\Modules\Forms.psm1"
+        Import-Module -Name "$workdir\Modules\Gordian.psm1"
+        Import-Module PSSQLite
+        Import-Module ImportExcel
+        $ThirdParty = 'Ok'
+    } catch {
+        if (!(((Get-InstalledModule).Name) -contains 'PSSQLite')) {
+            Install-Module PSSQLite -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [PSSQLite] module: please restart the script",'RESTART','Ok','warning') | Out-Null
+            $ThirdParty = 'Ko'
+        } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
+            Install-Module ImportExcel -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: please restart the script",'RESTART','Ok','warning') | Out-Null
+            $ThirdParty = 'Ko'
+        } else {
+            [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error') | Out-Null
+            Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+            exit
+        }
     }
-}
+} while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
-
 
 <# *******************************************************************************
                                 INITIALIZATION
 ******************************************************************************* #>
-$cryptofile = $env:LOCALAPPDATA + '\PSWallet.encrypted'
 $dbfile = $env:LOCALAPPDATA + '\PSWallet.sqlite'
+
 do {
-    if (!(Test-Path $cryptofile -PathType Leaf)) {
+    if (!(Test-Path $dbfile -PathType Leaf)) {
         # create Key file if no DB file exists
         [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
         $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-        $SaveFileDialog.Title = "Save Key File"
+        $SaveFileDialog.Title = "Create Key File"
         $SaveFileDialog.initialDirectory = "$env:LOCALAPPDATA"
         $SaveFileDialog.FileName = 'PSWallet.key'
         $SaveFileDialog.filter = 'Key file (*.key)| *.key'
@@ -120,8 +125,7 @@ do {
 Write-Host -NoNewline 'Accessing DB file... '
 $ErrorActionPreference= 'Stop'
 try {
-    if (Test-Path $cryptofile -PathType Leaf) {
-        DecryptFile -keyfile "$keyfile" -infile "$cryptofile" | Out-File -FilePath "$dbfile"
+    if (Test-Path $dbfile -PathType Leaf) {
         $SQLiteConnection = New-SQLiteConnection -DataSource $dbfile
     } else {
         Write-Host -NoNewline -ForegroundColor Yellow 'No DB found, create it '
@@ -136,11 +140,18 @@ CREATE TABLE `Logs` (
     `UPTIME` datetime,
     `DESC` text
 );
+CREATE TABLE `Credits` (
+    `USER` varchar(80),
+    `PSWD` varchar(80),
+    `DESC` text
+);
 '@
     }
 
     # login
-    Invoke-SqliteQuery -SQLiteConnection $Connection -Query @"
+    $SQLiteConnection.Close()
+    $SQLiteConnection.Open()
+    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
     '$($env:USERNAME)',
@@ -149,7 +160,7 @@ VALUES (
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
-
+    $SQLiteConnection.Close()
     Write-Host -ForegroundColor Green 'Ok'
 } catch {
     Write-Host -ForegroundColor Red 'Ko'
@@ -160,12 +171,36 @@ VALUES (
 $ErrorActionPreference= 'Inquire'
 
 
+<# *******************************************************************************
+                                LOCALES
+******************************************************************************* #>
+if ($ExtDesc -eq 'NULL') {
+    $adialog = FormBase -w 350 -h 170 -text "MAINTENANCE"
+    $importCredits = RadioButton -form $adialog -checked $false -x 20 -y 20 -w 500 -h 30 -text "Import Credits table"
+    $exportCredits = RadioButton -form $adialog -checked $true -x 20 -y 50 -w 500 -h 30 -text "Export Credits table"
+    OKButton -form $adialog -x 100 -y 90 -text "Ok" | Out-Null
+    $result = $adialog.ShowDialog()
+    if ($importCredits.Checked -eq $true) {
+        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+        $OpenFileDialog.Title = "Import Table"
+        $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+        $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+        $OpenFileDialog.ShowDialog() | Out-Null
+        $ImportFile = $OpenFileDialog.filename 
+        
+        $headers = Compare-Object -ReferenceObject ('USER', 'PSWD', 'DESC') -DifferenceObject ((Import-Excel -Path $ImportFile | Get-Member).Name)
+        if ($headers.SideIndicator -contains '<=') {
+            [System.Windows.MessageBox]::Show("Required fields doesn't match",'ERROR','Ok','Error')
+        } else {
+            <# importing table #>
+        }
 
 
-
-
-
-
+    } elseif ($exportCredits.Checked -eq $true) {
+        <# Action when this condition is true #>
+    }
+}
 
 
 <# *******************************************************************************
@@ -175,7 +210,8 @@ Write-Host -NoNewline 'Closing DB file... '
 $ErrorActionPreference= 'Stop'
 try {
     # logout
-    Invoke-SqliteQuery -SQLiteConnection $Connection -Query @"
+    $SQLiteConnection.Open()
+    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
     '$($env:USERNAME)',
@@ -184,9 +220,7 @@ VALUES (
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
-
     $SQLiteConnection.Close()
-    EncryptFile -keyfile "$keyfile" -infile "$dbfile" -outfile "$cryptofile" | Out-Null
     Write-Host -ForegroundColor Green 'Ok'
 } catch {
     Write-Host -ForegroundColor Red 'Ko'
