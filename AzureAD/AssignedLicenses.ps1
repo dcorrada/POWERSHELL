@@ -19,11 +19,6 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# setting script execution policy
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
-
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AssignedLicenses\.ps1$" > $null
@@ -40,26 +35,29 @@ Add-Type -AssemblyName PresentationFramework
 
 # importing modules
 $ErrorActionPreference= 'Stop'
-try {
-    Import-Module -Name "$workdir\Modules\Gordian.psm1"
-    Import-Module -Name "$workdir\Modules\Forms.psm1"
-    Import-Module MSOnline
-    Import-Module ImportExcel
-} catch {
-    if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
-        Install-Module MSOnline -Confirm:$False -Force
-        [System.Windows.MessageBox]::Show("Installed [MSOnline] module: please restart the script",'RESTART','Ok','warning')
-        exit
-    } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
-        Install-Module ImportExcel -Confirm:$False -Force
-        [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: please restart the script",'RESTART','Ok','warning')
-        exit
-    } else {
-        [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error')
-        Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-        exit
+do {
+    try {
+        Import-Module -Name "$workdir\Modules\Gordian.psm1"
+        Import-Module -Name "$workdir\Modules\Forms.psm1"
+        Import-Module MSOnline
+        Import-Module ImportExcel
+        $ThirdParty = 'Ok'
+    } catch {
+        if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
+            Install-Module MSOnline -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [MSOnline] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
+            $ThirdParty = 'Ko'
+        } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
+            Install-Module ImportExcel -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
+            $ThirdParty = 'Ko'
+        } else {
+            [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error') > $null
+            Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+            exit
+        }
     }
-}
+} while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
 
@@ -274,22 +272,24 @@ if ($UseRefFile -eq "Yes") {
 Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 
 # [Licenses_Pool]
-$timeline = Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool' | Select UPTIME | Get-Unique -AsString
-$adialog = FormBase -w 250 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
-Label -form $adialog -x 20 -y 20 -w 200 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
-$they = 40
-$choices = @()
-foreach ($adate in $timeline) {
-    $choices += CheckBox -form $adialog -checked $true -x 50 -y $they -w 150 -text $($adate.UPTIME | Get-Date -Format "dd-MM-yyyy")
-    $they += 30
-}
-OKButton -form $adialog -x 60 -y ($they + 15) -text "Ok" | Out-Null
-$result = $adialog.ShowDialog()
-$SaveTheDate = @()
-foreach ($item in $choices) {
-    if ($item.Checked) {
-        $SaveTheDate += $item.Text
+if ($UseRefFile -eq "Yes") {
+    $timeline = Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool' | Select UPTIME | Get-Unique -AsString
+    $adialog = FormBase -w 250 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
+    Label -form $adialog -x 20 -y 20 -w 200 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
+    $they = 40
+    $choices = @()
+    foreach ($adate in $timeline) {
+        $choices += CheckBox -form $adialog -checked $true -x 50 -y $they -w 150 -text $($adate.UPTIME | Get-Date -Format "dd-MM-yyyy")
+        $they += 30
     }
+    OKButton -form $adialog -x 60 -y ($they + 15) -text "Ok" | Out-Null
+    $result = $adialog.ShowDialog()
+    $SaveTheDate = @()
+    foreach ($item in $choices) {
+        if ($item.Checked) {
+            $SaveTheDate += $item.Text
+        }
+    }    
 }
 
 $Licenses_Pool_dataframe = @()

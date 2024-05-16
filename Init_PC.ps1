@@ -23,10 +23,6 @@ $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Init_PC\.ps1$" > $null
 $workdir = $matches[1]
 
 # header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing

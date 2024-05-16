@@ -1,6 +1,6 @@
 <#
 Name......: UpdateMe.ps1
-Version...: 22.12.2
+Version...: 24.05.1
 Author....: Dario CORRADA
 
 This script looks for installed Powershell modules and try to update them
@@ -20,10 +20,6 @@ $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Updates\\UpdateMe\.ps1$" > $null
 $workdir = $matches[1]
 
 # header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -33,10 +29,20 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 # searching updates
 $repo = 'PSGallery'
 Write-Host -NoNewline "Looking for updates at [$repo]..."
-$halloffame = Get-InstalledModule
+$halloffame = Get-InstalledModule | Foreach-Object{
+    Write-Host -NoNewline '.' 
+    if ($_.Name -cnotmatch "^Microsoft\.Graph\..+$") { # bypass Graph submodules
+        New-Object -TypeName PSObject -Property @{
+            Version     = $_.Version
+            Name        = $_.Name
+            Repository  = $_.Repository
+            Description = $_.Description
+        } | Select Version, Name
+    }
+}
 $upgradable = @{}
 foreach ($item in $halloffame) {
-    $online = Find-Module -Name $item.name -Repository $repo -ErrorAction Stop
+    $online = Find-Module -Name $item.Name -Repository $repo -ErrorAction Stop
     Write-Host -NoNewline '.'
     $upgradable[$online.Name] = $online.Version
 }
@@ -53,7 +59,7 @@ foreach ($item in $halloffame) {
     } else {
         $selmods[$item.Name] = CheckBox -form $adialog -checked $false -enabled $false -x 20 -y $they -w 350 -text $desc
     }
-    $they += 30 
+    $they += 30
 }
 OKButton -form $adialog -x 150 -y ($they + 20) -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
@@ -94,7 +100,7 @@ foreach ($item in $halloffame) {
     if ($previous.Count -gt 1) {
         for ($i = 1; $i -lt $previous.Count; $i++) {
             $akey = $item.Name + ' - ' + $previous[$i].Version
-            $selmods[$akey] = CheckBox -form $adialog -checked $false -x 20 -y $they -text $akey
+            $selmods[$akey] = CheckBox -form $adialog -checked $false -w 350 -x 20 -y $they -text $akey
             $they += 30
         }
     }

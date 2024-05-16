@@ -6,11 +6,6 @@ Author....: Dario CORRADA
 This script uninstall software looking at register keys
 #>
 
-# header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 
 $searchkey = Read-Host "Software to uninstall"

@@ -6,12 +6,6 @@ Author....: Dario CORRADA
 Loooking for a PC at Active Directory
 #>
 
-# header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
-$WarningPreference = 'SilentlyContinue'
 
 # import Active Directory module
 $ErrorActionPreference= 'Stop'
