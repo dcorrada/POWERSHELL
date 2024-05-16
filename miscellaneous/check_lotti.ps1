@@ -20,11 +20,6 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# setting script execution policy
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
-
 # seleziono il file Excel del lotto
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms')
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog

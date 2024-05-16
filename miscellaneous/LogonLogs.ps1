@@ -13,10 +13,6 @@ https://learn.microsoft.com/en-us/answers/questions/267891/logon-history-for-sin
 #>
 
 # header 
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-Write-Host "ExecutionPolicy Bypass" -fore Green
-$ErrorActionPreference= 'Inquire'
 $WarningPreference = 'SilentlyContinue'
 
 # import Active Directory module

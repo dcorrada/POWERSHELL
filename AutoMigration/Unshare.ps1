@@ -18,11 +18,6 @@ $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AutoMigration\\Unshare\.ps1$" > $null
 $repopath = $matches[1]
 
-# setting script execution policy
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
-
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing

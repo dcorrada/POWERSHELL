@@ -12,11 +12,6 @@ if ($testadmin -eq $false) {
     Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
     exit $LASTEXITCODE
 }
-
-# setting script execution policy
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
 #>
 
 # funzione per disegnare una progress bar
