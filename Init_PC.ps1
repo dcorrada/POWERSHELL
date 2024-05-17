@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 23.07.1
+Version...: 24.05.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -53,29 +53,41 @@ $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 $result = $form_panel.ShowDialog()
 
+# get OS release
+$info = systeminfo
+
 $download = New-Object net.webclient
-Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
-# see also https://phoenixnap.com/kb/install-winget
-$url = 'https://github.com/microsoft/winget-cli/releases/latest'
-$request = [System.Net.WebRequest]::Create($url)
-$response = $request.GetResponse()
-$realTagUrl = $response.ResponseUri.OriginalString
-$version = $realTagUrl.split('/')[-1]
-$fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
-$download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
-Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-[System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
-$winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+if ($info[2] -match 'Windows 10') {
+    Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
+    # see also https://phoenixnap.com/kb/install-winget
+    $url = 'https://github.com/microsoft/winget-cli/releases/latest'
+    $request = [System.Net.WebRequest]::Create($url)
+    $response = $request.GetResponse()
+    $realTagUrl = $response.ResponseUri.OriginalString
+    $version = $realTagUrl.split('/')[-1]
+    $fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
+    $download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+    Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+    [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
+    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+}
 $msstore_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
-# $winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
+$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
 Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $msstore_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
+            if ($info[2] -match 'Windows 10') {
+                $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $msstore_opts
+                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
+            } elseif ($info[2] -match 'Windows 11') {
+                $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $winget_opts
+                winget $StagingArgumentList
+            } else {
+                [System.Windows.MessageBox]::Show("$($info[2])",'INSTFAIL','Ok','Warning') > $null
+            }
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
             Write-Host -NoNewline "Download launcher..."
@@ -137,8 +149,15 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $msstore_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
+            if ($info[2] -match 'Windows 10') {
+                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $msstore_opts
+                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
+            } elseif ($info[2] -match 'Windows 11') {
+                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
+                winget $StagingArgumentList
+            } else {
+                [System.Windows.MessageBox]::Show("$($info[2])",'INSTFAIL','Ok','Warning') > $null
+            }
             Write-Host -ForegroundColor Green " DONE"    
         } elseif ($item -eq '7ZIP') {            
             <# the version stored on MSstore has less features
