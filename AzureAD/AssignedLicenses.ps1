@@ -331,7 +331,7 @@ if ($UseRefFile -eq "Yes") {
                 if ($MsolUsrData[$aUser].LICENSES.ContainsKey($aLicense)) {
                     $OldTime = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
                     $NewTime = $MsolUsrData[$aUser].LICENSES[$aLicense]
-                    if ($OldTime -lt $NewTime) {
+                    if (($OldTime -lt $NewTime) -and ($MsolUsrData[$aUser].BLOCKED -eq $history.BLOCKED)) {
                         $MsolUsrData[$aUser].LICENSES[$aLicense] = $OldTime
                     }
                 } else {
