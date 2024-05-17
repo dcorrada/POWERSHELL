@@ -142,7 +142,7 @@ CREATE TABLE `Logs` (
 );
 CREATE TABLE `Credits` (
     `USER` varchar(80),
-    `PSWD` varchar(80),
+    `PSWD` text,
     `DESC` text
 );
 '@
@@ -193,12 +193,72 @@ if ($ExtDesc -eq 'NULL') {
         if ($headers.SideIndicator -contains '<=') {
             [System.Windows.MessageBox]::Show("Required fields doesn't match",'ERROR','Ok','Error')
         } else {
-            <# importing table #>
+            Write-Host -NoNewline 'Importing...'
+            $ImportedTable = Import-Excel -Path $ImportFile | ForEach-Object {
+                Write-Host -NoNewline '.'
+                New-Object -TypeName PSObject -Property @{
+                    USER    = $_.USER
+                    PSWD    = EncryptString -keyfile $keyfile -instring $_.PSWD
+                    DESC    = $_.DESC
+                } | Select USER, PSWD, DESC
+            }
+            $DataTable = $ImportedTable | Out-DataTable
+            # purge any existing record
+            $SQLiteConnection.Open()
+            Write-Host -NoNewline '.'
+            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'DELETE FROM `Credits`;'
+            # insert new records
+            $stdout = Invoke-SQLiteBulkCopy -DataTable $DataTable -SQLiteConnection $SQLiteConnection -Table Credits -NotifyAfter 0 -ConflictClause Ignore -Verbose -Force
+            Write-Host -NoNewline '.'
+            Write-Host -ForegroundColor Green ' DONE'
+            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'import Credits',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+            $SQLiteConnection.Close()
         }
-
-
     } elseif ($exportCredits.Checked -eq $true) {
-        <# Action when this condition is true #>
+        Write-Host -NoNewline 'Exporting...'
+        $SQLiteConnection.Open()
+        $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
+        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'export Credits',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+        $SQLiteConnection.Close()
+
+        $ExportedTable = $rawdata | ForEach-Object {
+            Write-Host -NoNewline '.'
+            New-Object -TypeName PSObject -Property @{
+                USER    = $_.USER
+                PSWD    = DecryptString -keyfile $keyfile -instring $_.PSWD
+                DESC    = $_.DESC
+            } | Select USER, PSWD, DESC
+        }
+        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+        $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+        $SaveFileDialog.Title = "Export Credits"
+        $SaveFileDialog.initialDirectory = "C:$env:HOMEPATH\Downloads"
+        $SaveFileDialog.FileName = 'PSWallet.xlsx'
+        $SaveFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+        $SaveFileDialog.ShowDialog() | Out-Null
+        $ExportFile = $SaveFileDialog.filename
+
+        Write-Host -NoNewline '.'
+        $XlsPkg = Open-ExcelPackage -Path $ExportFile -Create
+        $XlsPkg = $ExportedTable | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium3' -AutoSize -PassThru
+        Close-ExcelPackage -ExcelPackage $XlsPkg
+        Write-Host -ForegroundColor Green ' DONE'
     }
 }
 

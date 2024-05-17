@@ -65,3 +65,41 @@ function DecryptFile {
     return $plain_content
 }
 Export-ModuleMember -Function DecryptFile
+
+function EncryptString {
+    param ($keyfile, $instring)
+
+    $ErrorActionPreference= 'Stop'
+    Try {
+        $EncryptionKeyData = Get-Content -Path "$keyfile"
+        $secured_content = ConvertTo-SecureString "$instring" -AsPlainText -Force
+        $outstring = ConvertFrom-SecureString $secured_content -Key $EncryptionKeyData
+        $ErrorActionPreference= 'Inquire'
+    }
+    Catch {
+        Write-Output "`nError: $($error[0].ToString())"
+        Pause
+    }
+
+    return $outstring
+}
+Export-ModuleMember -Function EncryptString
+
+function DecryptString {
+    param ($keyfile, $instring)
+
+    $ErrorActionPreference= 'Stop'
+    Try {
+        $EncryptionKeyData = Get-Content -Path "$keyfile"
+        $secured_content = ConvertTo-SecureString $instring -Key $EncryptionKeyData
+        $outstring = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secured_content))
+        $ErrorActionPreference= 'Inquire'
+    }
+    Catch {
+        Write-Output "`nError: $($error[0].ToString())"
+        Pause
+    }
+
+    return $outstring
+}
+Export-ModuleMember -Function DecryptString
