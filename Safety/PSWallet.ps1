@@ -20,7 +20,13 @@ Refs:
 
 <# !!! TODO LIST !!!
 
-3) Determinare i flussi IO sul wallet:
+1) Comportamento in locale:
+    * opzione per editare/cancellare singola credenziale (con menu a tendina
+      degli script coinvolti)
+    * loop continuo di presentazione menu (con tasto uscita)
+    * creare e mostrare demo, in Excel da importare, se non esiste 'Credits'
+
+2) Determinare i flussi IO sul wallet:
     * in input dagli script che lo invocano 
       (vedi il wrapper usato per recuperare i GET_RAWDATA.ps1 di AGMskyline)
     * in output per raccogliere le info fornite dal wallet
@@ -30,10 +36,13 @@ Refs:
         + creare un behaviour dedicato (ie su AssignedLicenses.ps1 viene 
           buttata fuori solo una lista di credenziali da scegliere)
 
-4) Cifrare, on th fly, le password nelle tabelle inserite come SecureString.
-   Aggiornare Gordian.psm1 con funzioni per criptare/decriptare testo.
+3) Comportamento sugli script chiamante:
+    * presentare lista degli username per lo script, con opzione per inserire
+      nuove credenziali
+    * su richiesta memorizzare nuove credenziali
+    * come fare autofill?
 
-5) Versioning: una volta terminato lo sbozzamento dello script rimuoverlo dal 
+4) Versioning: una volta terminato lo sbozzamento dello script rimuoverlo dal 
    branch "tempus" e creare un branch proprio di testing "PSWallet", facendolo 
    ramificare dal branch "unstable". Sul branch "PSWallet" verranno 
    implementate le integrazioni degli script che invocano il wallet.
@@ -143,7 +152,7 @@ CREATE TABLE `Logs` (
 CREATE TABLE `Credits` (
     `USER` varchar(80),
     `PSWD` text,
-    `DESC` text
+    `SCRIPT` text
 );
 '@
     }
@@ -189,7 +198,7 @@ if ($ExtDesc -eq 'NULL') {
         $OpenFileDialog.ShowDialog() | Out-Null
         $ImportFile = $OpenFileDialog.filename 
         
-        $headers = Compare-Object -ReferenceObject ('USER', 'PSWD', 'DESC') -DifferenceObject ((Import-Excel -Path $ImportFile | Get-Member).Name)
+        $headers = Compare-Object -ReferenceObject ('USER', 'PSWD', 'SCRIPT') -DifferenceObject ((Import-Excel -Path $ImportFile | Get-Member).Name)
         if ($headers.SideIndicator -contains '<=') {
             [System.Windows.MessageBox]::Show("Required fields doesn't match",'ERROR','Ok','Error')
         } else {
