@@ -57,7 +57,8 @@ $result = $form_panel.ShowDialog()
 $info = systeminfo
 
 $download = New-Object net.webclient
-if ($info[2] -match 'Windows 10') {
+$winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+if (($info[2] -match 'Windows 10') -and ($winget_exe -eq $null)) {
     Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
     # see also https://phoenixnap.com/kb/install-winget
     $url = 'https://github.com/microsoft/winget-cli/releases/latest'
@@ -70,7 +71,6 @@ if ($info[2] -match 'Windows 10') {
     Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
     [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
 }
-$winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 $msstore_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
 #$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
 Write-Host -ForegroundColor Green " DONE"
