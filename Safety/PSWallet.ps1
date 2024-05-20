@@ -1,4 +1,4 @@
-Param([string]$ExtDesc='NULL', 
+Param([string]$ExtScript='NULL', 
     [string]$ExtUsr=$env:USERNAME, [string]$ExtHost=$env:COMPUTERNAME,
     [string]$ExtUptime=(Get-Date -format "yyyy-MM-dd HH:mm:ss"), [string]$ExtAction='read')
 
@@ -23,29 +23,18 @@ Refs:
 1) Comportamento in locale:
     * opzione per editare/cancellare singola credenziale (con menu a tendina
       degli script coinvolti)
-    * loop continuo di presentazione menu (con tasto uscita)
-    * creare e mostrare demo, in Excel da importare, se non esiste 'Credits'
 
-2) Determinare i flussi IO sul wallet:
-    * in input dagli script che lo invocano 
-      (vedi il wrapper usato per recuperare i GET_RAWDATA.ps1 di AGMskyline)
-    * in output per raccogliere le info fornite dal wallet
-      ( https://stackoverflow.com/questions/8097354/how-do-i-capture-the-output-into-a-variable-from-an-external-process-in-powershe )
-    * per ogni script che invoca il wallet...
-        + creare una tabella dedicata di credenziali
-        + creare un behaviour dedicato (ie su AssignedLicenses.ps1 viene 
-          buttata fuori solo una lista di credenziali da scegliere)
-
-3) Comportamento sugli script chiamante:
+2) Comportamento sugli script chiamante:
     * presentare lista degli username per lo script, con opzione per inserire
       nuove credenziali
     * su richiesta memorizzare nuove credenziali
     * come fare autofill?
 
-4) Versioning: una volta terminato lo sbozzamento dello script rimuoverlo dal 
-   branch "tempus" e creare un branch proprio di testing "PSWallet", facendolo 
-   ramificare dal branch "unstable". Sul branch "PSWallet" verranno 
-   implementate le integrazioni degli script che invocano il wallet.
+3) Versioning: una volta terminato lo sbozzamento dello script 
+    * spostare <PSWallet.ps1> e <PSWallet_DemoImport.xlsx> dal branch "tempus" 
+      ad un branch proprio di "PSWallet" ramificato dal branch "unstable".
+    * eliminare lo script <ExtScript.ps1> dal repository (script temporaneo 
+      per testare le chiamate esterne verso PSwallet)
 
 #>
 
@@ -109,6 +98,16 @@ $dbfile = $env:LOCALAPPDATA + '\PSWallet.sqlite'
 
 do {
     if (!(Test-Path $dbfile -PathType Leaf)) {
+        # take a view to an Excel demo to import
+        $demoxlsx = "$workdir\Safety\PSWallet_DemoImport.xlsx"
+        $aansw = [System.Windows.MessageBox]::Show(@"
+No database found yet. Would you like 
+to view a typical Excel file to import?
+"@,'DEMO','YesNo','Warning')
+        if ($aansw -eq 'Yes') {
+            Invoke-Item $demoxlsx
+        }
+
         # create Key file if no DB file exists
         [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
         $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
@@ -147,7 +146,7 @@ CREATE TABLE `Logs` (
     `HOST` varchar(80),
     `ACTION` varchar(80),
     `UPTIME` datetime,
-    `DESC` text
+    `SCRIPT` text
 );
 CREATE TABLE `Credits` (
     `USER` varchar(80),
@@ -183,44 +182,50 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                                 LOCALES
 ******************************************************************************* #>
-if ($ExtDesc -eq 'NULL') {
-    $adialog = FormBase -w 350 -h 170 -text "MAINTENANCE"
-    $importCredits = RadioButton -form $adialog -checked $false -x 20 -y 20 -w 500 -h 30 -text "Import Credits table"
-    $exportCredits = RadioButton -form $adialog -checked $true -x 20 -y 50 -w 500 -h 30 -text "Export Credits table"
-    OKButton -form $adialog -x 100 -y 90 -text "Ok" | Out-Null
-    $result = $adialog.ShowDialog()
-    if ($importCredits.Checked -eq $true) {
-        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-        $OpenFileDialog.Title = "Import Table"
-        $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
-        $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
-        $OpenFileDialog.ShowDialog() | Out-Null
-        $ImportFile = $OpenFileDialog.filename 
-        
-        $headers = Compare-Object -ReferenceObject ('USER', 'PSWD', 'SCRIPT') -DifferenceObject ((Import-Excel -Path $ImportFile | Get-Member).Name)
-        if ($headers.SideIndicator -contains '<=') {
-            [System.Windows.MessageBox]::Show("Required fields doesn't match",'ERROR','Ok','Error')
-        } else {
-            Write-Host -NoNewline 'Importing...'
-            $ImportedTable = Import-Excel -Path $ImportFile | ForEach-Object {
-                Write-Host -NoNewline '.'
-                New-Object -TypeName PSObject -Property @{
-                    USER    = $_.USER
-                    PSWD    = EncryptString -keyfile $keyfile -instring $_.PSWD
-                    DESC    = $_.DESC
-                } | Select USER, PSWD, DESC
-            }
-            $DataTable = $ImportedTable | Out-DataTable
-            # purge any existing record
-            $SQLiteConnection.Open()
-            Write-Host -NoNewline '.'
-            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'DELETE FROM `Credits`;'
-            # insert new records
-            $stdout = Invoke-SQLiteBulkCopy -DataTable $DataTable -SQLiteConnection $SQLiteConnection -Table Credits -NotifyAfter 0 -ConflictClause Ignore -Verbose -Force
-            Write-Host -NoNewline '.'
-            Write-Host -ForegroundColor Green ' DONE'
-            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+if ($ExtScript -eq 'NULL') {
+    do {
+        $adialog = FormBase -w 350 -h 260 -text "MAINTENANCE"
+        $importCredits = RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Import Database from xlsx"
+        $exportCredits = RadioButton -form $adialog -checked $false -x 20 -y 50 -w 500 -h 30 -text "Export Database to xlsx"
+        $editCredits = RadioButton -form $adialog -checked $false -x 20 -y 80 -w 500 -h 30 -text "Edit single credential"
+        $deleteCredits = RadioButton -form $adialog -checked $false -x 20 -y 110 -w 500 -h 30 -text "Delete single credential"
+        RETRYButton -form $adialog -x 40 -y 170 -text "Next" | Out-Null
+        OKButton -form $adialog -x 180 -y 170 -text "Exit" | Out-Null
+        $resultButton = $adialog.ShowDialog()
+
+        if ($resultButton -eq 'RETRY') {
+            if ($importCredits.Checked -eq $true) {
+                [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+                $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+                $OpenFileDialog.Title = "Import Table"
+                $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+                $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+                $OpenFileDialog.ShowDialog() | Out-Null
+                $ImportFile = $OpenFileDialog.filename 
+                
+                $headers = Compare-Object -ReferenceObject ('USER', 'PSWD', 'SCRIPT') -DifferenceObject ((Import-Excel -Path $ImportFile | Get-Member).Name)
+                if ($headers.SideIndicator -contains '<=') {
+                    [System.Windows.MessageBox]::Show("Required fields doesn't match",'ERROR','Ok','Error')
+                } else {
+                    Write-Host -NoNewline 'Importing...'
+                    $ImportedTable = Import-Excel -Path $ImportFile | ForEach-Object {
+                        Write-Host -NoNewline '.'
+                        New-Object -TypeName PSObject -Property @{
+                            USER    = $_.USER
+                            PSWD    = EncryptString -keyfile $keyfile -instring $_.PSWD
+                            SCRIPT  = $_.SCRIPT
+                        } | Select USER, PSWD, SCRIPT
+                    }
+                    $DataTable = $ImportedTable | Out-DataTable
+                    # purge any existing record
+                    $SQLiteConnection.Open()
+                    Write-Host -NoNewline '.'
+                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'DELETE FROM `Credits`;'
+                    # insert new records
+                    $stdout = Invoke-SQLiteBulkCopy -DataTable $DataTable -SQLiteConnection $SQLiteConnection -Table Credits -NotifyAfter 0 -ConflictClause Ignore -Force
+                    Write-Host -NoNewline '.'
+                    Write-Host -ForegroundColor Green ' DONE'
+                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
     '$($env:USERNAME)',
@@ -229,13 +234,13 @@ VALUES (
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
-            $SQLiteConnection.Close()
-        }
-    } elseif ($exportCredits.Checked -eq $true) {
-        Write-Host -NoNewline 'Exporting...'
-        $SQLiteConnection.Open()
-        $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
-        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+                    $SQLiteConnection.Close()
+                }
+            } elseif ($exportCredits.Checked -eq $true) {
+                Write-Host -NoNewline 'Exporting...'
+                $SQLiteConnection.Open()
+                $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
+                Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
     '$($env:USERNAME)',
@@ -244,31 +249,33 @@ VALUES (
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
-        $SQLiteConnection.Close()
+                $SQLiteConnection.Close()
 
-        $ExportedTable = $rawdata | ForEach-Object {
-            Write-Host -NoNewline '.'
-            New-Object -TypeName PSObject -Property @{
-                USER    = $_.USER
-                PSWD    = DecryptString -keyfile $keyfile -instring $_.PSWD
-                DESC    = $_.DESC
-            } | Select USER, PSWD, DESC
+                $ExportedTable = $rawdata | ForEach-Object {
+                    Write-Host -NoNewline '.'
+                    New-Object -TypeName PSObject -Property @{
+                        USER    = $_.USER
+                        PSWD    = DecryptString -keyfile $keyfile -instring $_.PSWD
+                        SCRIPT  = $_.SCRIPT
+                    } | Select USER, PSWD, SCRIPT
+                }
+                [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+                $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+                $SaveFileDialog.Title = "Export Credits"
+                $SaveFileDialog.initialDirectory = "C:$env:HOMEPATH\Downloads"
+                $SaveFileDialog.FileName = 'PSWallet.xlsx'
+                $SaveFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+                $SaveFileDialog.ShowDialog() | Out-Null
+                $ExportFile = $SaveFileDialog.filename
+
+                Write-Host -NoNewline '.'
+                $XlsPkg = Open-ExcelPackage -Path $ExportFile -Create
+                $XlsPkg = $ExportedTable | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium3' -AutoSize -PassThru
+                Close-ExcelPackage -ExcelPackage $XlsPkg
+                Write-Host -ForegroundColor Green ' DONE'
+            }
         }
-        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-        $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-        $SaveFileDialog.Title = "Export Credits"
-        $SaveFileDialog.initialDirectory = "C:$env:HOMEPATH\Downloads"
-        $SaveFileDialog.FileName = 'PSWallet.xlsx'
-        $SaveFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
-        $SaveFileDialog.ShowDialog() | Out-Null
-        $ExportFile = $SaveFileDialog.filename
-
-        Write-Host -NoNewline '.'
-        $XlsPkg = Open-ExcelPackage -Path $ExportFile -Create
-        $XlsPkg = $ExportedTable | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium3' -AutoSize -PassThru
-        Close-ExcelPackage -ExcelPackage $XlsPkg
-        Write-Host -ForegroundColor Green ' DONE'
-    }
+    } until ($resultButton -eq 'OK')
 }
 
 
