@@ -69,25 +69,18 @@ if ($info[2] -match 'Windows 10') {
     $download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
     Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
     [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
-    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 }
+$winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 $msstore_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
-$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
+#$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
 Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            if ($info[2] -match 'Windows 10') {
-                $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $msstore_opts
-                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            } elseif ($info[2] -match 'Windows 11') {
-                $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $winget_opts
-                winget $StagingArgumentList
-            } else {
-                [System.Windows.MessageBox]::Show("$($info[2])",'INSTFAIL','Ok','Warning') > $null
-            }
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $msstore_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
             Write-Host -NoNewline "Download launcher..."
@@ -149,15 +142,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
-            if ($info[2] -match 'Windows 10') {
-                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $msstore_opts
-                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            } elseif ($info[2] -match 'Windows 11') {
-                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
-                winget $StagingArgumentList
-            } else {
-                [System.Windows.MessageBox]::Show("$($info[2])",'INSTFAIL','Ok','Warning') > $null
-            }
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $msstore_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"    
         } elseif ($item -eq '7ZIP') {            
             <# the version stored on MSstore has less features
