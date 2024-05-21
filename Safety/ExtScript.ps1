@@ -9,7 +9,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Safety\\PSWallet\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Safety\\ExtScript\.ps1$" > $null
 $workdir = $matches[1]
 <# for testing purposes
 $workdir = Get-Location
@@ -23,3 +23,7 @@ Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 
+$WhereIsMyWallet = "$workdir\Safety\PSWallet.ps1"
+if (Test-Path -Path $WhereIsMyWallet -PathType Leaf) {
+    PowerShell.exe -file $WhereIsMyWallet -ExtScript 'ExtScript'
+}

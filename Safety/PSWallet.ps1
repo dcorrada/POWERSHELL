@@ -376,6 +376,27 @@ VALUES (
 
 
 <# *******************************************************************************
+                                EXTERNAL
+******************************************************************************* #>
+Write-Host -NoNewline 'Calling PSWallet from '
+Write-Host -NoNewline -ForegroundColor Blue "$ExtScript"
+Write-Host -NoNewline '... '
+$SQLiteConnection.Open()
+Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
+VALUES (
+'$ExtUsr',
+'$ExtHost',
+'$extAction',
+'$extUptime',
+'$ExtScript'
+);
+"@
+$SQLiteConnection.Close()
+Write-Host -ForegroundColor Green 'Ok'
+
+
+<# *******************************************************************************
                                 CLOSURE
 ******************************************************************************* #>
 Write-Host -NoNewline 'Closing DB file... '
