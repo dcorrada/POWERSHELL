@@ -69,7 +69,8 @@ if (($info[2] -match 'Windows 10') -and ($winget_exe -eq $null)) {
     $fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
     $download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
     Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-    [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
+    [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null  
+    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 }
 $msstore_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
 #$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
