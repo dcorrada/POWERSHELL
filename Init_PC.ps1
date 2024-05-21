@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 23.07.1
+Version...: 24.05.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -51,21 +51,27 @@ $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 $result = $form_panel.ShowDialog()
 
+# get OS release
+$info = systeminfo
+
 $download = New-Object net.webclient
-Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
-# see also https://phoenixnap.com/kb/install-winget
-$url = 'https://github.com/microsoft/winget-cli/releases/latest'
-$request = [System.Net.WebRequest]::Create($url)
-$response = $request.GetResponse()
-$realTagUrl = $response.ResponseUri.OriginalString
-$version = $realTagUrl.split('/')[-1]
-$fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
-$download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
-Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-[System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null
 $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+if (($info[2] -match 'Windows 10') -and ($winget_exe -eq $null)) {
+    Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
+    # see also https://phoenixnap.com/kb/install-winget
+    $url = 'https://github.com/microsoft/winget-cli/releases/latest'
+    $request = [System.Net.WebRequest]::Create($url)
+    $response = $request.GetResponse()
+    $realTagUrl = $response.ResponseUri.OriginalString
+    $version = $realTagUrl.split('/')[-1]
+    $fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
+    $download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+    Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+    [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null  
+    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+}
 $msstore_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
-# $winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
+#$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
 Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {

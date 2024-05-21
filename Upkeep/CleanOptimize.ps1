@@ -1,6 +1,6 @@
 ﻿<#
 Name......: CleanOptimize.ps1
-Version...: 19.12.1
+Version...: 21.05.1
 Author....: Dario CORRADA
 
 This script runs a disk cleanup on volume C: and optimize it
