@@ -41,14 +41,12 @@ $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Open Hardware Monitor"
 $swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Revo Uninstaller"
-$swlist['Skype'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Skype"
-$swlist['Skype'].Checked = $false
+$swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Skype"
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
-$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "WatchGuard VPN"
-$swlist['WatchGuard'].Checked = $false
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 260 -text "TreeSize"
+$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 $result = $form_panel.ShowDialog()
