@@ -20,21 +20,18 @@ Refs:
 
 <# !!! TODO LIST !!!
 
-1) Comportamento in locale:
-    * opzione per editare/cancellare singola credenziale (con menu a tendina
-      degli script coinvolti)
-
-2) Comportamento sugli script chiamante:
+* Comportamento sugli script chiamante:
     * presentare lista degli username per lo script, con opzione per inserire
       nuove credenziali
     * su richiesta memorizzare nuove credenziali
-    * come fare autofill?
 
-3) Versioning: una volta terminato lo sbozzamento dello script 
+* Versioning: una volta terminato lo sbozzamento dello script 
     * spostare <PSWallet.ps1> e <PSWallet_DemoImport.xlsx> dal branch "tempus" 
       ad un branch proprio di "PSWallet" ramificato dal branch "unstable".
     * eliminare lo script <ExtScript.ps1> dal repository (script temporaneo 
       per testare le chiamate esterne verso PSwallet)
+
+* Pulizia tabella di log (ie cancellare record più vecchi di...)
 
 #>
 
@@ -273,6 +270,105 @@ VALUES (
                 $XlsPkg = $ExportedTable | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium3' -AutoSize -PassThru
                 Close-ExcelPackage -ExcelPackage $XlsPkg
                 Write-Host -ForegroundColor Green ' DONE'
+            } elseif ($editCredits.Checked -eq $true) {
+                Write-Host -NoNewline 'Editing...'
+                $SQLiteConnection.Open()
+                $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
+                $SQLiteConnection.Close()
+                
+                $formlist = FormBase -w 250 -h 175 -text 'SELECT'
+                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:'
+                $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
+                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:'
+                $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
+                OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
+                $result = $formlist.ShowDialog()
+                
+                do {
+                    $SQLiteConnection.Open()
+                    $rowexists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                    $SQLiteConnection.Close()
+
+                    if ($rowexists -eq $null) {
+                        [System.Windows.MessageBox]::Show("No user <$($selectedUser.Text)> related to script <$($selectedScript.Text)>",'ABORTING','Ok','Error') | Out-Null
+                        $willabort = 'noabort'
+                    } else {
+                        $updateform = FormBase -w 300 -h 175 -text 'UPDATE'
+                        Label -form $updateform -x 10 -y 20 -w 100 -text 'New password:'
+                        $newpwd = TxtBox -form $updateform -x 120 -y 20 -w 150 -masked $true
+                        Label -form $updateform -x 10 -y 50 -w 100 -text 'Confirm password:'
+                        $confirmpwd = TxtBox -form $updateform -x 120 -y 50 -w 150 -masked $true
+                        OKButton -form $updateform -x 60 -y 90 -text "Ok" | Out-Null
+                        $result = $updateform.ShowDialog()
+                        if ($newpwd.Text -cne $confirmpwd.Text) {
+                            $willabort = [System.Windows.MessageBox]::Show("Password doesn't match. Aborting?",'ABORTING','YesNo','Error')
+                        } else {
+                            $willabort = 'noabort'
+                        }
+                    }
+                } while ($willabort -eq 'No') 
+
+                if ($willabort -eq 'noabort') {
+                    $SQLiteConnection.Open()
+                    $new_encrypted = EncryptString -keyfile $keyfile -instring $newpwd.Text
+                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "UPDATE Credits SET PSWD = '$new_encrypted' WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                    $SQLiteConnection.Close()
+
+                    $SQLiteConnection.Open()
+                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'edit Credits',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+                    $SQLiteConnection.Close()
+                    Write-Host -ForegroundColor Green ' DONE'
+                }
+            } elseif ($deleteCredits.Checked -eq $true) {
+                Write-Host -NoNewline 'Deleting...'
+                $SQLiteConnection.Open()
+                $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
+                $SQLiteConnection.Close()
+                
+                $formlist = FormBase -w 250 -h 175 -text 'SELECT'
+                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:'
+                $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
+                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:'
+                $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
+                OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
+                $result = $formlist.ShowDialog()
+                
+                $SQLiteConnection.Open()
+                $rowexists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                $SQLiteConnection.Close()
+
+                if ($rowexists -eq $null) {
+                    [System.Windows.MessageBox]::Show("No user <$($selectedUser.Text)> related to script <$($selectedScript.Text)>",'ABORTING','Ok','Error') | Out-Null
+                    $willabort = 'noabort'
+                } else {
+                    $willabort = [System.Windows.MessageBox]::Show("Really delete <$($selectedUser.Text)::$($selectedScript.Text)>?",'CONFIRM','YesNo','Warning')
+                    if ($willabort -eq 'Yes') {
+                        $SQLiteConnection.Open()
+                        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                        $SQLiteConnection.Close()
+
+                        $SQLiteConnection.Open()
+                        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'delete Credits',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+                        $SQLiteConnection.Close()
+                        Write-Host -ForegroundColor Green ' DONE'
+                    }
+                }
             }
         }
     } until ($resultButton -eq 'OK')
