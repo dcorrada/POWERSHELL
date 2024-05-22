@@ -101,6 +101,19 @@ function OKButton {
 }
 Export-ModuleMember -Function OKButton
 
+function RETRYButton {
+    param ($form, $x, $y, $w = 100, $h = 30, $text)
+
+    $obj = New-Object System.Windows.Forms.Button
+    $obj.Location = "$x,$y"
+    $obj.Size = "$w,$h"
+    $obj.Text = $text
+    $obj.DialogResult = [System.Windows.Forms.DialogResult]::RETRY
+    $form.AcceptButton = $obj
+    $form.Controls.Add($obj)
+}
+Export-ModuleMember -Function RETRYButton
+
 function LoginWindow {
     $form_PWD = New-Object System.Windows.Forms.Form
     $form_PWD.Text = "LOGIN"
