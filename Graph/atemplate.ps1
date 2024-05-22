@@ -12,21 +12,6 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# check execution policy
-if (!((Get-ExecutionPolicy LocalMachine) -eq 'Bypass')) {
-    Write-Host -ForegroundColor Yellow @"
-Before run this script open a shell with admin privileges
-and launch the following command:
-
-"@
-    Write-Host -ForegroundColor Cyan @"
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-
-"@
-    Pause
-    exit
-}
-
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AssignedLicenses\.ps1$" > $null

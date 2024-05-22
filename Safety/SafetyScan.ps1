@@ -14,11 +14,6 @@ if ($testadmin -eq $false) {
     exit $LASTEXITCODE
 }
 
-# setting script execution policy
-$ErrorActionPreference= 'SilentlyContinue'
-Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
-$ErrorActionPreference= 'Inquire'
-
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -108,21 +103,4 @@ if ($answ -eq "Yes") {
     # log check
     notepad $logfile
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
