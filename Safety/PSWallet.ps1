@@ -1,6 +1,6 @@
-Param([string]$ExtScript='NULL', 
-    [string]$ExtUsr=$env:USERNAME, [string]$ExtHost=$env:COMPUTERNAME,
-    [string]$ExtUptime=(Get-Date -format "yyyy-MM-dd HH:mm:ss"), [string]$ExtAction='read')
+Param([string]$ExtScript='NULL', [string]$ExtKey='NULL',
+    [string]$ExtUsr='NULL', [string]$ExtPwd='NULL',
+    [string]$ExtAction='NULL')
 
 <#
 Name......: PSWallet.ps1
@@ -115,7 +115,7 @@ to view a typical Excel file to import?
         $SaveFileDialog.ShowDialog() | Out-Null
         $keyfile = $SaveFileDialog.filename
         CreateKeyFile -keyfile "$keyfile" | Out-Null
-    } else {
+    } elseif ($ExtKey -eq 'NULL') {
         [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
         $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
         $OpenFileDialog.Title = "Open Key File"
@@ -123,6 +123,8 @@ to view a typical Excel file to import?
         $OpenFileDialog.filter = 'Key file (*.key)| *.key'
         $OpenFileDialog.ShowDialog() | Out-Null
         $keyfile = $OpenFileDialog.filename   
+    } else {
+        $keyfile = $ExtKey
     }
 } while ([string]::IsNullOrEmpty($keyfile))
 
@@ -227,7 +229,7 @@ INSERT INTO Logs (USER, HOST, ACTION, UPTIME)
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
-    'import Credits',
+    'import table',
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
@@ -242,7 +244,7 @@ INSERT INTO Logs (USER, HOST, ACTION, UPTIME)
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
-    'export Credits',
+    'export table',
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
@@ -277,9 +279,9 @@ VALUES (
                 $SQLiteConnection.Close()
                 
                 $formlist = FormBase -w 250 -h 175 -text 'SELECT'
-                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:'
+                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:' | Out-Null
                 $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
-                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:'
+                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:' | Out-Null
                 $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
                 OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
                 $result = $formlist.ShowDialog()
@@ -294,9 +296,9 @@ VALUES (
                         $willabort = 'noabort'
                     } else {
                         $updateform = FormBase -w 300 -h 175 -text 'UPDATE'
-                        Label -form $updateform -x 10 -y 20 -w 100 -text 'New password:'
+                        Label -form $updateform -x 10 -y 20 -w 100 -text 'New password:' | Out-Null
                         $newpwd = TxtBox -form $updateform -x 120 -y 20 -w 150 -masked $true
-                        Label -form $updateform -x 10 -y 50 -w 100 -text 'Confirm password:'
+                        Label -form $updateform -x 10 -y 50 -w 100 -text 'Confirm password:' | Out-Null
                         $confirmpwd = TxtBox -form $updateform -x 120 -y 50 -w 150 -masked $true
                         OKButton -form $updateform -x 60 -y 90 -text "Ok" | Out-Null
                         $result = $updateform.ShowDialog()
@@ -320,7 +322,7 @@ INSERT INTO Logs (USER, HOST, ACTION, UPTIME)
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
-    'edit Credits',
+    'edit row',
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
@@ -334,9 +336,9 @@ VALUES (
                 $SQLiteConnection.Close()
                 
                 $formlist = FormBase -w 250 -h 175 -text 'SELECT'
-                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:'
+                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:' | Out-Null
                 $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
-                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:'
+                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:' | Out-Null
                 $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
                 OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
                 $result = $formlist.ShowDialog()
@@ -361,7 +363,7 @@ INSERT INTO Logs (USER, HOST, ACTION, UPTIME)
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
-    'delete Credits',
+    'delete row',
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
@@ -380,21 +382,76 @@ VALUES (
 ******************************************************************************* #>
 Write-Host -NoNewline 'Calling PSWallet from '
 Write-Host -NoNewline -ForegroundColor Blue "$ExtScript"
-Write-Host -NoNewline '... '
+
+if ($ExtAction -eq 'listusr') {
+    $SQLiteConnection.Open()
+    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT USER
+FROM Credits
+WHERE SCRIPT = '$ExtScript'
+"@
+    $SQLiteConnection.Close()
+    if ([string]::IsNullOrEmpty($TheResult)) {
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
+    } else {
+        foreach ($item in $TheResult.USER) {
+            Write-Host -ForegroundColor Cyan "PSWallet>>> $item"
+        }
+    }
+    $TheAction = 'read table'
+} elseif ($ExtAction -eq 'getpwd') {
+    $SQLiteConnection.Open()
+    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT PSWD
+FROM Credits
+WHERE SCRIPT = '$ExtScript' AND USER = '$ExtUsr'
+"@
+    $SQLiteConnection.Close()
+    if ([string]::IsNullOrEmpty($TheResult)) {
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
+    } else {
+        foreach ($item in $TheResult.PSWD) {
+            $plantxt = DecryptString -keyfile $keyfile -instring $item
+            Write-Host -ForegroundColor Cyan "PSWallet>>> $plantxt"
+        }
+    }
+    $TheAction = 'read table'
+} elseif ($ExtAction -eq 'add') {
+    $SQLiteConnection.Open()
+    $ItExists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT PSWD
+FROM Credits
+WHERE SCRIPT = '$ExtScript' AND USER = '$ExtUsr'
+"@
+    $SQLiteConnection.Close()
+
+    if ([string]::IsNullOrEmpty($ItExists)) {
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALRED^ADY EXISTS'
+    } else {
+        $CryptedPwd = EncryptString -keyfile $keyfile -instring $ExtPwd
+        $SQLiteConnection.Open()
+        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Credits (USER, PSWD, SCRIPT) 
+VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
+"@
+        $SQLiteConnection.Close()
+    }
+
+    $TheAction = 'add row'
+}
+
 $SQLiteConnection.Open()
 Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
 VALUES (
-'$ExtUsr',
-'$ExtHost',
-'$extAction',
-'$extUptime',
+'$($env:USERNAME)',
+'$($env:COMPUTERNAME)',
+'$TheAction',
+'$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
 '$ExtScript'
 );
 "@
 $SQLiteConnection.Close()
-Write-Host -ForegroundColor Green 'Ok'
-
 
 <# *******************************************************************************
                                 CLOSURE
