@@ -331,6 +331,13 @@ if ($UseRefFile -eq "Yes") {
                 if ($MsolUsrData[$aUser].LICENSES.ContainsKey($aLicense)) {
                     $OldTime = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
                     $NewTime = $MsolUsrData[$aUser].LICENSES[$aLicense]
+                    <#
+                    By default, the field TIMESTAMP refers to any change in license assignement.
+                    If would like to also track the time in changing account proprerties substitue the
+                    if clause as follows, for instance:
+                    
+                    if (($OldTime -lt $NewTime) -and ($MsolUsrData[$aUser].BLOCKED -eq $history.BLOCKED)) {
+                    #>
                     if ($OldTime -lt $NewTime) {
                         $MsolUsrData[$aUser].LICENSES[$aLicense] = $OldTime
                     }
