@@ -4,7 +4,7 @@ Param([string]$ExtScript='NULL', [string]$ExtKey='NULL',
 
 <#
 Name......: PSWallet.ps1
-Version...: 24.05.a
+Version...: 24.05.1
 Author....: Dario CORRADA
 
 PSWallet aims to be the credential manager tool in order to handle the various 
@@ -13,25 +13,11 @@ It will store, fetch and update credential onto a SQLite database.
 
 Refs:
 * https://github.com/RamblingCookieMonster/PSSQLite
-* https://www.powershellgallery.com/packages/PSSQLite/1.1.0
+* https://www.powershellgallery.com/packages/PSSQLite
 
-#>
+TODO LIST
 
-
-<# !!! TODO LIST !!!
-
-* Comportamento sugli script chiamante:
-    * presentare lista degli username per lo script, con opzione per inserire
-      nuove credenziali
-    * su richiesta memorizzare nuove credenziali
-
-* Versioning: una volta terminato lo sbozzamento dello script 
-    * spostare <PSWallet.ps1> e <PSWallet_DemoImport.xlsx> dal branch "tempus" 
-      ad un branch proprio di "PSWallet" ramificato dal branch "unstable".
-    * eliminare lo script <ExtScript.ps1> dal repository (script temporaneo 
-      per testare le chiamate esterne verso PSwallet)
-
-* Pulizia tabella di log (ie cancellare record più vecchi di...)
+* Periodic history cleaning of log table (ie delete those rows older than...)
 
 #>
 
@@ -381,7 +367,7 @@ VALUES (
                                 EXTERNAL
 ******************************************************************************* #>
 Write-Host -NoNewline 'Calling PSWallet from '
-Write-Host -NoNewline -ForegroundColor Blue "$ExtScript"
+Write-Host -ForegroundColor Blue "$ExtScript"
 
 if ($ExtAction -eq 'listusr') {
     $SQLiteConnection.Open()
@@ -426,8 +412,6 @@ WHERE SCRIPT = '$ExtScript' AND USER = '$ExtUsr'
     $SQLiteConnection.Close()
 
     if ([string]::IsNullOrEmpty($ItExists)) {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALRED^ADY EXISTS'
-    } else {
         $CryptedPwd = EncryptString -keyfile $keyfile -instring $ExtPwd
         $SQLiteConnection.Open()
         Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
@@ -435,6 +419,8 @@ INSERT INTO Credits (USER, PSWD, SCRIPT)
 VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
 "@
         $SQLiteConnection.Close()
+    } else {
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALRED^ADY EXISTS'
     }
 
     $TheAction = 'add row'
