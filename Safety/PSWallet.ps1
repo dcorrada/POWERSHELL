@@ -1,4 +1,4 @@
-Param([string]$ExtScript='NULL', [string]$ExtKey='NULL',
+Param([string]$ExtScript='PSWallet', [string]$ExtKey='NULL',
     [string]$ExtUsr='NULL', [string]$ExtPwd='NULL',
     [string]$ExtAction='NULL')
 
@@ -141,18 +141,6 @@ CREATE TABLE `Credits` (
 '@
     }
 
-    # login
-    $SQLiteConnection.Close()
-    $SQLiteConnection.Open()
-    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
-VALUES (
-    '$($env:USERNAME)',
-    '$($env:COMPUTERNAME)',
-    'login',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
-);
-"@
     $SQLiteConnection.Close()
     Write-Host -ForegroundColor Green 'Ok'
 } catch {
@@ -167,7 +155,7 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                                 LOCALES
 ******************************************************************************* #>
-if ($ExtScript -eq 'NULL') {
+if (($ExtScript -eq 'PSWallet') -or  (!(Test-Path $dbfile -PathType Leaf))) {
     do {
         $adialog = FormBase -w 350 -h 260 -text "MAINTENANCE"
         $importCredits = RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Import Database from xlsx"
@@ -438,32 +426,3 @@ VALUES (
 );
 "@
 $SQLiteConnection.Close()
-
-<# *******************************************************************************
-                                CLOSURE
-******************************************************************************* #>
-Write-Host -NoNewline 'Closing DB file... '
-$ErrorActionPreference= 'Stop'
-try {
-    # logout
-    $SQLiteConnection.Open()
-    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
-VALUES (
-    '$($env:USERNAME)',
-    '$($env:COMPUTERNAME)',
-    'logout',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
-);
-"@
-    $SQLiteConnection.Close()
-    Write-Host -ForegroundColor Green 'Ok'
-} catch {
-    Write-Host -ForegroundColor Red 'Ko'
-    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-    [System.Windows.MessageBox]::Show("Error closing database",'ABORTING','Ok','Error')
-    exit
-}
-$ErrorActionPreference= 'Inquire'
-
-
