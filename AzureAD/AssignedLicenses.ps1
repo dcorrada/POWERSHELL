@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.6
+Version...: 24.05.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -64,108 +64,107 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                             CREDENTIALS MANAGEMENT
 ******************************************************************************* #>
-# the db files
-$usedb = $true
-$dbfile = $env:LOCALAPPDATA + '\AssignedLicenses.encrypted'
-$keyfile = $env:LOCALAPPDATA + '\AssignedLicenses.key'
+# starting release 24.05.1 credentials are managed from PSWallet
+Write-Host -NoNewline "Credentials management... "
+$AccessForm = FormBase -w 300 -h 210 -text 'ACCESS'
+Label -form $AccessForm -x 10 -y 20 -w 80 -text 'Username:' | Out-Null
+$usrname = TxtBox -form $AccessForm -x 100 -y 20 -w 170
+Label -form $AccessForm -x 10 -y 50 -w 80 -text 'Password:' | Out-Null
+$passwd = TxtBox -form $AccessForm -x 100 -y 50 -w 170 -masked $true
+$pswadd = CheckBox -form $AccessForm -x 10 -y 80 -text 'Add new credential to PSWallet'
+RETRYButton -form $AccessForm -x 150 -y 120 -w 120 -text "PSWallet user list" | Out-Null
+OKButton -form $AccessForm -x 20 -y 120 -w 120 -text "Directly access" | Out-Null
+$resultButton = $AccessForm.ShowDialog()
 
-# looking for existing DB file
-if (Test-Path $dbfile -PathType Leaf) {
-    $adialog = FormBase -w 350 -h 170 -text "DATABASE"
-    if (Test-Path $keyfile -PathType Leaf) {
-        $enterDB = RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Enter the DB file"
-        $cleanDB = RadioButton -form $adialog -checked $false -x 20 -y 50 -w 500 -h 30 -text "Delete the DB file"
-    } else {
-        $enterDB = RadioButton -form $adialog -enabled $false -checked $false -x 20 -y 20 -w 500 -h 30 -text "Enter the DB file (NO key to decrypt!)"
-        $cleanDB = RadioButton -form $adialog -checked $true -x 20 -y 50 -w 500 -h 30 -text "Delete the DB file"
-    }
-    OKButton -form $adialog -x 100 -y 90 -text "Ok" | Out-Null
-    $result = $adialog.ShowDialog()
-    if ($cleanDB.Checked -eq $true) {
-        $answ = [System.Windows.MessageBox]::Show("Really delete DB file?",'DELETE','YesNo','Warning')
-        if ($answ -eq "Yes") {    
-            Remove-Item -Path $dbfile
+$ThisScript = 'AssignedLicenses'
+$WhereIsMyWallet = "$workdir\Safety\PSWallet.ps1"
+if ($resultButton -eq 'RETRY') {
+    if (Test-Path -Path $WhereIsMyWallet -PathType Leaf) {
+        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+        $OpenFileDialog.Title = "Open Key File"
+        $OpenFileDialog.initialDirectory = "$env:LOCALAPPDATA"
+        $OpenFileDialog.filter = 'Key file (*.key)| *.key'
+        $OpenFileDialog.ShowDialog() | Out-Null
+        $WhereIsMyKey = $OpenFileDialog.filename 
+
+        $pswout = PowerShell.exe -file $WhereIsMyWallet `
+            -ExtKey $WhereIsMyKey  `
+            -ExtScript $ThisScript  `
+            -ExtAction 'listusr'
+        $userlist = @()
+        foreach ($currentItem in $pswout) {
+            if ($currentItem -match "PSWallet>>> (.+)$") {
+                $currentItem -match "PSWallet>>> (.+)$" | Out-Null
+                $userlist += $matches[1]
+            }
         }
-    }
-}
 
-if (!(Test-Path $dbfile -PathType Leaf)) {
-    $answacc = [System.Windows.MessageBox]::Show("No DB file found.`nDo you want accessing tenant directly?",'ACCESS','YesNo','Info')
-    if ($answacc -eq "Yes") {    
-        $usedb = $false
-        $singlelogin = LoginWindow
-    } else {
-            # creating key file if not available
-        if (!(Test-Path $keyfile -PathType Leaf)) {
-            CreateKeyFile -keyfile "$keyfile" | Out-Null
+        $Formlist = FormBase -w 275 -h ((($userlist.Count) * 30) + 120) -text "SELECT"
+        $they = 20
+        $choices = @()
+        foreach ($remote in $userlist) {
+            if ($they -eq 20) {
+                $isfirst = $true
+            } else {
+                $isfirst = $false
+            }
+            $choices += RadioButton -form $Formlist -x 25 -y $they -checked $isfirst -text $remote
+            $they += 25 
+        }
+        OKButton -form $Formlist -x 75 -y ($they + 30) -text "Ok" | Out-Null
+        $result = $Formlist.ShowDialog()
+        foreach ($item in $choices) {
+            if ($item.Checked) {
+                $ausr = $item.Text
+            }
         }
 
-        # creating DB file
-        $adialog = FormBase -w 400 -h 300 -text "DB INIT"
-        Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Initialize your DB as follows (NO space allowed)" | Out-Null
-        $dbcontent = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 150 -text ''
-        $dbcontent.Multiline = $true;
-        $dbcontent.Text = @'
-USR;PWD
-user1@foobar.baz;password1
-user2@foobar.baz;password2
-'@
-        $dbcontent.AcceptsReturn = $true
-        OKButton -form $adialog -x 100 -y 220 -text "Ok" | Out-Null
-        $result = $adialog.ShowDialog()
-        $tempusfile = $env:LOCALAPPDATA + '\AssignedLicenses.csv'
-        $dbcontent.Text | Out-File $tempusfile
-        EncryptFile -keyfile "$keyfile" -infile "$tempusfile" -outfile "$dbfile" | Out-Null
-    }
-}
-
-if ($usedb -eq $true) {
-    # reading DB file
-    $filecontent = (DecryptFile -keyfile "$keyfile" -infile "$dbfile").Split(" ")
-    $allowed = @{}
-    foreach ($newline in $filecontent) {
-        if ($newline -ne 'USR;PWD') {
-            ($username, $passwd) = $newline.Split(';')
-            $allowed[$username] = $passwd
-        }
-    }
-
-    # select the account to access
-    $adialog = FormBase -w 350 -h (($allowed.Count * 30) + 120) -text "SELECT AN ACCOUNT"
-    $they = 20
-    $choices = @()
-    foreach ($username in $allowed.Keys) {
-        if ($they -eq 20) {
-            $isfirst = $true
+        if ($ausr -eq 'NO DATA FOUND') {
+            Write-Host -ForegroundColor Red 'Ko'
+            Write-Host -NoNewline 'Execution script will abort. '
+            Pause
+            exit
         } else {
-            $isfirst = $false
+            $pswout = PowerShell.exe -file $WhereIsMyWallet `
+                -ExtKey $WhereIsMyKey  `
+                -ExtScript $ThisScript  `
+                -ExtUsr $ausr  `
+                -ExtAction 'getpwd'
+            foreach ($currentItem in $pswout) {
+                if ($currentItem -match "PSWallet>>> (.+)$") {
+                    $currentItem -match "PSWallet>>> (.+)$" | Out-Null
+                    $apwd = ConvertTo-SecureString $matches[1] -AsPlainText -Force
+                }
+            }
         }
-        $choices += RadioButton -form $adialog -x 20 -y $they -w 300 -checked $isfirst -text $username
-        $they += 30
     }
-    OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
-    $result = $adialog.ShowDialog()
-}
+} else {
+    $ausr = $usrname.Text
+    $apwd = ConvertTo-SecureString $passwd.Text -AsPlainText -Force
+    if (($pswadd.Checked) -and (Test-Path -Path $WhereIsMyWallet -PathType Leaf)) {
+        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+        $OpenFileDialog.Title = "Open Key File"
+        $OpenFileDialog.initialDirectory = "$env:LOCALAPPDATA"
+        $OpenFileDialog.filter = 'Key file (*.key)| *.key'
+        $OpenFileDialog.ShowDialog() | Out-Null
+        $WhereIsMyKey = $OpenFileDialog.filename 
 
+        $pswout = PowerShell.exe -file $WhereIsMyWallet `
+                -ExtKey $WhereIsMyKey  `
+                -ExtScript $ThisScript  `
+                -ExtUsr $ausr  `
+                -ExtPwd $passwd.Text  `
+                -ExtAction 'add'
+    }
+}
+$credits = New-Object System.Management.Automation.PSCredential($ausr, $apwd)
+Write-Host -ForegroundColor Green 'Ok'
 
 <# *******************************************************************************
                             FETCHING DATA FROM TENANT
 ******************************************************************************* #>
-# get credentials for accessing
-if ($usedb -eq $true) {
-    foreach ($item in $choices) {
-        if ($item.Checked) {
-            $usr = $item.Text
-            $plain_pwd = $allowed[$usr]
-        }
-    }
-    $pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
-    $credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
-} else {
-    $credits = $singlelogin
-}
-
-
 # connect to Tenant
 Write-Host -NoNewline "Connecting to the Tenant..."
 $ErrorActionPreference= 'Stop'
@@ -427,6 +426,9 @@ if (($orphanedrecords.Count) -ge 1) {
 if ($UseRefFile -eq 'Yes') { 
     # create backup file    
     $bkp_file = $xlsx_file + '.bkp'
+    if (Test-Path -Path $bkp_file -PathType Leaf) {
+        Remove-Item -Path $bkp_file -Force
+    }
     Copy-Item -Path $xlsx_file -Destination $bkp_file -Force
 
     # remove older worksheets
