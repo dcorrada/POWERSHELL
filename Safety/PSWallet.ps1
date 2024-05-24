@@ -4,7 +4,7 @@ Param([string]$ExtScript='PSWallet', [string]$ExtKey='NULL',
 
 <#
 Name......: PSWallet.ps1
-Version...: 24.05.1
+Version...: 24.05.2
 Author....: Dario CORRADA
 
 PSWallet aims to be the credential manager tool in order to handle the various 
@@ -14,11 +14,6 @@ It will store, fetch and update credential onto a SQLite database.
 Refs:
 * https://github.com/RamblingCookieMonster/PSSQLite
 * https://www.powershellgallery.com/packages/PSSQLite
-
-TODO LIST
-
-* Periodic history cleaning of log table (ie delete those rows older than...)
-
 #>
 
 
@@ -151,6 +146,28 @@ CREATE TABLE `Credits` (
 }
 $ErrorActionPreference= 'Inquire'
 
+# Logs clean
+$BackInTime = '-30 day'
+$SQLiteConnection.Open()
+$TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Logs WHERE UPTIME > DATETIME('now', '$BackInTime');"
+$SQLiteConnection.Close()
+if (!([string]::IsNullOrEmpty($TheResult))) {
+    $CleanSweep = [System.Windows.MessageBox]::Show("Proceed to purge logs older than $BackInTime ?",'CLEAN','YesNo','warning')
+    if ($CleanSweep -eq 'Yes') {
+        $SQLiteConnection.Open()
+        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM FROM Logs WHERE UPTIME > DATETIME('now', '$BackInTime');"
+        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'logs clean',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+        $SQLiteConnection.Close()
+    }
+}
 
 <# *******************************************************************************
                                 LOCALES

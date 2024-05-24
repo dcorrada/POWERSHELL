@@ -35,68 +35,74 @@ Label -form $AccessForm -x 10 -y 20 -w 80 -text 'Username:' | Out-Null
 $usrname = TxtBox -form $AccessForm -x 100 -y 20 -w 170
 Label -form $AccessForm -x 10 -y 50 -w 80 -text 'Password:' | Out-Null
 $passwd = TxtBox -form $AccessForm -x 100 -y 50 -w 170 -masked $true
-$pswadd = CheckBox -form $AccessForm -x 10 -y 80 -text 'Add new credential to PSWallet'
-RETRYButton -form $AccessForm -x 150 -y 120 -w 120 -text "PSWallet user list" | Out-Null
-OKButton -form $AccessForm -x 20 -y 120 -w 120 -text "Directly access" | Out-Null
+$pswadd = CheckBox -form $AccessForm -x 10 -y 80 -text 'Add new credential to PSWallet' 
+if (!(Test-Path -Path "$env:LOCALAPPDATA\PSWallet.sqlite" -PathType Leaf)) { $pswadd.Enabled = $false }
+RETRYButton -form $AccessForm -x 150 -y 120 -w 120 -text "PSWallet user list" 
+OKButton -form $AccessForm -x 20 -y 120 -w 120 -text "Directly access"
 $resultButton = $AccessForm.ShowDialog()
 
 $WhereIsMyWallet =  "$workdir\Safety\PSWallet.ps1"
 if ($resultButton -eq 'RETRY') {
     if (Test-Path -Path $WhereIsMyWallet -PathType Leaf) {
-        [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-        $OpenFileDialog.Title = "Open Key File"
-        $OpenFileDialog.initialDirectory = "$env:LOCALAPPDATA"
-        $OpenFileDialog.filter = 'Key file (*.key)| *.key'
-        $OpenFileDialog.ShowDialog() | Out-Null
-        $WhereIsMyKey = $OpenFileDialog.filename 
+        if (Test-Path -Path "$env:LOCALAPPDATA\PSWallet.sqlite" -PathType Leaf) {            
+            [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+            $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+            $OpenFileDialog.Title = "Open Key File"
+            $OpenFileDialog.initialDirectory = "$env:LOCALAPPDATA"
+            $OpenFileDialog.filter = 'Key file (*.key)| *.key'
+            $OpenFileDialog.ShowDialog() | Out-Null
+            $WhereIsMyKey = $OpenFileDialog.filename 
 
-        $pswout = PowerShell.exe -file $WhereIsMyWallet `
-            -ExtKey $WhereIsMyKey  `
-            -ExtScript $ascript  `
-            -ExtAction 'listusr'
-        $userlist = @()
-        foreach ($currentItem in $pswout) {
-            if ($currentItem -match "PSWallet>>> (.+)$") {
-                $currentItem -match "PSWallet>>> (.+)$" | Out-Null
-                $userlist += $matches[1]
-            }
-        }
-
-        $Formlist = FormBase -w 275 -h ((($userlist.Count) * 30) + 120) -text "SELECT"
-        $they = 20
-        $choices = @()
-        foreach ($remote in $userlist) {
-            if ($they -eq 20) {
-                $isfirst = $true
-            } else {
-                $isfirst = $false
-            }
-            $choices += RadioButton -form $Formlist -x 25 -y $they -checked $isfirst -text $remote
-            $they += 25 
-        }
-        OKButton -form $Formlist -x 75 -y ($they + 30) -text "Ok" | Out-Null
-        $result = $Formlist.ShowDialog()
-        foreach ($item in $choices) {
-            if ($item.Checked) {
-                $ausr = $item.Text
-            }
-        }
-
-        if ($ausr -eq 'NO DATA FOUND') {
-            exit
-        } else {
             $pswout = PowerShell.exe -file $WhereIsMyWallet `
                 -ExtKey $WhereIsMyKey  `
                 -ExtScript $ascript  `
-                -ExtUsr $ausr  `
-                -ExtAction 'getpwd'
+                -ExtAction 'listusr'
+            $userlist = @()
             foreach ($currentItem in $pswout) {
                 if ($currentItem -match "PSWallet>>> (.+)$") {
                     $currentItem -match "PSWallet>>> (.+)$" | Out-Null
-                    $apwd = $matches[1]
+                    $userlist += $matches[1]
                 }
             }
+
+            $Formlist = FormBase -w 275 -h ((($userlist.Count) * 30) + 120) -text "SELECT"
+            $they = 20
+            $choices = @()
+            foreach ($remote in $userlist) {
+                if ($they -eq 20) {
+                    $isfirst = $true
+                } else {
+                    $isfirst = $false
+                }
+                $choices += RadioButton -form $Formlist -x 25 -y $they -checked $isfirst -text $remote
+                $they += 25 
+            }
+            OKButton -form $Formlist -x 75 -y ($they + 30) -text "Ok" | Out-Null
+            $result = $Formlist.ShowDialog()
+            foreach ($item in $choices) {
+                if ($item.Checked) {
+                    $ausr = $item.Text
+                }
+            }
+
+            if ($ausr -eq 'NO DATA FOUND') {
+                exit
+            } else {
+                $pswout = PowerShell.exe -file $WhereIsMyWallet `
+                    -ExtKey $WhereIsMyKey  `
+                    -ExtScript $ascript  `
+                    -ExtUsr $ausr  `
+                    -ExtAction 'getpwd'
+                foreach ($currentItem in $pswout) {
+                    if ($currentItem -match "PSWallet>>> (.+)$") {
+                        $currentItem -match "PSWallet>>> (.+)$" | Out-Null
+                        $apwd = $matches[1]
+                    }
+                }
+            }
+        } else {
+            # launch PSWallet directly, for creating new database file
+            PowerShell.exe -file $WhereIsMyWallet
         }
     }
 } else {
