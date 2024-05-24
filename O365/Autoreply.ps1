@@ -1,6 +1,6 @@
 <#
 Name......: Autoreply.ps1
-Version...: 22.12.1
+Version...: 24.05.1
 Author....: Dario CORRADA
 
 This script sets an autoreply message in Outlook. In the following example I will set an autoreply from 04:00pm to 09:00am of the day after. 
@@ -53,8 +53,17 @@ if ($outproc -ne $null) {
 }
 $ErrorActionPreference= 'Inquire'
 
-# get credentials
-$usrlogin = LoginWindow
+# credential management
+$pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'Autoreply'
+if ($pswout.Count -eq 2) {
+    $UserCredential = New-Object System.Management.Automation.PSCredential($pswout[0], (ConvertTo-SecureString $pswout[1] -AsPlainText -Force))
+} else {
+    [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
+    exit
+}
+Connect-ExchangeOnline -Credential $UserCredential
+$pswout[0] -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" | Out-Null
+$unique = $matches[1]
 
 <#
 # If you need to set specific time zone you can list those locally stored in the registry as follows
@@ -64,9 +73,6 @@ $TimeZone | sort Display | Format-Table -Auto PSChildname,Display
 Set-MailboxRegionalConfiguration -TimeZone 'UTC' -Identity $unique
 
 # setting autoreply
-$usrlogin.Username -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" | Out-Null
-$unique = $matches[1]
-Connect-ExchangeOnline -Credential $usrlogin
 $message = @'
 <html> <body> <div  style="font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt; color:rg b(0,0,0)">
 <p>Hi there,</p>
