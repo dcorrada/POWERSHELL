@@ -104,6 +104,17 @@ if ($resultButton -eq 'RETRY') {
             # launch PSWallet directly, for creating new database file
             PowerShell.exe -file $WhereIsMyWallet
         }
+    } else {
+        $AccessForm = FormBase -w 300 -h 210 -text 'ACCESS'
+        Label -form $AccessForm -x 10 -y 20 -w 80 -text 'Username:' | Out-Null
+        $usrname = TxtBox -form $AccessForm -x 100 -y 20 -w 170
+        Label -form $AccessForm -x 10 -y 50 -w 80 -text 'Password:' | Out-Null
+        $passwd = TxtBox -form $AccessForm -x 100 -y 50 -w 170 -masked $true
+        Label -form $AccessForm -x 75 -y 90 -text '*** No PSWallet found ***' | Out-Null
+        OKButton -form $AccessForm -x 75 -y 120 -w 120 -text "Directly access"
+        $resultButton = $AccessForm.ShowDialog()
+        $ausr = $usrname.Text
+        $apwd = $passwd.Text
     }
 } else {
     $ausr = $usrname.Text
