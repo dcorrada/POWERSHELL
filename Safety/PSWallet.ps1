@@ -149,8 +149,7 @@ $ErrorActionPreference= 'Inquire'
 # Logs clean
 $BackInTime = '-90 day'
 $SQLiteConnection.Open()
-$TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Logs WHERE UPTIME < DATETIME('now', '$BackInTime');"
-$SQLiteConnection.Open()
+Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Logs WHERE UPTIME < DATETIME('now', '$BackInTime');"
 Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
