@@ -149,8 +149,10 @@ $ErrorActionPreference= 'Inquire'
 # Logs clean
 $BackInTime = '-90 day'
 $SQLiteConnection.Open()
-Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Logs WHERE UPTIME < DATETIME('now', '$BackInTime');"
-Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+$howmuch = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Logs WHERE UPTIME > DATETIME('now', '-1 day') AND ACTION LIKE 'history clean%';"
+if ($howmuch.Count -eq 0) { # just perform single check a day
+    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Logs WHERE UPTIME < DATETIME('now', '$BackInTime');"
+    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
     '$($env:USERNAME)',
@@ -159,6 +161,7 @@ VALUES (
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
+}
 $SQLiteConnection.Close()
 
 
