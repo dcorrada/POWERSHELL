@@ -1,6 +1,6 @@
 <#
 Name......: PPPC.ps1
-Version...: 21.06.1
+Version...: 24.05.1
 Author....: Dario CORRADA
 
 Pipeline per la preparazione di nuovi PC
@@ -71,6 +71,7 @@ New-Item -ItemType directory -Path "$tmppath\AD" > $null
 New-Item -ItemType directory -Path "$tmppath\AzureAD" > $null
 New-Item -ItemType directory -Path "$tmppath\Updates" > $null
 New-Item -ItemType directory -Path "$tmppath\Upkeep" > $null
+New-Item -ItemType directory -Path "$tmppath\Safety" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Wazuh.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD\Join2Domain.ps1' -DestinationPath "$tmppath\AD"
@@ -79,6 +80,7 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD\
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\drvUpdate_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\Update_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Upkeep\Powerize.ps1' -DestinationPath "$tmppath\Upkeep"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\Stargate.ps1' -DestinationPath "$tmppath\Safety"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Check_NuGet.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
 
