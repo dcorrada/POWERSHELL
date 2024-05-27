@@ -147,27 +147,21 @@ CREATE TABLE `Credits` (
 $ErrorActionPreference= 'Inquire'
 
 # Logs clean
-$BackInTime = '-30 day'
+$BackInTime = '-90 day'
 $SQLiteConnection.Open()
-$TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Logs WHERE UPTIME > DATETIME('now', '$BackInTime');"
-$SQLiteConnection.Close()
-if (!([string]::IsNullOrEmpty($TheResult))) {
-    $CleanSweep = [System.Windows.MessageBox]::Show("Proceed to purge logs older than $BackInTime ?",'CLEAN','YesNo','warning')
-    if ($CleanSweep -eq 'Yes') {
-        $SQLiteConnection.Open()
-        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM FROM Logs WHERE UPTIME > DATETIME('now', '$BackInTime');"
-        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+$TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Logs WHERE UPTIME < DATETIME('now', '$BackInTime');"
+$SQLiteConnection.Open()
+Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
-    'logs clean',
+    'history clean $BackInTime',
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
-        $SQLiteConnection.Close()
-    }
-}
+$SQLiteConnection.Close()
+
 
 <# *******************************************************************************
                                 LOCALES
