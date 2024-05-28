@@ -104,20 +104,3 @@ if ($answ -eq "Yes") {
     notepad $logfile
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
