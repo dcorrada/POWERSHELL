@@ -1,7 +1,6 @@
 <#
-This is a template for the header of those scripts that will use the Microsoft 
-Graph module and wil access through the authenticator method (OTP and/or 
-renewal of a token)
+This is a template for testing those scripts that will use the Microsoft Graph 
+module and wil access through the authenticator method
 #>
 
 # elevated script execution with admin privileges
@@ -14,7 +13,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AssignedLicenses\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Graph\\PowerShell_SDK\\atemplate\.ps1$" > $null
 $workdir = $matches[1]
 <# for testing purposes
 $workdir = Get-Location
@@ -46,42 +45,13 @@ $ErrorActionPreference= 'Inquire'
 
 Connect-MgGraph -Scopes 'User.Read.All'
 <#
-Alternativamente a questo cmdlet possibile accedere a Graph tramite 
-un'app di autorizzazione Azure AD.
-
-*** Creare un'applicazione nell'Azure Portal ***
-Accedi al servizio Azure AD B2C e seleziona "Registrazioni per l'app":
-https://portal.azure.com/#view/Microsoft_AAD_B2CAdmin/TenantManagementMenuBlade/~/overview
-
-Crea una nuova registrazione dell'applicazione, limitando l'accesso solo ad 
-"Account solo in questa directory dell'organizzazione (Tenant singolo)".
-
-*** Memorizza le credenziali dell'applicazione ***
-Dopo aver creato l'applicazione, prendi nota di "ID applicazione" (Client ID) e 
-genera un segreto (Client Secret) cliccando sulla voce "Credenziali client".
-
-*** Concedi autorizzazioni all'applicazione ***
-Assicurati che l'applicazione abbia le autorizzazioni appropriate per accedere 
-alle informazioni utente tramite Microsoft Graph (ie scope "User.Read.All"). 
-Puoi farlo nelle impostazioni delle autorizzazioni dell'applicazione (click su 
-voce "Autorizzazioni API").
-
-*** Utilizza le credenziali dell'applicazione per l'autenticazione ***
-Nel tuo script PowerShell, utilizza le credenziali dell'applicazione per 
-ottenere un token di accesso tramite il flusso Client Credentials:
-
-# Credenziali dell'applicazione
+# Alternatively to directly connet through Connect-MgGraph we can import a token from a regitered app
 $clientId = "Your-Client-Id"
 $clientSecret = "Your-Client-Secret"
 $tenantId = "Your-Tenant-Id"
-# Autenticazione e ottenimento del token di accesso
 $token = Get-MgAccessToken -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId -Scopes "https://graph.microsoft.com/.default"
-# Imposta il token di accesso per l'utilizzo nelle richieste
 Set-MgAccessToken -AccessToken $token.AccessToken
-# Esegui le operazioni su Microsoft Graph
-Get-MgUser -All
 #>
-
 
 Get-MgUser -All -Top 30
 <#
