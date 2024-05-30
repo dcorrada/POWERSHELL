@@ -4,7 +4,7 @@ Param([string]$ExtScript='PSWallet', [string]$ExtKey='NULL',
 
 <#
 Name......: PSWallet.ps1
-Version...: 24.05.2
+Version...: 24.06.1
 Author....: Dario CORRADA
 
 PSWallet aims to be the credential manager tool in order to handle the various 
@@ -131,6 +131,18 @@ CREATE TABLE `Logs` (
 CREATE TABLE `Credits` (
     `USER` varchar(80),
     `PSWD` text,
+    `SCRIPT` text
+);
+CREATE TABLE `Graph` (
+    `APPNAME` varchar(80),
+    `APPID` varchar(80),
+    `OBJID` varchar(80),
+    `TENANTID` varchar(80),
+    `SECRETNAME` varchar(80),
+    `SECRETID` varchar(80),
+    `SECRETVALUE` text,
+    `SECRETEXPDATE` datetime,
+    `UPN` text,
     `SCRIPT` text
 );
 '@
@@ -421,10 +433,92 @@ VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
 "@
         $SQLiteConnection.Close()
     } else {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALRED^ADY EXISTS'
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREDADY EXISTS'
     }
 
     $TheAction = 'add row'
+} elseif ($ExtAction -eq 'addGraph') {
+    $toPSWallet = @{ SCRIPT = $ExtScript }
+    $newentryform = FormBase -w 410 -h 440 -text 'NEW ENTRY'
+    Label -form $newentryform -x 20 -y 10 -w 80 -text 'App name:' | Out-Null
+    $toPSWallet.APPNAME = TxtBox -form $newentryform -x 100 -y 10 -w 275
+    Label -form $newentryform -x 20 -y 60 -w 80 -text 'Client ID:' | Out-Null
+    $toPSWallet.APPID = TxtBox -form $newentryform -x 100 -y 60 -w 275
+    Label -form $newentryform -x 20 -y 90 -w 80 -text 'Object ID:' | Out-Null
+    $toPSWallet.OBJID = TxtBox -form $newentryform -x 100 -y 90 -w 275
+    Label -form $newentryform -x 20 -y 120 -w 80 -text 'Tenant ID:' | Out-Null
+    $toPSWallet.TENANTID = TxtBox -form $newentryform -x 100 -y 120 -w 275
+    Label -form $newentryform -x 20 -y 170 -w 80 -text 'Secret name:' | Out-Null
+    $toPSWallet.SECRETNAME = TxtBox -form $newentryform -x 100 -y 170 -w 275
+    Label -form $newentryform -x 20 -y 200 -w 80 -text 'Secret ID:' | Out-Null
+    $toPSWallet.SECRETID = TxtBox -form $newentryform -x 100 -y 200 -w 275
+    Label -form $newentryform -x 20 -y 230 -w 80 -text 'Secret value:' | Out-Null
+    $toPSWallet.SECRETVALUE = TxtBox -form $newentryform -x 100 -y 230 -w 275
+    Label -form $newentryform -x 20 -y 260 -w 80 -text 'Expire date:' | Out-Null
+    $toPSWallet.SECRETEXPDATE = TxtBox -form $newentryform -x 100 -y 260 -w 275
+    Label -form $newentryform -x 20 -y 310 -w 80 -text 'UPN:' | Out-Null
+    $toPSWallet.SECRETEXPDATE = TxtBox -form $newentryform -x 100 -y 310 -w 275
+    OKButton -form $newentryform -x 140 -y 350 -text "Ok" | Out-Null    
+    $resultButton = $newentryform.ShowDialog()
+
+    $SQLiteConnection.Open()
+    $ItExists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT *
+FROM Graph
+WHERE APPNAME = '$($toPSWallet.APPNAME.Text)'
+"@
+    $SQLiteConnection.Close()
+
+    if ([string]::IsNullOrEmpty($ItExists)) {
+        $ErrorActionPreference= 'Stop'
+        try {
+            $CryptedSecret = EncryptString -keyfile $keyfile -instring $toPSWallet.SECRETVALUE.Text
+            $SQLiteConnection.Open()
+            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Graph (APPNAME, APPID, OBJID, TENANTID, SECRETNAME, SECRETID, SECRETVALUE, SECRETEXPDATE, UPN, SCRIPT) 
+VALUES ('$($toPSWallet.APPNAME.Text)', 
+        '$($toPSWallet.APPID.Text)',
+        '$($toPSWallet.OBJID.Text)',
+        '$($toPSWallet.TENANTID.Text)',
+        '$($toPSWallet.SECRETNAME.Text)',
+        '$($toPSWallet.SECRETID.Text)',
+        '$CryptedSecret',
+        '$(($toPSWallet.SECRETEXPDATE.Text | Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+        '$($toPSWallet.UPN.Text),
+        '$ExtScript');
+"@
+            $SQLiteConnection.Close()
+        } catch {
+            Write-Host -ForegroundColor Red 'Ko'
+            Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+            [System.Windows.MessageBox]::Show("Error accessing database",'ABORTING','Ok','Error')
+        }
+        $ErrorActionPreference= 'Inquire'
+
+        foreach ($currentItem in ($toPSWallet.Keys | Sort-Object)) {
+            Write-Host -ForegroundColor Cyan "PSWallet>>> [$currentItem] $($toPSWallet[$currentItem].Text)"
+        }
+    } else {
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREDADY EXISTS'
+    }
+
+    $TheAction = 'add row'
+} elseif ($ExtAction -eq 'listGraph') {
+    $SQLiteConnection.Open()
+    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT UPN, APPNAME, SECRETEXPDATE
+FROM Graph
+WHERE SCRIPT = '$ExtScript'
+"@
+    $SQLiteConnection.Close()
+    if ([string]::IsNullOrEmpty($TheResult)) {
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
+    } else {
+        foreach ($item in $TheResult) {
+            Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $($item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"))"
+        }
+    }
+    $TheAction = 'read table'
 }
 
 $SQLiteConnection.Open()
