@@ -433,12 +433,12 @@ VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
 "@
         $SQLiteConnection.Close()
     } else {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREDADY EXISTS'
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
     }
 
     $TheAction = 'add row'
 } elseif ($ExtAction -eq 'addGraph') {
-    $toPSWallet = @{ SCRIPT = $ExtScript }
+    $toPSWallet = @{ }
     $newentryform = FormBase -w 410 -h 440 -text 'NEW ENTRY'
     Label -form $newentryform -x 20 -y 10 -w 80 -text 'App name:' | Out-Null
     $toPSWallet.APPNAME = TxtBox -form $newentryform -x 100 -y 10 -w 275
@@ -457,7 +457,7 @@ VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
     Label -form $newentryform -x 20 -y 260 -w 80 -text 'Expire date:' | Out-Null
     $toPSWallet.SECRETEXPDATE = TxtBox -form $newentryform -x 100 -y 260 -w 275
     Label -form $newentryform -x 20 -y 310 -w 80 -text 'UPN:' | Out-Null
-    $toPSWallet.SECRETEXPDATE = TxtBox -form $newentryform -x 100 -y 310 -w 275
+    $toPSWallet.UPN = TxtBox -form $newentryform -x 100 -y 310 -w 275
     OKButton -form $newentryform -x 140 -y 350 -text "Ok" | Out-Null    
     $resultButton = $newentryform.ShowDialog()
 
@@ -484,7 +484,7 @@ VALUES ('$($toPSWallet.APPNAME.Text)',
         '$($toPSWallet.SECRETID.Text)',
         '$CryptedSecret',
         '$(($toPSWallet.SECRETEXPDATE.Text | Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
-        '$($toPSWallet.UPN.Text),
+        '$($toPSWallet.UPN.Text)',
         '$ExtScript');
 "@
             $SQLiteConnection.Close()
@@ -499,7 +499,7 @@ VALUES ('$($toPSWallet.APPNAME.Text)',
             Write-Host -ForegroundColor Cyan "PSWallet>>> [$currentItem] $($toPSWallet[$currentItem].Text)"
         }
     } else {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREDADY EXISTS'
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
     }
 
     $TheAction = 'add row'
@@ -517,6 +517,28 @@ WHERE SCRIPT = '$ExtScript'
         foreach ($item in $TheResult) {
             Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $($item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"))"
         }
+    }
+    $TheAction = 'read table'
+} elseif ($ExtAction -eq 'getGraph') {
+    $ExtUsr -match "^(.+)<<>>(.+)$" | Out-Null
+    ($aUPN, $anApp) = ($matches[1], $matches[2])
+    $SQLiteConnection.Open()
+    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT *
+FROM Graph
+WHERE SCRIPT = '$ExtScript' AND
+      UPN = '$aUPN' AND
+      APPNAME = '$anApp'  
+"@
+    $SQLiteConnection.Close()
+    if ($TheResult.SECRETVALUE.Count -eq 1) {
+        $decryptedSecret = DecryptString -keyfile $keyfile -instring $TheResult.SECRETVALUE
+        Write-Host  -ForegroundColor Cyan "PSWallet>>> [APPID] $($TheResult.APPID)"
+        Write-Host  -ForegroundColor Cyan "PSWallet>>> [TENANTID] $($TheResult.TENANTID)"
+        Write-Host  -ForegroundColor Cyan "PSWallet>>> [UPN] $($TheResult.UPN)"
+        Write-Host  -ForegroundColor Cyan "PSWallet>>> [SECRETVALUE] $decryptedSecret"
+    } else {
+        Write-Host  -ForegroundColor Yellow "PSWallet>>> DATA REDUNDANCY"
     }
     $TheAction = 'read table'
 }

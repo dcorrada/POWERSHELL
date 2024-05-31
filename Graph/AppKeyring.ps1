@@ -1,6 +1,10 @@
 param (
-    [Parameter(Mandatory=$true)]
-    [string]$ascript
+    <#
+        *** TESTING ***
+        Mettere il parametro obbligatorio senza default e togliere il pasu alla fine una volta finito il testing
+    #> 
+    # [Parameter(Mandatory=$true)]
+    [string]$ascript='AutoReply'
 )
 
 <#
@@ -24,6 +28,10 @@ if ($testadmin -eq $false) {
 $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Graph\\AppKeyring\.ps1$" > $null
 $workdir = $matches[1]
+<# for testing purposes
+$workdir = Get-Location
+$workdir = $workdir.Path
+#>
 
 # header 
 Add-Type -AssemblyName System.Windows.Forms
@@ -78,10 +86,68 @@ if ((Test-Path -Path $WhereIsMyWallet -PathType Leaf) -and (Test-Path -Path $Whe
                 -ExtScript $ascript  `
                 -ExtAction 'listGraph'
 
-        <# 
-        Fare un form con due bottoni: uno per accedere, l'altro per aggiornare 
-        la secret scaduta (mostrare data di scadenza sul form)
-        #>
+        $PSWrecords = $pswout | ForEach-Object {
+            if ($_ -match "^PSWallet>>> ([a-zA-Z_\-\.0-9@]+) <-> ([a-zA-Z_\-\.0-9]+) ([a-zA-Z\-\s0-9\(\)]+)$") {
+                New-Object -TypeName PSObject -Property @{
+                    UPN = $matches[1]
+                    APP = $matches[2]
+                    EXP = $matches[3]
+                } | Select UPN, APP, EXP
+            }
+        } 
+
+        if ($PSWrecords.UPN.Count -gt 0) {
+            $formlist = FormBase -w 480 -h ((($PSWrecords.UPN.Count) * 30) + 180) -text 'ACCESS'
+            $they = 20
+            $choices = @()
+            foreach ($entry in $PSWrecords) {
+                if ($they -eq 20) {
+                    $isfirst = $true
+                } else {
+                    $isfirst = $false
+                }
+                $astring = "$($entry.UPN) on $($entry.APP)`n$($entry.EXP)"
+                $choices += RadioButton -form $formlist -x 20 -y $they -w 450 -h 50 -checked $isfirst -text $astring
+                $they += 50 
+            }
+            RETRYButton -form $formlist -x 280 -y ($they + 30) -w 120 -text "Update secret" 
+            OKButton -form $formlist -x 30 -y ($they + 30) -w 120 -text "Access"
+            $resultButton = $formlist.ShowDialog()
+            foreach ($item in $choices) {
+                if ($item.Checked) {
+                    $item.Text -match "^(.+) on (.+)`n" | Out-Null
+                    $UPN_App = "$($matches[1])<<>>$($matches[2])"
+                }
+            }
+
+            if ($resultButton -eq 'RETRY') {
+
+                <# update dei dati di secret #>
+
+            } elseif ($resultButton -eq 'OK') {
+                $pswout = PowerShell.exe -file $WhereIsMyWallet `
+                    -ExtKey $WhereIsMyKey  `
+                    -ExtScript $ascript  `
+                    -ExtUsr $UPN_App  `
+                    -ExtAction 'getGraph'
+
+                $pswout | foreach {
+                    if ($_ -match "^PSWallet>>> \[APPID\] (.+)$") {
+                        $idi.CLIENT = "$($matches[1])"
+                    } elseif ($_ -match "^PSWallet>>> \[TENANTID\] (.+)$") {
+                        $idi.TENANT = "$($matches[1])"
+                    } elseif ($_ -match "^PSWallet>>> \[SECRETVALUE\] (.+)$") {
+                        $idi.SECRET = "$($matches[1])"
+                    } elseif ($_ -match "^PSWallet>>> \[UPN\] (.+)$") {
+                        $idi.UPN = "$($matches[1])"
+                    } else {
+                        $matches = @()
+                    }
+                }
+            }
+        } else {
+            [System.Windows.MessageBox]::Show("No record found on database",'INFO','Ok','Warning') | Out-Null
+        }
     }
 } else {
     [System.Windows.MessageBox]::Show("No PSWallet or related database found",'ABORTING','Ok','Error') | Out-Null
@@ -91,3 +157,5 @@ Write-Host -ForegroundColor Blue "$($idi.UPN)"
 Write-Host -ForegroundColor Blue "$($idi.CLIENT)"
 Write-Host -ForegroundColor Blue "$($idi.TENANT)"
 Write-Host -ForegroundColor Blue "$($idi.SECRET)"
+
+Pause
