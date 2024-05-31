@@ -421,14 +421,15 @@ VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
 "@
         $SQLiteConnection.Close()
     } else {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALRED^ADY EXISTS'
+        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
     }
 
     $TheAction = 'add row'
 }
 
-$SQLiteConnection.Open()
-Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+if (!([string]::IsNullOrEmpty($TheAction))) {
+    $SQLiteConnection.Open()
+    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
 VALUES (
 '$($env:USERNAME)',
@@ -438,4 +439,5 @@ VALUES (
 '$ExtScript'
 );
 "@
-$SQLiteConnection.Close()
+    $SQLiteConnection.Close()
+}
