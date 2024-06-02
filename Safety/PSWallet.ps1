@@ -4,7 +4,7 @@ Param([string]$ExtScript='PSWallet', [string]$ExtKey='NULL',
 
 <#
 Name......: PSWallet.ps1
-Version...: 24.06.1
+Version...: 24.06.2
 Author....: Dario CORRADA
 
 PSWallet aims to be the credential manager tool in order to handle the various 
@@ -180,7 +180,7 @@ $SQLiteConnection.Close()
 <# *******************************************************************************
                                 LOCALES
 ******************************************************************************* #>
-if (($ExtScript -eq 'PSWallet') -or  (!(Test-Path $dbfile -PathType Leaf))) {
+if ($ExtScript -eq 'PSWallet') {
     do {
         $adialog = FormBase -w 350 -h 260 -text "MAINTENANCE"
         $importCredits = RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Import Database from xlsx"
@@ -249,28 +249,32 @@ VALUES (
 "@
                 $SQLiteConnection.Close()
 
-                $ExportedTable = $rawdata | ForEach-Object {
-                    Write-Host -NoNewline '.'
-                    New-Object -TypeName PSObject -Property @{
-                        USER    = $_.USER
-                        PSWD    = DecryptString -keyfile $keyfile -instring $_.PSWD
-                        SCRIPT  = $_.SCRIPT
-                    } | Select USER, PSWD, SCRIPT
-                }
-                [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-                $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-                $SaveFileDialog.Title = "Export Credits"
-                $SaveFileDialog.initialDirectory = "C:$env:HOMEPATH\Downloads"
-                $SaveFileDialog.FileName = 'PSWallet.xlsx'
-                $SaveFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
-                $SaveFileDialog.ShowDialog() | Out-Null
-                $ExportFile = $SaveFileDialog.filename
+                if ($rawdata -eq $null) {
+                    [System.Windows.MessageBox]::Show("Database empty, no data to export",'INFO','Ok','Warning') | Out-Null
+                } else {
+                    $ExportedTable = $rawdata | ForEach-Object {
+                        Write-Host -NoNewline '.'
+                        New-Object -TypeName PSObject -Property @{
+                            USER    = $_.USER
+                            PSWD    = DecryptString -keyfile $keyfile -instring $_.PSWD
+                            SCRIPT  = $_.SCRIPT
+                        } | Select USER, PSWD, SCRIPT
+                    }
+                    [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+                    $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+                    $SaveFileDialog.Title = "Export Credits"
+                    $SaveFileDialog.initialDirectory = "C:$env:HOMEPATH\Downloads"
+                    $SaveFileDialog.FileName = 'PSWallet.xlsx'
+                    $SaveFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+                    $SaveFileDialog.ShowDialog() | Out-Null
+                    $ExportFile = $SaveFileDialog.filename
 
-                Write-Host -NoNewline '.'
-                $XlsPkg = Open-ExcelPackage -Path $ExportFile -Create
-                $XlsPkg = $ExportedTable | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium3' -AutoSize -PassThru
-                Close-ExcelPackage -ExcelPackage $XlsPkg
-                Write-Host -ForegroundColor Green ' DONE'
+                    Write-Host -NoNewline '.'
+                    $XlsPkg = Open-ExcelPackage -Path $ExportFile -Create
+                    $XlsPkg = $ExportedTable | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium3' -AutoSize -PassThru
+                    Close-ExcelPackage -ExcelPackage $XlsPkg
+                    Write-Host -ForegroundColor Green ' DONE'
+                }
             } elseif ($editCredits.Checked -eq $true) {
                 Write-Host -NoNewline 'Editing...'
                 $SQLiteConnection.Open()
@@ -373,108 +377,108 @@ VALUES (
             }
         }
     } until ($resultButton -eq 'OK')
-}
-
+    
 
 <# *******************************************************************************
                                 EXTERNAL
 ******************************************************************************* #>
-Write-Host -NoNewline 'Calling PSWallet from '
-Write-Host -ForegroundColor Blue "$ExtScript"
+} else {
+    Write-Host -NoNewline 'Calling PSWallet from '
+    Write-Host -ForegroundColor Blue "$ExtScript"
 
-if ($ExtAction -eq 'listusr') {
-    $SQLiteConnection.Open()
-    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+    if ($ExtAction -eq 'listusr') {
+        $SQLiteConnection.Open()
+        $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 SELECT USER
 FROM Credits
 WHERE SCRIPT = '$ExtScript'
 "@
-    $SQLiteConnection.Close()
-    if ([string]::IsNullOrEmpty($TheResult)) {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
-    } else {
-        foreach ($item in $TheResult.USER) {
-            Write-Host -ForegroundColor Cyan "PSWallet>>> $item"
+        $SQLiteConnection.Close()
+        if ([string]::IsNullOrEmpty($TheResult)) {
+            Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
+        } else {
+            foreach ($item in $TheResult.USER) {
+                Write-Host -ForegroundColor Cyan "PSWallet>>> $item"
+            }
         }
-    }
-    $TheAction = 'read table'
-} elseif ($ExtAction -eq 'getpwd') {
-    $SQLiteConnection.Open()
-    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-SELECT PSWD
-FROM Credits
-WHERE SCRIPT = '$ExtScript' AND USER = '$ExtUsr'
-"@
-    $SQLiteConnection.Close()
-    if ([string]::IsNullOrEmpty($TheResult)) {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
-    } else {
-        foreach ($item in $TheResult.PSWD) {
-            $plantxt = DecryptString -keyfile $keyfile -instring $item
-            Write-Host -ForegroundColor Cyan "PSWallet>>> $plantxt"
-        }
-    }
-    $TheAction = 'read table'
-} elseif ($ExtAction -eq 'add') {
-    $SQLiteConnection.Open()
-    $ItExists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-SELECT PSWD
-FROM Credits
-WHERE SCRIPT = '$ExtScript' AND USER = '$ExtUsr'
-"@
-    $SQLiteConnection.Close()
-
-    if ([string]::IsNullOrEmpty($ItExists)) {
-        $CryptedPwd = EncryptString -keyfile $keyfile -instring $ExtPwd
+        $TheAction = 'read table'
+    } elseif ($ExtAction -eq 'getpwd') {
         $SQLiteConnection.Open()
-        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+        $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT PSWD
+FROM Credits
+WHERE SCRIPT = '$ExtScript' AND USER = '$ExtUsr'
+"@
+        $SQLiteConnection.Close()
+        if ([string]::IsNullOrEmpty($TheResult)) {
+            Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
+        } else {
+            foreach ($item in $TheResult.PSWD) {
+                $plantxt = DecryptString -keyfile $keyfile -instring $item
+                Write-Host -ForegroundColor Cyan "PSWallet>>> $plantxt"
+            }
+        }
+        $TheAction = 'read table'
+    } elseif ($ExtAction -eq 'add') {
+        $SQLiteConnection.Open()
+        $ItExists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT PSWD
+FROM Credits
+WHERE SCRIPT = '$ExtScript' AND USER = '$ExtUsr'
+"@
+        $SQLiteConnection.Close()
+
+        if ([string]::IsNullOrEmpty($ItExists)) {
+            $CryptedPwd = EncryptString -keyfile $keyfile -instring $ExtPwd
+            $SQLiteConnection.Open()
+            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Credits (USER, PSWD, SCRIPT) 
 VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
 "@
-        $SQLiteConnection.Close()
-    } else {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
-    }
+            $SQLiteConnection.Close()
+        } else {
+            Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
+        }
 
-    $TheAction = 'add row'
-} elseif ($ExtAction -eq 'addGraph') {
-    $toPSWallet = @{ }
-    $newentryform = FormBase -w 410 -h 440 -text 'NEW ENTRY'
-    Label -form $newentryform -x 20 -y 10 -w 80 -text 'App name:' | Out-Null
-    $toPSWallet.APPNAME = TxtBox -form $newentryform -x 100 -y 10 -w 275
-    Label -form $newentryform -x 20 -y 60 -w 80 -text 'Client ID:' | Out-Null
-    $toPSWallet.APPID = TxtBox -form $newentryform -x 100 -y 60 -w 275
-    Label -form $newentryform -x 20 -y 90 -w 80 -text 'Object ID:' | Out-Null
-    $toPSWallet.OBJID = TxtBox -form $newentryform -x 100 -y 90 -w 275
-    Label -form $newentryform -x 20 -y 120 -w 80 -text 'Tenant ID:' | Out-Null
-    $toPSWallet.TENANTID = TxtBox -form $newentryform -x 100 -y 120 -w 275
-    Label -form $newentryform -x 20 -y 170 -w 80 -text 'Secret name:' | Out-Null
-    $toPSWallet.SECRETNAME = TxtBox -form $newentryform -x 100 -y 170 -w 275
-    Label -form $newentryform -x 20 -y 200 -w 80 -text 'Secret ID:' | Out-Null
-    $toPSWallet.SECRETID = TxtBox -form $newentryform -x 100 -y 200 -w 275
-    Label -form $newentryform -x 20 -y 230 -w 80 -text 'Secret value:' | Out-Null
-    $toPSWallet.SECRETVALUE = TxtBox -form $newentryform -x 100 -y 230 -w 275
-    Label -form $newentryform -x 20 -y 260 -w 80 -text 'Expire date:' | Out-Null
-    $toPSWallet.SECRETEXPDATE = TxtBox -form $newentryform -x 100 -y 260 -w 275
-    Label -form $newentryform -x 20 -y 310 -w 80 -text 'UPN:' | Out-Null
-    $toPSWallet.UPN = TxtBox -form $newentryform -x 100 -y 310 -w 275
-    OKButton -form $newentryform -x 140 -y 350 -text "Ok" | Out-Null    
-    $resultButton = $newentryform.ShowDialog()
+        $TheAction = 'add row'
+    } elseif ($ExtAction -eq 'addGraph') {
+        $toPSWallet = @{ }
+        $NewEntryForm = FormBase -w 450 -h 440 -text 'NEW ENTRY'
+        Label -form $NewEntryForm -x 20 -y 10 -w 90 -text 'App name:' | Out-Null
+        $toPSWallet.APPNAME = TxtBox -form $NewEntryForm -x 120 -y 10 -w 275 -text 'RegisteredApp'
+        Label -form $NewEntryForm -x 20 -y 60 -w 90 -text 'Client ID:' | Out-Null
+        $toPSWallet.APPID = TxtBox -form $NewEntryForm -x 120 -y 60 -w 275 -text 'null'
+        Label -form $NewEntryForm -x 20 -y 90 -w 90 -text 'Object ID:' | Out-Null
+        $toPSWallet.OBJID = TxtBox -form $NewEntryForm -x 120 -y 90 -w 275 -text 'null'
+        Label -form $NewEntryForm -x 20 -y 120 -w 90 -text 'Tenant ID:' | Out-Null
+        $toPSWallet.TENANTID = TxtBox -form $NewEntryForm -x 120 -y 120 -w 275 -text 'null'
+        Label -form $NewEntryForm -x 20 -y 170 -w 90 -text 'Secret name:' | Out-Null
+        $toPSWallet.SECRETNAME = TxtBox -form $NewEntryForm -x 120 -y 170 -w 275 -text 'SecretName'
+        Label -form $NewEntryForm -x 20 -y 200 -w 90 -text 'Secret ID:' | Out-Null
+        $toPSWallet.SECRETID = TxtBox -form $NewEntryForm -x 120 -y 200 -w 275 -text 'null'
+        Label -form $NewEntryForm -x 20 -y 230 -w 90 -text 'Secret value:' | Out-Null
+        $toPSWallet.SECRETVALUE = TxtBox -form $NewEntryForm -x 120 -y 230 -w 275 -text 'null'
+        Label -form $NewEntryForm -x 20 -y 260 -w 90 -text 'Expire date:' | Out-Null
+        $toPSWallet.SECRETEXPDATE = TxtBox -form $NewEntryForm -x 120 -y 260 -w 275 -text '07/02/1980'
+        Label -form $NewEntryForm -x 20 -y 310 -w 90 -text 'UPN:' | Out-Null
+        $toPSWallet.UPN = TxtBox -form $NewEntryForm -x 120 -y 310 -w 275 -text 'foo@bar.baz'
+        OKButton -form $NewEntryForm -x 140 -y 350 -text "Ok" | Out-Null    
+        $resultButton = $NewEntryForm.ShowDialog()
 
-    $SQLiteConnection.Open()
-    $ItExists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+        $SQLiteConnection.Open()
+        $ItExists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 SELECT *
 FROM Graph
 WHERE APPNAME = '$($toPSWallet.APPNAME.Text)'
 "@
-    $SQLiteConnection.Close()
+        $SQLiteConnection.Close()
 
-    if ([string]::IsNullOrEmpty($ItExists)) {
-        $ErrorActionPreference= 'Stop'
-        try {
-            $CryptedSecret = EncryptString -keyfile $keyfile -instring $toPSWallet.SECRETVALUE.Text
-            $SQLiteConnection.Open()
-            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+        if ([string]::IsNullOrEmpty($ItExists)) {
+            $ErrorActionPreference= 'Stop'
+            try {
+                $CryptedSecret = EncryptString -keyfile $keyfile -instring $toPSWallet.SECRETVALUE.Text
+                $SQLiteConnection.Open()
+                Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Graph (APPNAME, APPID, OBJID, TENANTID, SECRETNAME, SECRETID, SECRETVALUE, SECRETEXPDATE, UPN, SCRIPT) 
 VALUES ('$($toPSWallet.APPNAME.Text)', 
         '$($toPSWallet.APPID.Text)',
@@ -487,71 +491,105 @@ VALUES ('$($toPSWallet.APPNAME.Text)',
         '$($toPSWallet.UPN.Text)',
         '$ExtScript');
 "@
-            $SQLiteConnection.Close()
-        } catch {
-            Write-Host -ForegroundColor Red 'Ko'
-            Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-            [System.Windows.MessageBox]::Show("Error accessing database",'ABORTING','Ok','Error')
-        }
-        $ErrorActionPreference= 'Inquire'
+                $SQLiteConnection.Close()
+            } catch {
+                Write-Host -ForegroundColor Red 'Ko'
+                Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+                [System.Windows.MessageBox]::Show("Error accessing database",'ABORTING','Ok','Error')
+            }
+            $ErrorActionPreference= 'Inquire'
 
-        foreach ($currentItem in ($toPSWallet.Keys | Sort-Object)) {
-            Write-Host -ForegroundColor Cyan "PSWallet>>> [$currentItem] $($toPSWallet[$currentItem].Text)"
+            foreach ($currentItem in ($toPSWallet.Keys | Sort-Object)) {
+                Write-Host -ForegroundColor Cyan "PSWallet>>> [$currentItem] $($toPSWallet[$currentItem].Text)"
+            }
+        } else {
+            Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
         }
-    } else {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
-    }
 
-    $TheAction = 'add row'
-} elseif ($ExtAction -eq 'listGraph') {
-    $SQLiteConnection.Open()
-    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+        $TheAction = 'add row'
+    } elseif ($ExtAction -eq 'listGraph') {
+        $SQLiteConnection.Open()
+        $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 SELECT UPN, APPNAME, SECRETEXPDATE
 FROM Graph
 WHERE SCRIPT = '$ExtScript'
 "@
-    $SQLiteConnection.Close()
-    if ([string]::IsNullOrEmpty($TheResult)) {
-        Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
-    } else {
-        foreach ($item in $TheResult) {
-            Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $($item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"))"
+        $SQLiteConnection.Close()
+        if ([string]::IsNullOrEmpty($TheResult)) {
+            Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
+        } else {
+            foreach ($item in $TheResult) {
+                Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $($item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"))"
+            }
         }
-    }
-    $TheAction = 'read table'
-} elseif ($ExtAction -eq 'getGraph') {
-    $ExtUsr -match "^(.+)<<>>(.+)$" | Out-Null
-    ($aUPN, $anApp) = ($matches[1], $matches[2])
-    $SQLiteConnection.Open()
-    $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+        $TheAction = 'read table'
+    } elseif ($ExtAction -eq 'getGraph') {
+        $ExtUsr -match "^(.+)<<>>(.+)$" | Out-Null
+        ($aUPN, $anApp) = ($matches[1], $matches[2])
+        $SQLiteConnection.Open()
+        $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 SELECT *
 FROM Graph
 WHERE SCRIPT = '$ExtScript' AND
       UPN = '$aUPN' AND
       APPNAME = '$anApp'  
 "@
-    $SQLiteConnection.Close()
-    if ($TheResult.SECRETVALUE.Count -eq 1) {
-        $decryptedSecret = DecryptString -keyfile $keyfile -instring $TheResult.SECRETVALUE
-        Write-Host  -ForegroundColor Cyan "PSWallet>>> [APPID] $($TheResult.APPID)"
-        Write-Host  -ForegroundColor Cyan "PSWallet>>> [TENANTID] $($TheResult.TENANTID)"
-        Write-Host  -ForegroundColor Cyan "PSWallet>>> [UPN] $($TheResult.UPN)"
-        Write-Host  -ForegroundColor Cyan "PSWallet>>> [SECRETVALUE] $decryptedSecret"
-    } else {
-        Write-Host  -ForegroundColor Yellow "PSWallet>>> DATA REDUNDANCY"
-    }
-    $TheAction = 'read table'
-}
-
-$SQLiteConnection.Open()
-Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
-VALUES (
-'$($env:USERNAME)',
-'$($env:COMPUTERNAME)',
-'$TheAction',
-'$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
-'$ExtScript'
-);
+        $SQLiteConnection.Close()
+        if ($TheResult.SECRETVALUE.Count -eq 1) {
+            $decryptedSecret = DecryptString -keyfile $keyfile -instring $TheResult.SECRETVALUE
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [APPID] $($TheResult.APPID)"
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [TENANTID] $($TheResult.TENANTID)"
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [UPN] $($TheResult.UPN)"
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [SECRETVALUE] $decryptedSecret"
+        } else {
+            Write-Host  -ForegroundColor Yellow "PSWallet>>> DATA REDUNDANCY"
+        }
+        $TheAction = 'read table'
+        
+    } elseif ($ExtAction -eq 'updateGraph') {
+        $ExtUsr -match "^(.+)<<>>(.+)$" | Out-Null
+        ($aUPN, $anApp) = ($matches[1], $matches[2])
+        $SQLiteConnection.Open()
+        $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+SELECT SECRETNAME, SECRETID, SECRETID, SECRETEXPDATE
+FROM Graph
+WHERE SCRIPT = '$ExtScript' AND
+      UPN = '$aUPN' AND
+      APPNAME = '$anApp'  
 "@
-$SQLiteConnection.Close()
+        $SQLiteConnection.Close()
+        if ($TheResult.SECRETVALUE.Count -eq 1) {
+            $decryptedSecret = DecryptString -keyfile $keyfile -instring $TheResult.SECRETVALUE
+            $formattedDate = $TheResult.SECRETEXPDATE | Get-Date -format "dd/MM/yyyy"
+            $UpdateEntryForm = FormBase -w 450 -h 210 -text 'UPDATE ENTRY'
+            Label -form $UpdateEntryForm -x 20 -y 10 -w 90 -text 'Secret name:' | Out-Null
+            $toPSWallet.APPNAME = TxtBox -form $UpdateEntryForm -x 120 -y 10 -w 275 -text "$($TheResult.SECRETNAME)"
+            Label -form $UpdateEntryForm -x 20 -y 40 -w 90 -text 'Secret ID:' | Out-Null
+            $toPSWallet.APPID = TxtBox -form $UpdateEntryForm -x 120 -y 40 -w 275 -text "$($TheResult.SECRETID)"
+            Label -form $UpdateEntryForm -x 20 -y 70 -w 90 -text 'Secret value:' | Out-Null
+            $toPSWallet.OBJID = TxtBox -form $UpdateEntryForm -x 120 -y 70 -w 275 -text "$decryptedSecret"
+            Label -form $UpdateEntryForm -x 20 -y 110 -w 90 -text 'Expire date:' | Out-Null
+            $toPSWallet.TENANTID = TxtBox -form $UpdateEntryForm -x 120 -y 110 -w 275 -text "$formattedDate"
+            OKButton -form $UpdateEntryForm -x 140 -y 150 -text "Ok" | Out-Null    
+            $resultButton = $UpdateEntryForm.ShowDialog()
+
+            [System.Windows.MessageBox]::Show("TODO: scrivere la query x aggiornare il record",'INFO','Ok','Warning') | Out-Null
+        } else {
+            Write-Host  -ForegroundColor Yellow "PSWallet>>> DATA REDUNDANCY"
+        }
+        $TheAction = 'edit row'
+    }
+
+    # external log
+    $SQLiteConnection.Open()
+    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
+VALUES ('$($env:USERNAME)',
+        '$($env:COMPUTERNAME)',
+        '$TheAction',
+        '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+        '$ExtScript'
+       );
+"@
+    $SQLiteConnection.Close()
+}
