@@ -121,8 +121,11 @@ if ((Test-Path -Path $WhereIsMyWallet -PathType Leaf) -and (Test-Path -Path $Whe
             }
 
             if ($resultButton -eq 'RETRY') {
-
-                <# update dei dati di secret #>
+                $pswout = PowerShell.exe -file $WhereIsMyWallet `
+                    -ExtKey $WhereIsMyKey  `
+                    -ExtScript $ascript  `
+                    -ExtUsr $UPN_App  `
+                    -ExtAction 'updateGraph'
 
             } elseif ($resultButton -eq 'OK') {
                 $pswout = PowerShell.exe -file $WhereIsMyWallet `
@@ -130,21 +133,22 @@ if ((Test-Path -Path $WhereIsMyWallet -PathType Leaf) -and (Test-Path -Path $Whe
                     -ExtScript $ascript  `
                     -ExtUsr $UPN_App  `
                     -ExtAction 'getGraph'
+            }
 
-                $pswout | foreach {
-                    if ($_ -match "^PSWallet>>> \[APPID\] (.+)$") {
-                        $idi.CLIENT = "$($matches[1])"
-                    } elseif ($_ -match "^PSWallet>>> \[TENANTID\] (.+)$") {
-                        $idi.TENANT = "$($matches[1])"
-                    } elseif ($_ -match "^PSWallet>>> \[SECRETVALUE\] (.+)$") {
-                        $idi.SECRET = "$($matches[1])"
-                    } elseif ($_ -match "^PSWallet>>> \[UPN\] (.+)$") {
-                        $idi.UPN = "$($matches[1])"
-                    } else {
-                        $matches = @()
-                    }
+            $pswout | foreach {
+                if ($_ -match "^PSWallet>>> \[APPID\] (.+)$") {
+                    $idi.CLIENT = "$($matches[1])"
+                } elseif ($_ -match "^PSWallet>>> \[TENANTID\] (.+)$") {
+                    $idi.TENANT = "$($matches[1])"
+                } elseif ($_ -match "^PSWallet>>> \[SECRETVALUE\] (.+)$") {
+                    $idi.SECRET = "$($matches[1])"
+                } elseif ($_ -match "^PSWallet>>> \[UPN\] (.+)$") {
+                    $idi.UPN = "$($matches[1])"
+                } else {
+                    $matches = @()
                 }
             }
+                        
         } else {
             [System.Windows.MessageBox]::Show("No record found on database",'INFO','Ok','Warning') | Out-Null
         }

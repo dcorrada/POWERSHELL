@@ -238,7 +238,12 @@ VALUES (
                 Write-Host -NoNewline 'Exporting...'
                 $SQLiteConnection.Open()
                 $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
-                Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+                $SQLiteConnection.Close()
+                if ($rawdata -eq $null) {
+                    [System.Windows.MessageBox]::Show("Database empty, no data to export",'INFO','Ok','Warning') | Out-Null
+                } else {
+                    $SQLiteConnection.Open()
+                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
 VALUES (
     '$($env:USERNAME)',
@@ -247,11 +252,7 @@ VALUES (
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
-                $SQLiteConnection.Close()
-
-                if ($rawdata -eq $null) {
-                    [System.Windows.MessageBox]::Show("Database empty, no data to export",'INFO','Ok','Warning') | Out-Null
-                } else {
+                    $SQLiteConnection.Close()
                     $ExportedTable = $rawdata | ForEach-Object {
                         Write-Host -NoNewline '.'
                         New-Object -TypeName PSObject -Property @{
@@ -281,83 +282,45 @@ VALUES (
                 $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
                 $SQLiteConnection.Close()
                 
-                $formlist = FormBase -w 250 -h 175 -text 'SELECT'
-                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:' | Out-Null
-                $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
-                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:' | Out-Null
-                $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
-                OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
-                $result = $formlist.ShowDialog()
-                
-                do {
-                    $SQLiteConnection.Open()
-                    $rowexists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
-                    $SQLiteConnection.Close()
-
-                    if ($rowexists -eq $null) {
-                        [System.Windows.MessageBox]::Show("No user <$($selectedUser.Text)> related to script <$($selectedScript.Text)>",'ABORTING','Ok','Error') | Out-Null
-                        $willabort = 'noabort'
-                    } else {
-                        $updateform = FormBase -w 300 -h 175 -text 'UPDATE'
-                        Label -form $updateform -x 10 -y 20 -w 100 -text 'New password:' | Out-Null
-                        $newpwd = TxtBox -form $updateform -x 120 -y 20 -w 150 -masked $true
-                        Label -form $updateform -x 10 -y 50 -w 100 -text 'Confirm password:' | Out-Null
-                        $confirmpwd = TxtBox -form $updateform -x 120 -y 50 -w 150 -masked $true
-                        OKButton -form $updateform -x 60 -y 90 -text "Ok" | Out-Null
-                        $result = $updateform.ShowDialog()
-                        if ($newpwd.Text -cne $confirmpwd.Text) {
-                            $willabort = [System.Windows.MessageBox]::Show("Password doesn't match. Aborting?",'ABORTING','YesNo','Error')
-                        } else {
-                            $willabort = 'noabort'
-                        }
-                    }
-                } while ($willabort -eq 'No') 
-
-                if ($willabort -eq 'noabort') {
-                    $SQLiteConnection.Open()
-                    $new_encrypted = EncryptString -keyfile $keyfile -instring $newpwd.Text
-                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "UPDATE Credits SET PSWD = '$new_encrypted' WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
-                    $SQLiteConnection.Close()
-
-                    $SQLiteConnection.Open()
-                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
-VALUES (
-    '$($env:USERNAME)',
-    '$($env:COMPUTERNAME)',
-    'edit row',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
-);
-"@
-                    $SQLiteConnection.Close()
-                    Write-Host -ForegroundColor Green ' DONE'
-                }
-            } elseif ($deleteCredits.Checked -eq $true) {
-                Write-Host -NoNewline 'Deleting...'
-                $SQLiteConnection.Open()
-                $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
-                $SQLiteConnection.Close()
-                
-                $formlist = FormBase -w 250 -h 175 -text 'SELECT'
-                Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:' | Out-Null
-                $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
-                Label -form $formlist -x 10 -y 50 -w 40 -text 'User:' | Out-Null
-                $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
-                OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
-                $result = $formlist.ShowDialog()
-                
-                $SQLiteConnection.Open()
-                $rowexists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
-                $SQLiteConnection.Close()
-
-                if ($rowexists -eq $null) {
-                    [System.Windows.MessageBox]::Show("No user <$($selectedUser.Text)> related to script <$($selectedScript.Text)>",'ABORTING','Ok','Error') | Out-Null
-                    $willabort = 'noabort'
+                if ($rawdata -eq $null) {
+                    [System.Windows.MessageBox]::Show("Database empty, no data to export",'INFO','Ok','Warning') | Out-Null
                 } else {
-                    $willabort = [System.Windows.MessageBox]::Show("Really delete <$($selectedUser.Text)::$($selectedScript.Text)>?",'CONFIRM','YesNo','Warning')
-                    if ($willabort -eq 'Yes') {
+                    $formlist = FormBase -w 250 -h 175 -text 'SELECT'
+                    Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:' | Out-Null
+                    $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
+                    Label -form $formlist -x 10 -y 50 -w 40 -text 'User:' | Out-Null
+                    $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
+                    OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
+                    $result = $formlist.ShowDialog()
+                    
+                    do {
                         $SQLiteConnection.Open()
-                        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                        $rowexists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                        $SQLiteConnection.Close()
+
+                        if ($rowexists -eq $null) {
+                            [System.Windows.MessageBox]::Show("No user <$($selectedUser.Text)> related to script <$($selectedScript.Text)>",'ABORTING','Ok','Error') | Out-Null
+                            $willabort = 'noabort'
+                        } else {
+                            $updateform = FormBase -w 300 -h 175 -text 'UPDATE'
+                            Label -form $updateform -x 10 -y 20 -w 100 -text 'New password:' | Out-Null
+                            $newpwd = TxtBox -form $updateform -x 120 -y 20 -w 150 -masked $true
+                            Label -form $updateform -x 10 -y 50 -w 100 -text 'Confirm password:' | Out-Null
+                            $confirmpwd = TxtBox -form $updateform -x 120 -y 50 -w 150 -masked $true
+                            OKButton -form $updateform -x 60 -y 90 -text "Ok" | Out-Null
+                            $result = $updateform.ShowDialog()
+                            if ($newpwd.Text -cne $confirmpwd.Text) {
+                                $willabort = [System.Windows.MessageBox]::Show("Password doesn't match. Aborting?",'ABORTING','YesNo','Error')
+                            } else {
+                                $willabort = 'noabort'
+                            }
+                        }
+                    } while ($willabort -eq 'No') 
+
+                    if ($willabort -eq 'noabort') {
+                        $SQLiteConnection.Open()
+                        $new_encrypted = EncryptString -keyfile $keyfile -instring $newpwd.Text
+                        Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "UPDATE Credits SET PSWD = '$new_encrypted' WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
                         $SQLiteConnection.Close()
 
                         $SQLiteConnection.Open()
@@ -366,12 +329,58 @@ INSERT INTO Logs (USER, HOST, ACTION, UPTIME)
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
-    'delete row',
+    'edit row',
     '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
 );
 "@
                         $SQLiteConnection.Close()
                         Write-Host -ForegroundColor Green ' DONE'
+                    }
+                }
+            } elseif ($deleteCredits.Checked -eq $true) {
+                Write-Host -NoNewline 'Deleting...'
+                $SQLiteConnection.Open()
+                $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
+                $SQLiteConnection.Close()
+                
+                if ($rawdata -eq $null) {
+                    [System.Windows.MessageBox]::Show("Database empty, no data to export",'INFO','Ok','Warning') | Out-Null
+                } else {
+                    $formlist = FormBase -w 250 -h 175 -text 'SELECT'
+                    Label -form $formlist -x 10 -y 20 -w 40 -text 'Script:' | Out-Null
+                    $selectedScript = DropDown -form $formlist -x 60 -y 20 -w 120 -opts ($rawdata.SCRIPT | select -Unique | sort)
+                    Label -form $formlist -x 10 -y 50 -w 40 -text 'User:' | Out-Null
+                    $selectedUser = DropDown -form $formlist -x 60 -y 50 -w 120 -opts ($rawdata.USER | select -Unique | sort)
+                    OKButton -form $formlist -x 60 -y 90 -text "Ok" | Out-Null
+                    $result = $formlist.ShowDialog()
+                    
+                    $SQLiteConnection.Open()
+                    $rowexists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT * FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                    $SQLiteConnection.Close()
+
+                    if ($rowexists -eq $null) {
+                        [System.Windows.MessageBox]::Show("No user <$($selectedUser.Text)> related to script <$($selectedScript.Text)>",'ABORTING','Ok','Error') | Out-Null
+                        $willabort = 'noabort'
+                    } else {
+                        $willabort = [System.Windows.MessageBox]::Show("Really delete <$($selectedUser.Text)::$($selectedScript.Text)>?",'CONFIRM','YesNo','Warning')
+                        if ($willabort -eq 'Yes') {
+                            $SQLiteConnection.Open()
+                            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Credits WHERE USER = '$($selectedUser.Text)' AND SCRIPT = '$($selectedScript.Text)';"
+                            $SQLiteConnection.Close()
+
+                            $SQLiteConnection.Open()
+                            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'delete row',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+);
+"@
+                            $SQLiteConnection.Close()
+                            Write-Host -ForegroundColor Green ' DONE'
+                        }
                     }
                 }
             }
@@ -442,26 +451,26 @@ VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
 
         $TheAction = 'add row'
     } elseif ($ExtAction -eq 'addGraph') {
-        $toPSWallet = @{ }
+        $AddEntry = @{ }
         $NewEntryForm = FormBase -w 450 -h 440 -text 'NEW ENTRY'
         Label -form $NewEntryForm -x 20 -y 10 -w 90 -text 'App name:' | Out-Null
-        $toPSWallet.APPNAME = TxtBox -form $NewEntryForm -x 120 -y 10 -w 275 -text 'RegisteredApp'
+        $AddEntry.APPNAME = TxtBox -form $NewEntryForm -x 120 -y 10 -w 275 -text 'RegisteredApp'
         Label -form $NewEntryForm -x 20 -y 60 -w 90 -text 'Client ID:' | Out-Null
-        $toPSWallet.APPID = TxtBox -form $NewEntryForm -x 120 -y 60 -w 275 -text 'null'
+        $AddEntry.APPID = TxtBox -form $NewEntryForm -x 120 -y 60 -w 275 -text 'null'
         Label -form $NewEntryForm -x 20 -y 90 -w 90 -text 'Object ID:' | Out-Null
-        $toPSWallet.OBJID = TxtBox -form $NewEntryForm -x 120 -y 90 -w 275 -text 'null'
+        $AddEntry.OBJID = TxtBox -form $NewEntryForm -x 120 -y 90 -w 275 -text 'null'
         Label -form $NewEntryForm -x 20 -y 120 -w 90 -text 'Tenant ID:' | Out-Null
-        $toPSWallet.TENANTID = TxtBox -form $NewEntryForm -x 120 -y 120 -w 275 -text 'null'
+        $AddEntry.TENANTID = TxtBox -form $NewEntryForm -x 120 -y 120 -w 275 -text 'null'
         Label -form $NewEntryForm -x 20 -y 170 -w 90 -text 'Secret name:' | Out-Null
-        $toPSWallet.SECRETNAME = TxtBox -form $NewEntryForm -x 120 -y 170 -w 275 -text 'SecretName'
+        $AddEntry.SECRETNAME = TxtBox -form $NewEntryForm -x 120 -y 170 -w 275 -text 'SecretName'
         Label -form $NewEntryForm -x 20 -y 200 -w 90 -text 'Secret ID:' | Out-Null
-        $toPSWallet.SECRETID = TxtBox -form $NewEntryForm -x 120 -y 200 -w 275 -text 'null'
+        $AddEntry.SECRETID = TxtBox -form $NewEntryForm -x 120 -y 200 -w 275 -text 'null'
         Label -form $NewEntryForm -x 20 -y 230 -w 90 -text 'Secret value:' | Out-Null
-        $toPSWallet.SECRETVALUE = TxtBox -form $NewEntryForm -x 120 -y 230 -w 275 -text 'null'
+        $AddEntry.SECRETVALUE = TxtBox -form $NewEntryForm -x 120 -y 230 -w 275 -text 'null'
         Label -form $NewEntryForm -x 20 -y 260 -w 90 -text 'Expire date:' | Out-Null
-        $toPSWallet.SECRETEXPDATE = TxtBox -form $NewEntryForm -x 120 -y 260 -w 275 -text '07/02/1980'
+        $AddEntry.SECRETEXPDATE = TxtBox -form $NewEntryForm -x 120 -y 260 -w 275 -text '07/02/1980'
         Label -form $NewEntryForm -x 20 -y 310 -w 90 -text 'UPN:' | Out-Null
-        $toPSWallet.UPN = TxtBox -form $NewEntryForm -x 120 -y 310 -w 275 -text 'foo@bar.baz'
+        $AddEntry.UPN = TxtBox -form $NewEntryForm -x 120 -y 310 -w 275 -text 'foo@bar.baz'
         OKButton -form $NewEntryForm -x 140 -y 350 -text "Ok" | Out-Null    
         $resultButton = $NewEntryForm.ShowDialog()
 
@@ -469,26 +478,26 @@ VALUES ('$ExtUsr', '$CryptedPwd', '$ExtScript');
         $ItExists = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 SELECT *
 FROM Graph
-WHERE APPNAME = '$($toPSWallet.APPNAME.Text)'
+WHERE APPNAME = '$($AddEntry.APPNAME.Text)'
 "@
         $SQLiteConnection.Close()
 
         if ([string]::IsNullOrEmpty($ItExists)) {
             $ErrorActionPreference= 'Stop'
             try {
-                $CryptedSecret = EncryptString -keyfile $keyfile -instring $toPSWallet.SECRETVALUE.Text
+                $CryptedSecret = EncryptString -keyfile $keyfile -instring $AddEntry.SECRETVALUE.Text
                 $SQLiteConnection.Open()
                 Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
 INSERT INTO Graph (APPNAME, APPID, OBJID, TENANTID, SECRETNAME, SECRETID, SECRETVALUE, SECRETEXPDATE, UPN, SCRIPT) 
-VALUES ('$($toPSWallet.APPNAME.Text)', 
-        '$($toPSWallet.APPID.Text)',
-        '$($toPSWallet.OBJID.Text)',
-        '$($toPSWallet.TENANTID.Text)',
-        '$($toPSWallet.SECRETNAME.Text)',
-        '$($toPSWallet.SECRETID.Text)',
+VALUES ('$($AddEntry.APPNAME.Text)', 
+        '$($AddEntry.APPID.Text)',
+        '$($AddEntry.OBJID.Text)',
+        '$($AddEntry.TENANTID.Text)',
+        '$($AddEntry.SECRETNAME.Text)',
+        '$($AddEntry.SECRETID.Text)',
         '$CryptedSecret',
-        '$(($toPSWallet.SECRETEXPDATE.Text | Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
-        '$($toPSWallet.UPN.Text)',
+        '$(($AddEntry.SECRETEXPDATE.Text | Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+        '$($AddEntry.UPN.Text)',
         '$ExtScript');
 "@
                 $SQLiteConnection.Close()
@@ -499,8 +508,8 @@ VALUES ('$($toPSWallet.APPNAME.Text)',
             }
             $ErrorActionPreference= 'Inquire'
 
-            foreach ($currentItem in ($toPSWallet.Keys | Sort-Object)) {
-                Write-Host -ForegroundColor Cyan "PSWallet>>> [$currentItem] $($toPSWallet[$currentItem].Text)"
+            foreach ($currentItem in ($AddEntry.Keys | Sort-Object)) {
+                Write-Host -ForegroundColor Cyan "PSWallet>>> [$currentItem] $($AddEntry[$currentItem].Text)"
             }
         } else {
             Write-Host -ForegroundColor Yellow 'PSWallet>>> RECORD ALREADY EXISTS'
@@ -551,7 +560,7 @@ WHERE SCRIPT = '$ExtScript' AND
         ($aUPN, $anApp) = ($matches[1], $matches[2])
         $SQLiteConnection.Open()
         $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-SELECT SECRETNAME, SECRETID, SECRETID, SECRETEXPDATE
+SELECT *
 FROM Graph
 WHERE SCRIPT = '$ExtScript' AND
       UPN = '$aUPN' AND
@@ -562,22 +571,41 @@ WHERE SCRIPT = '$ExtScript' AND
             $decryptedSecret = DecryptString -keyfile $keyfile -instring $TheResult.SECRETVALUE
             $formattedDate = $TheResult.SECRETEXPDATE | Get-Date -format "dd/MM/yyyy"
             $UpdateEntryForm = FormBase -w 450 -h 210 -text 'UPDATE ENTRY'
+            $EditSecret = @{ }
             Label -form $UpdateEntryForm -x 20 -y 10 -w 90 -text 'Secret name:' | Out-Null
-            $toPSWallet.APPNAME = TxtBox -form $UpdateEntryForm -x 120 -y 10 -w 275 -text "$($TheResult.SECRETNAME)"
+            $EditSecret.SECRETNAME = TxtBox -form $UpdateEntryForm -x 120 -y 10 -w 275 -text "$($TheResult.SECRETNAME)"
             Label -form $UpdateEntryForm -x 20 -y 40 -w 90 -text 'Secret ID:' | Out-Null
-            $toPSWallet.APPID = TxtBox -form $UpdateEntryForm -x 120 -y 40 -w 275 -text "$($TheResult.SECRETID)"
+            $EditSecret.SECRETID = TxtBox -form $UpdateEntryForm -x 120 -y 40 -w 275 -text "$($TheResult.SECRETID)"
             Label -form $UpdateEntryForm -x 20 -y 70 -w 90 -text 'Secret value:' | Out-Null
-            $toPSWallet.OBJID = TxtBox -form $UpdateEntryForm -x 120 -y 70 -w 275 -text "$decryptedSecret"
+            $EditSecret.SECRETVALUE = TxtBox -form $UpdateEntryForm -x 120 -y 70 -w 275 -text "$decryptedSecret"
             Label -form $UpdateEntryForm -x 20 -y 110 -w 90 -text 'Expire date:' | Out-Null
-            $toPSWallet.TENANTID = TxtBox -form $UpdateEntryForm -x 120 -y 110 -w 275 -text "$formattedDate"
+            $EditSecret.SECRETEXPDATE = TxtBox -form $UpdateEntryForm -x 120 -y 110 -w 275 -text "$formattedDate"
             OKButton -form $UpdateEntryForm -x 140 -y 150 -text "Ok" | Out-Null    
             $resultButton = $UpdateEntryForm.ShowDialog()
 
-            [System.Windows.MessageBox]::Show("TODO: scrivere la query x aggiornare il record",'INFO','Ok','Warning') | Out-Null
+            $SQLiteConnection.Open()
+            $new_encrypted = EncryptString -keyfile $keyfile -instring $EditSecret.SECRETVALUE.Text
+            Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+UPDATE Graph SET SECRETNAME = '$($EditSecret.SECRETNAME.Text)',
+                 SECRETID = '$($EditSecret.SECRETID.Text)',
+                 SECRETVALUE = '$new_encrypted',
+                 SECRETEXPDATE = '$(($EditSecret.SECRETEXPDATE.Text | Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+WHERE SCRIPT = '$ExtScript' AND
+      UPN = '$aUPN' AND
+      APPNAME = '$anApp';
+"@
+            $SQLiteConnection.Close()
+
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [APPID] $($TheResult.APPID)"
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [TENANTID] $($TheResult.TENANTID)"
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [UPN] $($TheResult.UPN)"
+            Write-Host  -ForegroundColor Cyan "PSWallet>>> [SECRETVALUE] $($EditSecret.SECRETVALUE.Text)"
+
+            $TheAction = 'edit row'
         } else {
             Write-Host  -ForegroundColor Yellow "PSWallet>>> DATA REDUNDANCY"
+            $TheAction = 'read table'
         }
-        $TheAction = 'edit row'
     }
 
     # external log
