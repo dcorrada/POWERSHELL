@@ -1,6 +1,6 @@
 <#
 Name......: AutoReply.ps1
-Version...: 24.05.1
+Version...: 24.06.1
 Author....: Dario CORRADA
 
 This script sets an autoreply message from Outlook 365. See more details on:
@@ -9,6 +9,9 @@ https://docs.microsoft.com/en-us/graph/api/user-update-mailboxsettings?view=grap
  *** Please Note ***
  It requires the Application/Delegated Permission (MailboxSettings.ReadWrite) 
  from Azure App Registration.
+
+ Thx to techguy:
+ https://www.techguy.at/set-out-of-office-reply-with-powershell-and-ms-graph-api/
 #>
 
 <# *******************************************************************************
@@ -41,31 +44,47 @@ $ErrorActionPreference= 'Stop'
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 $ErrorActionPreference= 'Inquire'
 
-<#
-Here there is a template of script retrieved from:
-https://www.techguy.at/set-out-of-office-reply-with-powershell-and-ms-graph-api/
+<# *******************************************************************************
+                            CREDENTIALS MANAGEMENT
+******************************************************************************* #>
+# starting release 24.05.1 credentials are managed from PSWallet
+Write-Host -NoNewline "Credential management... "
+$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1" -ascript 'AutoReply'
+if ($pswout.Count -eq 4) {
+    $UPN = $pswout[0]
+    $clientID = $pswout[1]
+    $tenantID = $pswout[2]
+    $Clientsecret = $pswout[3]
+    Write-Host -ForegroundColor Green 'Ok'
+} else {
+    [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red "Ko"
+    Pause
+    exit
+}
 
+# get mail message
+[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$OpenFileDialog.Title = "Select Mail Message"
+$OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+$OpenFileDialog.filter = 'Txt file (*.txt)| *.txt'
+$OpenFileDialog.ShowDialog() | Out-Null
+$InFile = $OpenFileDialog.filename
+$MessageInaBottle = Get-Content -Path $InFile | Out-String
 
-
-$clientID = "your Client ID"
-$Clientsecret = "Your Secret"
-$tenantID = "your Tenant"
-
-
-$UPN = "first.last@techguy.at"
-
-$HTMLintern=@"
-<html>\n<body>\n<p>I'm at our company's worldwide reunion and will respond to your message as soon as I return.<br>\n</p></body>\n</html>\n
-"@
-
-$HTMLextern=@"
-<html>\n<body>\n<p>I'm at the Contoso worldwide reunion and will respond to your message as soon as I return.<br>\n</p></body>\n</html>\n
-"@
-
-
-#Function
-
-
+# TGIF
+$whatta = Get-Date
+$StartTime = (Get-Date -Hour 18 -Minute 0 -Second 0 -Format "yyyy-MM-dd HH:mm:ss").ToString()
+if (($whatta.DayOfWeek -eq 'Saturday') -or ($whatta.DayOfWeek -eq 'Sunday')) {
+    Write-Host -ForegroundColor Cyan "HAVE A NICE DAY!!!"
+    Start-Sleep 2
+    exit
+} elseif ($whatta.DayOfWeek -eq 'Friday') {
+    $EndTime = ((Get-Date -Hour 9 -Minute 0 -Second 0).AddDays(3) | Get-Date -Format "yyyy-MM-dd HH:mm:ss").ToString()
+} else {
+    $EndTime = ((Get-Date -Hour 9 -Minute 0 -Second 0).AddDays(1) | Get-Date -Format "yyyy-MM-dd HH:mm:ss").ToString()
+}
 
 #Connect to GRAPH API
 $tokenBody = @{
@@ -80,40 +99,26 @@ $headers = @{
     "Content-type"  = "application/json"
 }
 
-
-
 #Set MailboxSettings
 $URLSETOOF = "https://graph.microsoft.com/v1.0/users/$UPN/mailboxSettings" 
 #plan
 $BodyJsonSETOOF = @"
             {
-                
                 "automaticRepliesSetting": {
                     "status": "Scheduled",
                     "scheduledStartDateTime": {
-                      "dateTime": " 2020-08-25 12:00:00",
+                      "dateTime": "$StartTime",
                       "timeZone": "UTC"
                     },
                     "scheduledEndDateTime": {
-                      "dateTime": " 2021-08-25 12:00:00",
+                      "dateTime": "$EndTime",
                       "timeZone": "UTC"
                     },
-                    "internalReplyMessage": "$HTMLintern",
-                    "externalReplyMessage": "$HTMLextern"
+                    "internalReplyMessage": "$MessageInaBottle",
+                    "externalReplyMessage": "$MessageInaBottle"
                 }
             }
 "@
-#immediately
-$BodyJsonSETOOF = @"
-            {
-                
-                "automaticRepliesSetting": {
-                    "status": "alwaysEnabled",
-                    "internalReplyMessage": "$HTMLintern",
-                    "externalReplyMessage": "$HTMLextern"
-                }
-            }
-"@
-    
+
 $Result = Invoke-RestMethod -Headers $headers -Body $BodyJsonSETOOF -Uri $URLSETOOF -Method PATCH
-#>
+

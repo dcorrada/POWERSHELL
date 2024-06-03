@@ -570,7 +570,7 @@ WHERE SCRIPT = '$ExtScript' AND
         if ($TheResult.SECRETVALUE.Count -eq 1) {
             $decryptedSecret = DecryptString -keyfile $keyfile -instring $TheResult.SECRETVALUE
             $formattedDate = $TheResult.SECRETEXPDATE | Get-Date -format "dd/MM/yyyy"
-            $UpdateEntryForm = FormBase -w 450 -h 210 -text 'UPDATE ENTRY'
+            $UpdateEntryForm = FormBase -w 450 -h 240 -text 'UPDATE ENTRY'
             $EditSecret = @{ }
             Label -form $UpdateEntryForm -x 20 -y 10 -w 90 -text 'Secret name:' | Out-Null
             $EditSecret.SECRETNAME = TxtBox -form $UpdateEntryForm -x 120 -y 10 -w 275 -text "$($TheResult.SECRETNAME)"

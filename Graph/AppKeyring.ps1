@@ -1,9 +1,5 @@
 param (
-    <#
-        *** TESTING ***
-        Mettere il parametro obbligatorio senza default e togliere il pasu alla fine una volta finito il testing
-    #> 
-    # [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$true)]
     [string]$ascript='AutoReply'
 )
 
@@ -161,5 +157,3 @@ Write-Host -ForegroundColor Blue "$($idi.UPN)"
 Write-Host -ForegroundColor Blue "$($idi.CLIENT)"
 Write-Host -ForegroundColor Blue "$($idi.TENANT)"
 Write-Host -ForegroundColor Blue "$($idi.SECRET)"
-
-Pause
