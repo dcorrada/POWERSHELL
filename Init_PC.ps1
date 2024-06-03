@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.05.1
+Version...: 24.06.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -45,7 +45,7 @@ $swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 260 -text "TreeSize"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $false -x 20 -y 260 -text "TreeSize"
 $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
@@ -71,7 +71,7 @@ if (($info[2] -match 'Windows 10') -and ($winget_exe -eq $null)) {
     $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 }
 $msstore_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
-#$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
+$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
 Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
@@ -141,9 +141,18 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $msstore_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE"    
+            $ErrorActionPreference= 'Stop'
+            try {
+                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $msstore_opts
+                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
+                Write-Host -ForegroundColor Green " DONE"  
+            }
+            catch {
+                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
+                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
+                Write-Host -ForegroundColor Green " DONE" 
+            }
+            $ErrorActionPreference= 'Inquire'
         } elseif ($item -eq '7ZIP') {            
             <# the version stored on MSstore has less features
             Write-Host -NoNewline "Installing 7-Zip..."
