@@ -141,18 +141,9 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
-            $ErrorActionPreference= 'Stop'
-            try {
-                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $msstore_opts
-                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-                Write-Host -ForegroundColor Green " DONE"  
-            }
-            catch {
-                $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
-                Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-                Write-Host -ForegroundColor Green " DONE" 
-            }
-            $ErrorActionPreference= 'Inquire'
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
+            Write-Host -ForegroundColor Green " DONE" 
         } elseif ($item -eq '7ZIP') {            
             <# the version stored on MSstore has less features
             Write-Host -NoNewline "Installing 7-Zip..."
