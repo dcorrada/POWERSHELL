@@ -1,17 +1,20 @@
 <#
-Name......: AutoReply.ps1
+Name......: AutoreplyAPI.ps1
 Version...: 24.06.1
 Author....: Dario CORRADA
 
-This script sets an autoreply message from Outlook 365. See more details on:
+This script sets an autoreply message from Outlook 365 through RESTful Graph API. See more details on:
 https://docs.microsoft.com/en-us/graph/api/user-update-mailboxsettings?view=graph-rest-1.0&tabs=http
 
  *** Please Note ***
- It requires the Application/Delegated Permission (MailboxSettings.ReadWrite) 
- from Azure App Registration.
+It requires the Application/Delegated Permission (MailboxSettings.ReadWrite)
+Check it out on Graph Explorer "Modify permissions" tab.
 
- Thx to techguy:
- https://www.techguy.at/set-out-of-office-reply-with-powershell-and-ms-graph-api/
+
+*** TO FIX ***
+Received 803 from server, maybe:
+ * the registered app needs further permissions
+ * the JSON in <$BodyJsonSETOOF> is not correctly formatted
 #>
 
 <# *******************************************************************************
@@ -27,7 +30,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Graph\\API\\AutoReply\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Graph\\API\\AutoreplyAPI\.ps1$" > $null
 $workdir = $matches[1]
 <# for testing purposes
 $workdir = Get-Location
@@ -49,7 +52,7 @@ $ErrorActionPreference= 'Inquire'
 ******************************************************************************* #>
 # starting release 24.05.1 credentials are managed from PSWallet
 Write-Host -NoNewline "Credential management... "
-$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1" -ascript 'AutoReply'
+$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1" -ascript 'AutoreplyAPI'
 if ($pswout.Count -eq 4) {
     $UPN = $pswout[0]
     $clientID = $pswout[1]

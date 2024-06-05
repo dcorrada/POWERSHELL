@@ -1,5 +1,5 @@
 **************************************************
-* Graph API - obtaining Client ID and Secret Key *
+* Azure App - obtaining Client ID and Secret Key *
 **************************************************
 
 1. Login to Microsoft Azure console
@@ -24,3 +24,9 @@ Please check the right permission(s) before integrates the app credentials into
 a new script. An overview of them can be obtained from the Graph Explorer 
 platform, clicking on "Modify permissions" tab:
 https://developer.microsoft.com/en-us/graph/graph-explorer
+
+Furthemore you can get, from Graph Explorer, specific permissions for the app:
+GET https://graph.microsoft.com/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')?$select=id,appId,displayName,appRoles,oauth2PermissionScopes,resourceSpecificApplicationPermissions
+
+More infoprmations are available at:
+https://learn.microsoft.com/en-us/graph/permissions-reference
