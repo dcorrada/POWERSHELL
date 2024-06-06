@@ -55,11 +55,15 @@ try {
 $ErrorActionPreference= 'Inquire'
 
 # get UPN
-$AccessForm = FormBase -w 300 -h 200 -text 'SENDER'
+$AccessForm = FormBase -w 380 -h 200 -text 'SENDER'
 Label -form $AccessForm -x 10 -y 20 -w 150 -text 'User Principal Name (UPN):' | Out-Null
-$usrname = TxtBox -form $AccessForm -text 'foo@bar.baz' -x 160 -y 20 -w 120
-Label -form $AccessForm -x 10 -y 60 -w 280 -text "Please Note: the UPN should be the same one`nyou will connect to Graph with" | Out-Null
-OKButton -form $AccessForm -x 80 -y 110 -w 120 -text "Ok"
+$usrname = TxtBox -form $AccessForm -text 'foo@bar.baz' -x 160 -y 20 -w 190
+Label -form $AccessForm -x 100 -y 55 -w 280 -h 40 -text @"
+            +++ Please Note +++
+The UPN should be the same one 
+   you will connect to Graph with
+"@ | Out-Null
+OKButton -form $AccessForm -x 120 -y 110 -w 120 -text "Ok"
 $resultButton = $AccessForm.ShowDialog()
 $UPN = $usrname.Text
 
