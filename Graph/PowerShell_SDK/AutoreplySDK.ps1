@@ -1,6 +1,6 @@
 <#
 Name......: AutoReplySDK.ps1
-Version...: 24.06.1
+Version...: 24.06.2
 Author....: Dario CORRADA
 
 This script sets an autoreply message from Outlook 365.
@@ -55,24 +55,20 @@ try {
 $ErrorActionPreference= 'Inquire'
 
 # get UPN
-Write-Host -NoNewline "Credential management... "
-$pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'AutoreplySDK'
-if ($pswout.Count -eq 2) {
-    $UPN = $pswout[0]
-} else {
-    [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
-    Write-Host -ForegroundColor Red "Ko"
-    Pause
-    exit
-}
-Write-Host -ForegroundColor Green 'Ok'
+$AccessForm = FormBase -w 300 -h 200 -text 'SENDER'
+Label -form $AccessForm -x 10 -y 20 -w 150 -text 'User Principal Name (UPN):' | Out-Null
+$usrname = TxtBox -form $AccessForm -text 'foo@bar.baz' -x 160 -y 20 -w 120
+Label -form $AccessForm -x 10 -y 60 -w 280 -text "Please Note: the UPN should be the same one`nyou will connect to Graph with" | Out-Null
+OKButton -form $AccessForm -x 80 -y 110 -w 120 -text "Ok"
+$resultButton = $AccessForm.ShowDialog()
+$UPN = $usrname.Text
 
 # get mail message
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Select Mail Message"
 $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
-$OpenFileDialog.filter = 'Txt file (*.txt)| *.txt'
+$OpenFileDialog.filter = 'html file (*.html)| *.html'
 $OpenFileDialog.ShowDialog() | Out-Null
 $InFile = $OpenFileDialog.filename
 $MessageInaBottle = Get-Content -Path $InFile | Out-String
