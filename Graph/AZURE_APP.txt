@@ -1,6 +1,7 @@
 **************************************************
 * Azure App - obtaining Client ID and Secret Key *
 **************************************************
+see also: https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
 
 1. Login to Microsoft Azure console
 Navigate to Azure Active Directory* and click on App Registration from the left 

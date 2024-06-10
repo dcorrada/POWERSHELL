@@ -127,6 +127,7 @@ Write-Host -NoNewline "Setting autoreply..."
 try {
     $stdout = Update-MgUserMailboxSetting -UserId $UPN -BodyParameter $params
     Write-Host -ForegroundColor Green ' DONE'
+    Start-Sleep -Milliseconds 1000
 }
 catch {
     Write-Host -ForegroundColor Red ' FAILED'

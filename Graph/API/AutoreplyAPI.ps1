@@ -71,7 +71,7 @@ if ($pswout.Count -eq 4) {
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Select Mail Message"
 $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
-$OpenFileDialog.filter = 'Txt file (*.txt)| *.txt'
+$OpenFileDialog.filter = 'html file (*.html)| *.html'
 $OpenFileDialog.ShowDialog() | Out-Null
 $InFile = $OpenFileDialog.filename
 $MessageInaBottle = Get-Content -Path $InFile | Out-String
