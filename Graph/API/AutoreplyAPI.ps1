@@ -11,11 +11,9 @@ It requires the Application/Delegated Permission (MailboxSettings.ReadWrite)
 Check it out on Graph Explorer "Modify permissions" tab.
 
 
-*** TO FIX ***
-Received 803 from server, maybe:
- * the registered app needs further permissions
- * the JSON in <$BodyJsonSETOOF> is not correctly formatted
-#>
+*** WONTFIX(?) ***
+I still stuck in troubleshooting - getting 400 or 403 errors - probably due to:
+https://learn.microsoft.com/en-us/graph/resolve-auth-errors#400-bad-request-or-403-forbidden-does-the-user-comply-with-their-organizations-conditional-access-ca-policies
 
 <# *******************************************************************************
                                     HEADER
