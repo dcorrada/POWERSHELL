@@ -82,6 +82,11 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
+            <# 
+            There are several packages relayed to various Chrome flavours. 
+            I selected 'Google Chrome (EXE)' package and not 'Google Chrome' one, beause of this:
+            https://stackoverflow.com/questions/75647313/winget-install-my-app-receives-installer-hash-does-not-match
+            #>  
             Write-Host -NoNewline "Installing Google Chrome..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome (EXE)', $winget_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
