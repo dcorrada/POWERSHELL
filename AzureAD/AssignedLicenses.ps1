@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.04.6
+Version...: 24.05.2
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -37,7 +37,6 @@ Add-Type -AssemblyName PresentationFramework
 $ErrorActionPreference= 'Stop'
 do {
     try {
-        Import-Module -Name "$workdir\Modules\Gordian.psm1"
         Import-Module -Name "$workdir\Modules\Forms.psm1"
         Import-Module MSOnline
         Import-Module ImportExcel
@@ -64,108 +63,22 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                             CREDENTIALS MANAGEMENT
 ******************************************************************************* #>
-# the db files
-$usedb = $true
-$dbfile = $env:LOCALAPPDATA + '\AssignedLicenses.encrypted'
-$keyfile = $env:LOCALAPPDATA + '\AssignedLicenses.key'
-
-# looking for existing DB file
-if (Test-Path $dbfile -PathType Leaf) {
-    $adialog = FormBase -w 350 -h 170 -text "DATABASE"
-    if (Test-Path $keyfile -PathType Leaf) {
-        $enterDB = RadioButton -form $adialog -checked $true -x 20 -y 20 -w 500 -h 30 -text "Enter the DB file"
-        $cleanDB = RadioButton -form $adialog -checked $false -x 20 -y 50 -w 500 -h 30 -text "Delete the DB file"
-    } else {
-        $enterDB = RadioButton -form $adialog -enabled $false -checked $false -x 20 -y 20 -w 500 -h 30 -text "Enter the DB file (NO key to decrypt!)"
-        $cleanDB = RadioButton -form $adialog -checked $true -x 20 -y 50 -w 500 -h 30 -text "Delete the DB file"
-    }
-    OKButton -form $adialog -x 100 -y 90 -text "Ok" | Out-Null
-    $result = $adialog.ShowDialog()
-    if ($cleanDB.Checked -eq $true) {
-        $answ = [System.Windows.MessageBox]::Show("Really delete DB file?",'DELETE','YesNo','Warning')
-        if ($answ -eq "Yes") {    
-            Remove-Item -Path $dbfile
-        }
-    }
+# starting release 24.05.1 credentials are managed from PSWallet
+Write-Host -NoNewline "Credential management... "
+$pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'AssignedLicenses'
+if ($pswout.Count -eq 2) {
+    $credits = New-Object System.Management.Automation.PSCredential($pswout[0], (ConvertTo-SecureString $pswout[1] -AsPlainText -Force))
+} else {
+    [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red "Ko"
+    Pause
+    exit
 }
-
-if (!(Test-Path $dbfile -PathType Leaf)) {
-    $answacc = [System.Windows.MessageBox]::Show("No DB file found.`nDo you want accessing tenant directly?",'ACCESS','YesNo','Info')
-    if ($answacc -eq "Yes") {    
-        $usedb = $false
-        $singlelogin = LoginWindow
-    } else {
-            # creating key file if not available
-        if (!(Test-Path $keyfile -PathType Leaf)) {
-            CreateKeyFile -keyfile "$keyfile" | Out-Null
-        }
-
-        # creating DB file
-        $adialog = FormBase -w 400 -h 300 -text "DB INIT"
-        Label -form $adialog -x 20 -y 20 -w 500 -h 30 -text "Initialize your DB as follows (NO space allowed)" | Out-Null
-        $dbcontent = TxtBox -form $adialog -x 20 -y 50 -w 300 -h 150 -text ''
-        $dbcontent.Multiline = $true;
-        $dbcontent.Text = @'
-USR;PWD
-user1@foobar.baz;password1
-user2@foobar.baz;password2
-'@
-        $dbcontent.AcceptsReturn = $true
-        OKButton -form $adialog -x 100 -y 220 -text "Ok" | Out-Null
-        $result = $adialog.ShowDialog()
-        $tempusfile = $env:LOCALAPPDATA + '\AssignedLicenses.csv'
-        $dbcontent.Text | Out-File $tempusfile
-        EncryptFile -keyfile "$keyfile" -infile "$tempusfile" -outfile "$dbfile" | Out-Null
-    }
-}
-
-if ($usedb -eq $true) {
-    # reading DB file
-    $filecontent = (DecryptFile -keyfile "$keyfile" -infile "$dbfile").Split(" ")
-    $allowed = @{}
-    foreach ($newline in $filecontent) {
-        if ($newline -ne 'USR;PWD') {
-            ($username, $passwd) = $newline.Split(';')
-            $allowed[$username] = $passwd
-        }
-    }
-
-    # select the account to access
-    $adialog = FormBase -w 350 -h (($allowed.Count * 30) + 120) -text "SELECT AN ACCOUNT"
-    $they = 20
-    $choices = @()
-    foreach ($username in $allowed.Keys) {
-        if ($they -eq 20) {
-            $isfirst = $true
-        } else {
-            $isfirst = $false
-        }
-        $choices += RadioButton -form $adialog -x 20 -y $they -w 300 -checked $isfirst -text $username
-        $they += 30
-    }
-    OKButton -form $adialog -x 100 -y ($they + 10) -text "Ok" | Out-Null
-    $result = $adialog.ShowDialog()
-}
-
+Write-Host -ForegroundColor Green 'Ok'
 
 <# *******************************************************************************
                             FETCHING DATA FROM TENANT
 ******************************************************************************* #>
-# get credentials for accessing
-if ($usedb -eq $true) {
-    foreach ($item in $choices) {
-        if ($item.Checked) {
-            $usr = $item.Text
-            $plain_pwd = $allowed[$usr]
-        }
-    }
-    $pwd = ConvertTo-SecureString $plain_pwd -AsPlainText -Force
-    $credits = New-Object System.Management.Automation.PSCredential($usr, $pwd)
-} else {
-    $credits = $singlelogin
-}
-
-
 # connect to Tenant
 Write-Host -NoNewline "Connecting to the Tenant..."
 $ErrorActionPreference= 'Stop'
@@ -331,6 +244,13 @@ if ($UseRefFile -eq "Yes") {
                 if ($MsolUsrData[$aUser].LICENSES.ContainsKey($aLicense)) {
                     $OldTime = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
                     $NewTime = $MsolUsrData[$aUser].LICENSES[$aLicense]
+                    <#
+                    By default, the field TIMESTAMP refers to any change in license assignement.
+                    If would like to also track the time in changing account proprerties substitue the
+                    if clause as follows, for instance:
+                    
+                    if (($OldTime -lt $NewTime) -and ($MsolUsrData[$aUser].BLOCKED -eq $history.BLOCKED)) {
+                    #>
                     if ($OldTime -lt $NewTime) {
                         $MsolUsrData[$aUser].LICENSES[$aLicense] = $OldTime
                     }
@@ -420,6 +340,9 @@ if (($orphanedrecords.Count) -ge 1) {
 if ($UseRefFile -eq 'Yes') { 
     # create backup file    
     $bkp_file = $xlsx_file + '.bkp'
+    if (Test-Path -Path $bkp_file -PathType Leaf) {
+        Remove-Item -Path $bkp_file -Force
+    }
     Copy-Item -Path $xlsx_file -Destination $bkp_file -Force
 
     # remove older worksheets

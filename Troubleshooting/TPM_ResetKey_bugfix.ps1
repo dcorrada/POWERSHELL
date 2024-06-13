@@ -1,6 +1,6 @@
 <#
 Name......: TPM_ResetKey_bugfix.ps1
-Version...: 22.12.1
+Version...: 24.06.1
 Author....: Dario CORRADA
 
 This script will try to patch the error code 80090016 "Keyset does not exist".
@@ -58,7 +58,7 @@ if ($clearTPM.Checked) {
 } elseif ($ADALbypass.Checked) {
 # https://answers.microsoft.com/en-us/msoffice/forum/all/keyset-does-not-exist-tpm/de690cea-bba8-4260-8985-872e136e76c2
 
-    [System.Windows.MessageBox]::Show("Disabling ADAL or WAM not recommended`nfor fixing Office sign-in or activation issues.`n`nClick Ok to close Outlook and Teams clients`nand then proceeding...",'WARNING','Ok','Warning') | Out-Null
+    [System.Windows.MessageBox]::Show("The following approaches are not recommended`nfor fixing Office sign-in or activation issues.`n`nClick Ok to close Outlook and Teams clients`nand then proceeding...",'WARNING','Ok','Warning') | Out-Null
     
     # killing Outlook and Teams
     $ErrorActionPreference= 'SilentlyContinue'
@@ -79,17 +79,27 @@ if ($clearTPM.Checked) {
     }
     $ErrorActionPreference= 'Inquire'
 
-    <# The following chunck is commented out since op and other said that such solution wont works
+    $sdialog = FormBase -w 275 -h 200 -text "STRATEGY"
+    $ADALoff = RadioButton -form $sdialog -x 20 -y 10 -checked $false -text 'Disable ADAL'
+    $WAMon = RadioButton -form $sdialog -x 20 -y 40 -checked $true -text 'WAM override'
+    $Basil = RadioButton -form $sdialog -x 20 -y 70 -checked $false -text 'Enable ProtectionPolicy'
+    OKButton -form $sdialog -x 75 -y 120 -text "Ok" | Out-Null
+    $result = $sdialog.ShowDialog()
 
-    # Disabling ADAL, according to the original thread:
-    # https://answers.microsoft.com/en-us/outlook_com/forum/all/keyset-does-not-exist-outlook-throw-an-error-if-i/4205d705-10ca-4dbf-acca-a851c45bd212
-    $regpath = 'HKCU:\SOFTWARE\Microsoft\Office\16.0\Common\Identity'
-    New-ItemProperty -Path $regpath -Name 'EnableADAL' -Value 0 -PropertyType DWord
-    #>
-
-    # WAM override, according to Rick Song
-    $regpath = 'HKCU:\SOFTWARE\Microsoft\Office\16.0\Common\Identity'
-    New-ItemProperty -Path $regpath -Name 'DisableADALatopWAMOverride' -Value 1 -PropertyType DWord
+    if ($ADALoff.Checked) {
+        # Disabling ADAL, according to the original thread:
+        # https://answers.microsoft.com/en-us/outlook_com/forum/all/keyset-does-not-exist-outlook-throw-an-error-if-i/4205d705-10ca-4dbf-acca-a851c45bd212
+        $regpath = 'HKCU:\SOFTWARE\Microsoft\Office\16.0\Common\Identity'
+        New-ItemProperty -Path $regpath -Name 'EnableADAL' -Value 0 -PropertyType DWord
+    } elseif ($WAMon.Checked) {
+        # WAM override, according to Rick Song
+        $regpath = 'HKCU:\SOFTWARE\Microsoft\Office\16.0\Common\Identity'
+        New-ItemProperty -Path $regpath -Name 'DisableADALatopWAMOverride' -Value 1 -PropertyType DWord
+    } elseif ($Basil.Checked) {
+        # Basilio's Shuffle
+        $regpath = 'HKLM:\SOFTWARE\Microsoft\Cryptography\Protect\Providers\df9d8cd0-1501-11d1-8c7a-00c04fc297eb'
+        New-ItemProperty -Path $regpath -Name 'ProtectionPolicy' -Value 1 -PropertyType DWord
+    }
 }
 
 # reboot

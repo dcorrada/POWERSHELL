@@ -1,6 +1,6 @@
 <#
 Name......: UpdateMe.ps1
-Version...: 24.05.1
+Version...: 24.05.2
 Author....: Dario CORRADA
 
 This script looks for installed Powershell modules and try to update them
@@ -18,6 +18,11 @@ if ($testadmin -eq $false) {
 $fullname = $MyInvocation.MyCommand.Path
 $fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Updates\\UpdateMe\.ps1$" > $null
 $workdir = $matches[1]
+<# for testing purposes
+$workdir = Get-Location
+$workdir = $workdir.Path
+#>
+
 
 # header 
 $WarningPreference = 'SilentlyContinue'
@@ -64,7 +69,7 @@ foreach ($item in $halloffame) {
 OKButton -form $adialog -x 150 -y ($they + 20) -text "Ok" | Out-Null
 $result = $adialog.ShowDialog()
 
-# perform instalation
+# perform installation
 foreach ($item in ($selmods.Keys | Sort-Object)) {
     Write-Host -NoNewline "Updating $item... "
     if ($selmods[$item].Checked) {
@@ -85,44 +90,95 @@ foreach ($item in ($selmods.Keys | Sort-Object)) {
 }
 
 <# 
-Cleaning previous installed versions
-
-thx to Harm Veenstra
+Cleaning previous installed versions, thx to Harm Veenstra
 https://powershellisfun.com/2022/07/11/updating-your-powershell-modules-to-the-latest-version-plus-cleaning-up-older-versions/
-#>
-$adialog = FormBase -w 425 -h ((($halloffame.Count-1) * 30) + 125) -text "PREVIOUS INSTALLED"
-Label -form $adialog -x 20 -y 20 -w 300 -h 30 -text 'Would you uninstall previous version(s)?' | Out-Null
-$they = 50
-$selmods = @{}
-foreach ($item in $halloffame) {
-    $previous = Get-InstalledModule -Name $item.Name -AllVersions | Sort-Object PublishedDate -Descending
-    $current = $previous[0].Version.ToString() # latest version installed
-    if ($previous.Count -gt 1) {
-        for ($i = 1; $i -lt $previous.Count; $i++) {
-            $akey = $item.Name + ' - ' + $previous[$i].Version
-            $selmods[$akey] = CheckBox -form $adialog -checked $false -w 350 -x 20 -y $they -text $akey
-            $they += 30
-        }
-    }
-}
-OKButton -form $adialog -x 150 -y ($they + 20) -text "Ok" | Out-Null
-$result = $adialog.ShowDialog()
-foreach ($item in $selmods.Keys) {
-    if ($selmods[$item].Checked) {
-        Write-Host -NoNewline "Uninstalling $item... "
-        $ErrorActionPreference= 'Stop'
-        Try {
-            $item -match "^([a-zA-Z_\-\.0-9]+) - ([0-9\.]+)$" > $null
-            Uninstall-Module -Name $matches[1] -RequiredVersion $matches[2] -Force:$True -ErrorAction Stop
-            $matches = @()
-            Write-Host -ForegroundColor Green 'OK'
-            $ErrorActionPreference= 'Inquire'
-        }
-        Catch {
-            Write-Host -ForegroundColor Red 'KO'
-            Write-Output "Error: $($error[0].ToString())`n"
-            Pause
-        }
-    }
-}
 
+For uninstall of Microsoft.Graph and related submodules, thx to Andres Bohren
+https://blog.icewolf.ch/archive/2022/03/18/cleanup-microsoft-graph-powershell-modules/
+#>
+$answ = [System.Windows.MessageBox]::Show("Clean previous installed versions?",'REMOVE','YesNo','Info')
+if ($answ -eq "Yes") {
+    
+    Write-Host -NoNewline "Checking previous versions..."
+    $hallofshame = @()
+    foreach ($item in $halloffame) {
+        $previous = Get-InstalledModule -Name $item.Name -AllVersions | Sort-Object PublishedDate -Descending
+        $current = $previous[0].Version.ToString() # latest version installed
+        Write-Host -NoNewline "."
+        if ($previous.Count -gt 1) {
+            Write-Host -NoNewline "."
+            for ($i = 1; $i -lt $previous.Count; $i++) {
+                $old = $item.Name + ' - ' + $previous[$i].Version
+                $hallofshame += $old
+            }
+        }
+    }
+    Write-Host -ForegroundColor Green " DONE"
+
+    $adialog = FormBase -w 425 -h ((($hallofshame.Count+1) * 30) + 125) -text "PREVIOUS INSTALLED"
+    Label -form $adialog -x 20 -y 20 -w 300 -h 30 -text 'Would you uninstall previous version(s)?' | Out-Null
+    $they = 50
+    $selmods = @{}
+    foreach ($item in $hallofshame) {
+        $selmods[$item] = CheckBox -form $adialog -checked $false -w 350 -x 20 -y $they -text $item
+        $they += 30
+    }
+    OKButton -form $adialog -x 150 -y ($they + 20) -text "Ok" | Out-Null
+    $result = $adialog.ShowDialog()
+
+    $subitems = @()
+    foreach ($item in ($selmods.Keys | Sort-Object)) {
+        if ($selmods[$item].Checked) {
+            if ($item -match 'Microsoft.Graph') {
+                $item -match "^([a-zA-Z_\-\.0-9]+) - ([0-9\.]+)$" > $null
+                $ReqVer = $matches[2]
+                foreach ($submodule in ((Get-Module Microsoft.Graph* -ListAvailable | Select-Object Name -Unique) | Sort-Object)) {
+                    $string = $submodule.Name + ' - ' + [string]$ReqVer
+                    $subitems += $string
+                }
+            } else {
+                $subitems += $item
+            }
+        }
+    }
+
+    $ErrorActionPreference= 'Stop'
+    $thelastone = @()
+    foreach ($subitem in ($subitems | Sort-Object)) {
+        # keep aside Authentication submodule and the parent, queue them as the lastest to be removed
+        if (($subitem -match "^Microsoft.Graph.Authentication - ") -or ($subitem -match "^Microsoft.Graph - ")) {
+            $thelastone += $subitem
+        } else {
+            Write-Host -NoNewline "Uninstalling $subitem... "
+            Try {
+                $subitem -match "^([a-zA-Z_\-\.0-9]+) - ([0-9\.]+)$" > $null
+                Uninstall-Module -Name $matches[1] -RequiredVersion $matches[2] -Force:$True -ErrorAction Stop
+                $matches = @()
+                Write-Host -ForegroundColor Green 'OK'
+                $ErrorActionPreference= 'Inquire'
+            }
+            Catch {
+                Write-Host -ForegroundColor Red 'KO'
+                Write-Output "Error: $($error[0].ToString())`n"
+                Pause
+            }
+        }
+    }
+    if ($thelastone.Count -gt 0) {
+        foreach ($currentItemName in ($thelastone | Sort-Object -Descending)) {
+            Write-Host -NoNewline "Uninstalling $currentItemName... "
+            Try {
+                $currentItemName -match "^([a-zA-Z_\-\.0-9]+) - ([0-9\.]+)$" > $null
+                Uninstall-Module -Name $matches[1] -RequiredVersion $matches[2] -Force:$True -ErrorAction Stop
+                $matches = @()
+                Write-Host -ForegroundColor Green 'OK'
+                $ErrorActionPreference= 'Inquire'
+            }
+            Catch {
+                Write-Host -ForegroundColor Red 'KO'
+                Write-Output "Error: $($error[0].ToString())`n"
+                Pause
+            }
+        }
+    }
+}

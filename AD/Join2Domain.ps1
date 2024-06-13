@@ -43,7 +43,18 @@ if ($answ -eq "No") {
 }
 
 # getting AD credentials
-$ad_login = LoginWindow
+# starting release 24.05.1 credentials are managed from PSWallet
+Write-Host -NoNewline "Credential management... "
+$pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'Join2Domain'
+if ($pswout.Count -eq 2) {
+    $ad_login = New-Object System.Management.Automation.PSCredential($pswout[0], (ConvertTo-SecureString $pswout[1] -AsPlainText -Force))
+} else {
+    [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red "Ko"
+    Pause
+    exit
+}
+Write-Host -ForegroundColor Green 'Ok'
 
 # OU dialog box
 $form_modalita = FormBase -w 300 -h 230 -text "OU DESTINATION"
