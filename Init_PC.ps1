@@ -45,7 +45,7 @@ $swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $false -x 20 -y 260 -text "TreeSize"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
 $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
