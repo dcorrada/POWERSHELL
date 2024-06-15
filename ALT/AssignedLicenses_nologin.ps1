@@ -162,7 +162,7 @@ $xlsx_file = $OpenFileDialog.filename
 
 # [Licenses_Pool]
 $timeline = Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool' | Select UPTIME | Get-Unique -AsString
-$adialog = FormBase -w 250 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
+$adialog = FormBase -w 300 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
 Label -form $adialog -x 20 -y 20 -w 200 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
 $they = 40
 $choices = @()
@@ -232,8 +232,12 @@ $csvdestfile = "C:$($env:HOMEPATH)\Downloads\SkuCatalog.csv"
 if (Test-Path -Path $csvdestfile -PathType Leaf) { Remove-Item -Path $csvdestfile -Force }
 Invoke-WebRequest -Uri 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv' -OutFile "$csvdestfile"
 $SkuCatalog_rawdata = @{}
-$MsolUsrData_translates = @{} 
+$MsolUsrData_translates = @{}
+$tot = (Import-Csv -Path $csvdestfile).Count - 1
+$usrcount = 0
+$parsebar = ProgressBar
 foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
+    $usrcount ++
     if (!($SkuCatalog_rawdata.ContainsKey("$($currentItem.GUID)"))) {
         $SkuCatalog_rawdata["$($currentItem.GUID)"] = @{
             SKUID   = "$($currentItem.String_Id)"
@@ -242,34 +246,57 @@ foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
         if ($avail_lics.Keys -contains "$($currentItem.String_Id)") {
             $MsolUsrData_translates["$($currentItem.Product_Display_Name)"] = "$($currentItem.String_Id)"
         }
-        Write-Host -NoNewline '.'
     }
+
+    # progressbar
+    $percent = ($usrcount / $tot)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
+    $formattato = '{0:0.0}' -f $percent
+    [int32]$progress = $percent   
+    $parsebar[2].Text = ("User {0} out of {1} parsed [{2}%]" -f ($usrcount, $tot, $formattato))
+    if ($progress -ge 100) {
+        $parsebar[1].Value = 100
+    } else {
+        $parsebar[1].Value = $progress
+    }
+    [System.Windows.Forms.Application]::DoEvents()
 }
 Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
+$parsebar[0].Close()
 
-<# 
-Patch $MsolUsrData (convert license description into SKUID)
-Please Note: in this version translation refers to language en<->it 
-#>
+# Patch $MsolUsrData (convert license description into SKUID)
 foreach ($aUPN in $MsolUsrData.Keys) {
     if ($MsolUsrData[$aUPN].LICENSED -eq 'True') {
         $SKUlist = @()
         foreach ($aDesc in $MsolUsrData[$aUPN].LICENSES.Keys) {
+            # specific translation from italian tenant version
             $aDesc = $aDesc.replace('Piano','Plan')
             $aDesc = $aDesc.replace('Visio - Plan 2','Visio Online Plan 2')
+            $aDesc = $aDesc.replace('Planner Plan 1','Project Plan 1')
+
             if ($MsolUsrData_translates.ContainsKey($aDesc)) {
                 $SKUlist += "$($MsolUsrData_translates[$aDesc])"
-            } elseif (!(('Microsoft Fabric (gratuito)', 
+            
+                # *** TODO *** patchare $MsolUsrData (descrizione licenza -> SKUID)
+            
+            } elseif (!(('Microsoft Fabric (gratuito)', # blacklisted SKUs
                 'Microsoft Power Automate Free', 
                 'Microsoft Teams Exploratory') -contains "$aDesc")) {
-                # those SKU not translated nor blacklisted
-                Write-Host "[$aDesc] assigned to [$aUPN]"
-                <#
-                Mettere un pop up o una pause e gestire le eccezioni da inserire manualmente nell'excel
-                Al momento devo solo gestire questo
-                
-                [Planner Plan 1] assigned to [andrea.arcieri@agmsolutions.net]
-                #>
+
+                # raise warning: this SKU is not translated nor blacklisted
+                Write-Host -ForegroundColor Yellow "untracked [$aDesc] assigned to [$aUPN]"
+                [System.Windows.MessageBox]::Show(@"
+license [$aDesc]
+assigned to [$aUPN]
+NOT TRACKED YET
+
+Please edit your Excel reference file once script have been closed
+"@,'NEW SKU','Ok','Warning') | Out-Null
+
+                # *** TODO *** patchare eccezione $MsolUsrData (descrizione licenza -> ???)
+
             }
         }
     }
