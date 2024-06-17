@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses_nologin.ps1
-Version...: 24.06.1
+Version...: 24.06.2
 Author....: Dario CORRADA
 
 This script is a recovery version of <AssigneLicenses.ps1>, it requires either 
@@ -190,7 +190,8 @@ foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Poo
             $history.AVAILABLE,
             $history.TOTAL
         )
-    } elseif ($history.UPTIME -eq $timeline[$timeline.Count-1].UPTIME) {
+    }
+    if ($history.UPTIME -eq $timeline[$timeline.Count-1].UPTIME) {
         $avail_lics[$history.LICENSE] = @{
             TOTAL   = $history.TOTAL
             AVAIL   = $history.AVAILABLE 
@@ -263,8 +264,9 @@ foreach ($currentItem in (Import-Csv -Path $csvdestfile)) {
     }
     [System.Windows.Forms.Application]::DoEvents()
 }
-Write-Host -ForegroundColor Green "$($SkuCatalog_rawdata.Keys.Count) license type found"
+Write-Host -ForegroundColor Blue " $($SkuCatalog_rawdata.Keys.Count) license type found"
 $parsebar[0].Close()
+Start-Sleep -Milliseconds 1000
 
 # Patch $MsolUsrData (convert license description into SKUID)
 foreach ($aUPN in $MsolUsrData.Keys) {
@@ -278,9 +280,6 @@ foreach ($aUPN in $MsolUsrData.Keys) {
 
             if ($MsolUsrData_translates.ContainsKey($aDesc)) {
                 $SKUlist += "$($MsolUsrData_translates[$aDesc])"
-            
-                # *** TODO *** patchare $MsolUsrData (descrizione licenza -> SKUID)
-            
             } elseif (!(('Microsoft Fabric (gratuito)', # blacklisted SKUs
                 'Microsoft Power Automate Free', 
                 'Microsoft Teams Exploratory') -contains "$aDesc")) {
@@ -294,9 +293,17 @@ NOT TRACKED YET
 
 Please edit your Excel reference file once script have been closed
 "@,'NEW SKU','Ok','Warning') | Out-Null
-
-                # *** TODO *** patchare eccezione $MsolUsrData (descrizione licenza -> ???)
-
+                $SKUlist += "[TO_FIX] $aDesc"
+            }
+        }
+        $MsolUsrData[$aUPN].LICENSES = @{} # re-init for patching SKUs
+        if ($SKUlist.Count -eq 0) {
+            $MsolUsrData[$aUPN].LICENSES = @{
+                'NONE'        = Get-Date -format "yyyy/MM/dd"
+            }
+        } else {
+            foreach ($currentSKU in $SKUlist) {
+                $MsolUsrData[$aUPN].LICENSES[$currentSKU] = Get-Date -format "yyyy/MM/dd"
             }
         }
     }
@@ -304,5 +311,241 @@ Please edit your Excel reference file once script have been closed
 
 
 # [Assigned_Licenses]
-# si prosegue dalla linea 235 di AssignedLicenses.ps1
+$orphanedrecords = @()
+Write-Host "Merging [Assigned_Licenses] data..."
+foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
+    $aUser = $history.USRNAME
+    if ($MsolUsrData.ContainsKey($aUser)) {
+        if ($history.USRTYPE -ne 'na') {
+            $MsolUsrData[$aUser].USRTYPE = $history.USRTYPE
+        }
+        $aLicense = $history.LICENSE
+        if ($MsolUsrData[$aUser].LICENSES.ContainsKey($aLicense)) {
+            $OldTime = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
+            $NewTime = $MsolUsrData[$aUser].LICENSES[$aLicense]
+            <#
+            By default, the field TIMESTAMP refers to any change in license assignement.
+            If would like to also track the time in changing account proprerties substitue the
+            if clause as follows, for instance:
+            
+            if (($OldTime -lt $NewTime) -and ($MsolUsrData[$aUser].BLOCKED -eq $history.BLOCKED)) {
+            #>
+            if ($OldTime -lt $NewTime) {
+                $MsolUsrData[$aUser].LICENSES[$aLicense] = $OldTime
+            }
+        } else {
+            Write-Host -ForegroundColor Yellow "[$aLicense] no longer assigned to [$aUser]"
+            if ($history.LICENSE -eq 'NONE') {
+                $anote = 'assigned license(s) to this user'
+            } else {
+                $anote = 'license dismissed for this user'
+            }
+            $orphanedrecords += ,@(
+                $history.USRNAME,
+                $history.DESC,
+                $history.USRTYPE,
+                ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
+                $history.BLOCKED,
+                $history.LICENSED,
+                $history.LICENSE,
+                (Get-Date -format "yyyy/MM/dd"),
+                $anote
+            )
+        }
+    } else {
+        Write-Host -ForegroundColor Yellow "[$aUser] no longer exists on tenant"
+        $orphanedrecords += ,@(
+            $history.USRNAME,
+            $history.DESC,
+            $history.USRTYPE,
+            ($history.CREATED | Get-Date -format "yyyy/MM/dd"),
+            'NULL',
+            'NULL',
+            $history.LICENSE,
+            (Get-Date -format "yyyy/MM/dd"),
+            'user no longer exists on tenant'
+        )
+    }
+}
+Pause
+$Assigned_Licenses_dataframe = @()
+foreach ($item in $MsolUsrData.Keys) {
+    foreach ($subitem in $MsolUsrData[$item].LICENSES.Keys) {
+        $Assigned_Licenses_dataframe += ,@(
+            $MsolUsrData[$item].USRNAME,
+            $MsolUsrData[$item].DESC,
+            $MsolUsrData[$item].USRTYPE.ToString(),
+            $MsolUsrData[$item].CREATED.ToString(),
+            $MsolUsrData[$item].BLOCKED.ToString(),
+            $MsolUsrData[$item].LICENSED.ToString(),
+            $subitem,
+            $MsolUsrData[$item].LICENSES[$subitem]
+        )
+    }
+}
 
+
+# [Orphaned]
+foreach ($currentRec in (Import-Excel -Path $xlsx_file -WorksheetName 'Orphaned')) {
+    $orphanedrecords += ,@(
+        $currentRec.USRNAME,
+        $currentRec.DESC,
+        $currentRec.USRTYPE,
+        ($currentRec.CREATED | Get-Date -format "yyyy/MM/dd"),
+        $currentRec.BLOCKED,
+        $currentRec.LICENSED,
+        $currentRec.LICENSE,
+        ($currentRec.TIMESTAMP | Get-Date -format "yyyy/MM/dd"),
+        $currentRec.NOTES
+    )
+}
+
+
+
+<# *******************************************************************************
+                            WRITING REFERENCE FILE
+******************************************************************************* #>
+# create backup file    
+$bkp_file = $xlsx_file + '.bkp'
+if (Test-Path -Path $bkp_file -PathType Leaf) {
+    Remove-Item -Path $bkp_file -Force
+}
+Copy-Item -Path $xlsx_file -Destination $bkp_file -Force
+
+# remove older worksheets
+foreach ($currentSheet in $Worksheet_list) {
+    if (($currentSheet.Name -eq 'Assigned_Licenses') `
+    -or ($currentSheet.Name -eq 'Licenses_Pool') `
+    -or ($currentSheet.Name -eq 'Orphaned') `
+    -or ($currentSheet.Name -match "SkuCatalog")) {
+        Remove-Worksheet -Path $xlsx_file -WorksheetName $currentSheet.Name
+    }    
+}
+$XlsPkg = Open-ExcelPackage -Path $xlsx_file
+
+
+# writing SkuCatalog worksheet
+$ErrorActionPreference= 'Stop'
+try {
+    $label = 'SkuCatalog'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $now = Get-Date -Format  "yyyy/MM/dd"
+    $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            TIMESTAMP   = [DateTime]$now
+            ID          = "$_"
+            SKU         = "$($SkuCatalog_rawdata[$_].SKUID)"
+            DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
+        } | Select TIMESTAMP, ID, SKU, DESCRIPTION
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+
+# writing Licenses_Pool worksheet
+$ErrorActionPreference= 'Stop'
+try {
+    $label = 'Licenses_Pool'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $inData = 0..($Licenses_Pool_dataframe.Count - 1) | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            UPTIME      = [DateTime]$Licenses_Pool_dataframe[$_][0]
+            LICENSE     = $Licenses_Pool_dataframe[$_][1]
+            AVAILABLE   = $Licenses_Pool_dataframe[$_][2]
+            TOTAL       = $Licenses_Pool_dataframe[$_][3]
+        } | Select UPTIME, LICENSE, AVAILABLE, TOTAL
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+# writing Assigned_Licenses worksheet
+$ErrorActionPreference= 'Stop'
+try {
+    $label = 'Assigned_Licenses'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $inData = 0..($Assigned_Licenses_dataframe.Count - 1) | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            USRNAME     = $Assigned_Licenses_dataframe[$_][0]
+            DESC        = $Assigned_Licenses_dataframe[$_][1]
+            USRTYPE     = $Assigned_Licenses_dataframe[$_][2]
+            CREATED     = [DateTime]$Assigned_Licenses_dataframe[$_][3]
+            BLOCKED     = $Assigned_Licenses_dataframe[$_][4]
+            LICENSED    = $Assigned_Licenses_dataframe[$_][5]
+            LICENSE     = $Assigned_Licenses_dataframe[$_][6]
+            TIMESTAMP   = [DateTime]$Assigned_Licenses_dataframe[$_][7]
+        } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+# writing Orphaned worksheet
+$ErrorActionPreference= 'Stop'
+try {
+    if ($orphanedrecords.Count -ge 1) {
+        $label = 'Orphaned'
+        Write-Host -NoNewline "Writing worksheet [$label]..."
+        $inData = 0..($orphanedrecords.Count - 1) | Foreach-Object{
+            Write-Host -NoNewline '.'        
+            New-Object -TypeName PSObject -Property @{
+                USRNAME     = $orphanedrecords[$_][0]
+                DESC        = $orphanedrecords[$_][1]
+                USRTYPE     = $orphanedrecords[$_][2]
+                CREATED     = [DateTime]$orphanedrecords[$_][3]
+                BLOCKED     = $orphanedrecords[$_][4]
+                LICENSED    = $orphanedrecords[$_][5]
+                LICENSE     = $orphanedrecords[$_][6]
+                TIMESTAMP   = [DateTime]$orphanedrecords[$_][7]
+                NOTES       = $orphanedrecords[$_][8]
+            } | Select USRNAME, DESC, USRTYPE, CREATED, BLOCKED, LICENSED, LICENSE, TIMESTAMP, NOTES
+        }
+        $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize -PassThru
+        Write-Host -ForegroundColor Green ' DONE'
+    }
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+# resorting worksheets
+$XlsPkg.Workbook.Worksheets.MoveToStart('SkuCatalog')
+$XlsPkg.Workbook.Worksheets.MoveAfter('Licenses_Pool', 'Skucatalog')
+$XlsPkg.Workbook.Worksheets.MoveAfter('Assigned_Licenses', 'Licenses_Pool')
+if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
+    $XlsPkg.Workbook.Worksheets.MoveAfter('Orphaned', 'Assigned_Licenses')
+}
+
+Close-ExcelPackage -ExcelPackage $XlsPkg
+
+# remove renmants
+$twodots = Split-Path -Parent $xlsx_file | Split-Path -Parent
+$filename = Split-Path -Leaf $xlsx_file
+if (Test-Path "$twodots/$filename" -PathType Leaf) {
+    Remove-Item -Path "$twodots/$filename" -Force
+}
