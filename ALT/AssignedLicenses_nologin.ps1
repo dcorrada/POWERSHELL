@@ -59,12 +59,7 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                             FETCHING DATA FROM TENANT
 ******************************************************************************* #>
-$answ = [System.Windows.MessageBox]::Show("Load .csv file from tenant?",'INFILE','YesNo','Warning')
-if ($answ -eq "No") {    
-    Write-Host -ForegroundColor red "Aborting..."
-    Start-Sleep -Seconds 1
-    Exit
-}
+$answ = [System.Windows.MessageBox]::Show("Load .csv file from tenant",'INFILE','Ok','Info')
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Open File"
@@ -80,8 +75,8 @@ $Heather = 'blocked', 'city', 'state', 'dept', 'DirSyncEnabled', 'DisplayName',
     'addres', 'pswdComplex', 'title', 'zone', 'UPN', 'created'
 $A = Get-Content -Path $infile
 $A = $A[1..($A.Count - 1)]
-$A | Out-File -FilePath $infile
-$UsrRawdata = Import-Csv -Path $infile -Header $Heather
+$A | Out-File -FilePath "C:\Users\$env:USERNAME\Downloads\headless.csv"
+$UsrRawdata = Import-Csv -Path "C:\Users\$env:USERNAME\Downloads\headless.csv" -Header $Heather
 
 # retrieve all users list
 $MsolUsrData = @{} 
@@ -146,12 +141,7 @@ $parsebar[0].Close()
 <# *******************************************************************************
                             CREATING UPDATED DATAFRAMES
 ******************************************************************************* #>
-$answ = [System.Windows.MessageBox]::Show("Load .xlsx reference file?",'INFILE','YesNo','Warning')
-if ($answ -eq "No") {    
-    Write-Host -ForegroundColor red "Aborting..."
-    Start-Sleep -Seconds 1
-    Exit
-}
+$answ = [System.Windows.MessageBox]::Show("Load .xlsx reference file",'INFILE','Ok','Info')
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Open File"
