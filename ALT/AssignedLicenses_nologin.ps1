@@ -358,6 +358,26 @@ foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Lic
     }
 }
 Pause
+
+foreach ($currentUPN in $MsolUsrData.Key) {
+    if ($MsolUsrData[$currentUPN].USRTYPE -eq 'na') {
+        $typefixForm = FormBase -w 400 -h 160  -text 'NEW USER TYPE'
+        Label -form $typefixForm -x 20 -y 15 -w 200 -h 20 -text 'UPN' | Out-Null
+        Label -form $typefixForm -x 240 -y 15 -w 60 -h 20 -text 'Member' | Out-Null
+        Label -form $typefixForm -x 310 -y 15 -w 60 -h 20 -text 'Guest' | Out-Null
+        Label -form $typefixForm -x 20 -y 40 -w 220 -text $currentUPN | Out-Null
+        $okMember = RadioButton -form $typefixForm -x 255 -y 33 -w 30 -checked $true
+        $okGuest = RadioButton -form $typefixForm -x 325 -y 33 -w 30 -checked $false
+        OKButton -form $typefixForm -x 130 -y 80 -text "Ok" | Out-Null
+        $result = $typefixForm.ShowDialog()
+        if ($okMember.Checked) {
+            $MsolUsrData[$currentUPN].USRTYPE = 'Member'
+        } elseif ($okGuest.Checked) {
+            $MsolUsrData[$currentUPN].USRTYPE = 'Guest'
+        }
+    }
+}
+
 $Assigned_Licenses_dataframe = @()
 foreach ($item in $MsolUsrData.Keys) {
     foreach ($subitem in $MsolUsrData[$item].LICENSES.Keys) {
