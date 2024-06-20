@@ -45,7 +45,7 @@ $swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $false -x 20 -y 260 -text "TreeSize"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
 $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
@@ -82,6 +82,11 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
+            <# 
+            There are several packages relayed to various Chrome flavours. 
+            I selected 'Google Chrome (EXE)' package and not 'Google Chrome' one, beause of this:
+            https://stackoverflow.com/questions/75647313/winget-install-my-app-receives-installer-hash-does-not-match
+            #>  
             Write-Host -NoNewline "Installing Google Chrome..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome (EXE)', $winget_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow

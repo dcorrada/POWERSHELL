@@ -37,7 +37,6 @@ Add-Type -AssemblyName PresentationFramework
 $ErrorActionPreference= 'Stop'
 do {
     try {
-        Import-Module -Name "$workdir\Modules\Gordian.psm1"
         Import-Module -Name "$workdir\Modules\Forms.psm1"
         Import-Module MSOnline
         Import-Module ImportExcel
