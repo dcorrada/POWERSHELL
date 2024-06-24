@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicenses.ps1
-Version...: 24.05.2
+Version...: 24.06.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -59,10 +59,15 @@ do {
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
+<#
+In that cases in which MFA has been enabled on Microsot 365 accounts the option 
+"-Credential" of cmdlet "Connect-MsolService" doesn't work.
+Rather such cmdlet should be used without prior specification of any credential 
+(a dialog of registered account will appear, instead).
 
-<# *******************************************************************************
+*******************************************************************************
                             CREDENTIALS MANAGEMENT
-******************************************************************************* #>
+*******************************************************************************
 # starting release 24.05.1 credentials are managed from PSWallet
 Write-Host -NoNewline "Credential management... "
 $pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'AssignedLicenses'
@@ -75,6 +80,7 @@ if ($pswout.Count -eq 2) {
     exit
 }
 Write-Host -ForegroundColor Green 'Ok'
+#>
 
 <# *******************************************************************************
                             FETCHING DATA FROM TENANT
@@ -83,7 +89,7 @@ Write-Host -ForegroundColor Green 'Ok'
 Write-Host -NoNewline "Connecting to the Tenant..."
 $ErrorActionPreference= 'Stop'
 Try {
-    Connect-MsolService -Credential $credits
+    Connect-MsolService # -Credential $credits
     Write-Host -ForegroundColor Green " OK"
     $ErrorActionPreference= 'Inquire'
 }
