@@ -345,7 +345,8 @@ if (($orphanedrecords.Count) -ge 1) {
 ******************************************************************************* #>
 if ($UseRefFile -eq 'Yes') { 
     # create backup file    
-    $bkp_file = $xlsx_file + '.bkp'
+    $bkp_file = $xlsx_file + '-' + (Get-Date -format "yyMMdd") + '.bkp'
+    $bkp_file = $bkp_file.Replace('.xlsx', '')
     if (Test-Path -Path $bkp_file -PathType Leaf) {
         Remove-Item -Path $bkp_file -Force
     }
