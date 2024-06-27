@@ -1,6 +1,6 @@
 <#
 Name......: AutoReplySDK.ps1
-Version...: 24.06.2
+Version...: 24.06.3
 Author....: Dario CORRADA
 
 This script sets an autoreply message from Outlook 365.
@@ -54,19 +54,10 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
-# get UPN
-$AccessForm = FormBase -w 380 -h 200 -text 'SENDER'
-Label -form $AccessForm -x 10 -y 20 -w 150 -text 'User Principal Name (UPN):' | Out-Null
-$usrname = TxtBox -form $AccessForm -text 'foo@bar.baz' -x 160 -y 20 -w 190
-Label -form $AccessForm -x 100 -y 55 -w 280 -h 40 -text @"
-            +++ Please Note +++
-The UPN should be the same one 
-   you will connect to Graph with
-"@ | Out-Null
-OKButton -form $AccessForm -x 120 -y 110 -w 120 -text "Ok"
-$resultButton = $AccessForm.ShowDialog()
-$UPN = $usrname.Text
+$splash = Connect-MgGraph -Scopes 'MailboxSettings.ReadWrite'
+$UPN = (Get-MgContext).Account
 
+<# 
 # get mail message
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
@@ -76,6 +67,7 @@ $OpenFileDialog.filter = 'html file (*.html)| *.html'
 $OpenFileDialog.ShowDialog() | Out-Null
 $InFile = $OpenFileDialog.filename
 $MessageInaBottle = Get-Content -Path $InFile | Out-String
+#>
 
 # TGIF
 $whatta = Get-Date
@@ -86,13 +78,48 @@ if (($whatta.DayOfWeek -eq 'Saturday') -or ($whatta.DayOfWeek -eq 'Sunday')) {
     exit
 } elseif ($whatta.DayOfWeek -eq 'Friday') {
     $EndTime = ((Get-Date -Hour 9 -Minute 0 -Second 0).AddDays(3) | Get-Date -Format "yyyy-MM-ddTHH:mm:ss.0000000").ToString()
+    $MessageInaBottle = @"
+<html> <body> <div  style="font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt; color:rg b(0,0,0)">
+<p>Ciao,</p>
+<p>attualmente non sono in ufficio.</p>
+<p>Saro' disponibile lunedi mattina prossimo.
+<p>Per qualsiasi richiesta di supporto tecnico inviare una mail a <a href="mailto:helpdesk@agmsolutions.net">helpdesk@agmsolutions.net</a></p>
+<p>Buon weekend</p>
+<p>  </p>
+<p> --- </p>
+<p>  </p>
+<p>Hi there,</p>
+<p>currently I am out of office.</p>
+<p>I will be available next monday morning.
+<p>For any support request you should send an email to <a href="mailto:helpdesk@agmsolutions.net">helpdesk@agmsolutions.net</a></p>
+<p>Kind regards</p>
+</div> </body> </html>
+"@
 } else {
     $EndTime = ((Get-Date -Hour 9 -Minute 0 -Second 0).AddDays(1) | Get-Date -Format "yyyy-MM-ddTHH:mm:ss.0000000").ToString()
+    $MessageInaBottle = @"
+<html> <body> <div  style="font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt; color:rg b(0,0,0)">
+<p>Ciao,</p>
+<p>attualmente non sono in ufficio.</p>
+<p>Saro' disponibile da lunedi a venerdi, dalle ore 09:00 alle 18:00. Preferibilmente rispondero' alla tua mail in tale orario.</p>
+<p>Nota bene: il mio account MS Teams e' attualmente configurato in sleep mode. Potrei non ricevere notifiche push.</p>
+<p>Per qualsiasi richiesta di supporto tecnico inviare una mail a <a href="mailto:helpdesk@agmsolutions.net">helpdesk@agmsolutions.net</a></p>
+<p>Buona serata</p>
+<p>  </p>
+<p> --- </p>
+<p>  </p>
+<p>Hi there,</p>
+<p>currently I am out of office.</p>
+<p>I will be available from monday to friday, 09:00-18:00. Preferably, I will reply to your email in such period.</p>
+<p>Please note: my MS Teams is in sleep mode. I may not receive your push notifications.</p>
+<p>For any support request you should send an email to <a href="mailto:helpdesk@agmsolutions.net">helpdesk@agmsolutions.net</a></p>
+<p>Kind regards</p>
+</div> </body> </html>
+"@
 }
 
 
 # send request
-$ConnectInfo =Connect-MgGraph -Scopes 'MailboxSettings.ReadWrite'
 
 <#
 To set specific time zone you can list those locally stored in the registry as follows:
@@ -105,6 +132,7 @@ To check out the values for the setted parameters and/or add new ones, launch su
 
     GET https://graph.microsoft.com/v1.0/me/mailboxSettings
 #>
+
 $params = @{
 	"@odata.context" = "https://graph.microsoft.com/v1.0/$UPN/mailboxSettings"
 	automaticRepliesSetting = @{

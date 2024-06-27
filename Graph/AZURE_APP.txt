@@ -4,17 +4,17 @@
 see also: https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
 
 1. Login to Microsoft Azure console
-Navigate to Azure Active Directory* and click on App Registration from the left 
+Navigate to the Azure Portal* and click on New Registration from the left 
 panel (the first item under management section).
 
-(*) alternatively navigate to this URL, redirecting to Azure AD B2C:
-https://portal.azure.com/#view/Microsoft_AAD_B2CAdmin/TenantManagementMenuBlade/~/overview
+(*) https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
 
 
 2. Register a new App
 Once you clicked on "New Registration" button (from the header of the App 
-Registration tab) you can get a name to your app. You should restrict it for 
-internal accounts only (the option described as "Single Tenant").
+Registration tab) you can get a name to your app. 
+For Supported account types, select "Accounts in this organization directory - Single Tenant".
+For Redirect URI select "Public client/native - Mobile/Desktop" and specify URI value: http://localhost
 
 3. Create a Secret Key
 From the overview of the new app created you can create a secret by clicking on 
@@ -26,8 +26,7 @@ a new script. An overview of them can be obtained from the Graph Explorer
 platform, clicking on "Modify permissions" tab:
 https://developer.microsoft.com/en-us/graph/graph-explorer
 
-Furthemore you can get, from Graph Explorer, specific permissions for the app:
-GET https://graph.microsoft.com/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')?$select=id,appId,displayName,appRoles,oauth2PermissionScopes,resourceSpecificApplicationPermissions
+From the API authorizations section of the new app created you can add the required scopes.
 
 More infoprmations are available at:
 https://learn.microsoft.com/en-us/graph/permissions-reference

@@ -1,6 +1,6 @@
 param (
-    [Parameter(Mandatory=$true)]
-    [string]$ascript='AutoReply'
+    [Parameter(Mandatory=$false)]
+    [string]$ascript='AppKeyring'
 )
 
 <#

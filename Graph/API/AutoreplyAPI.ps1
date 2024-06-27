@@ -50,7 +50,7 @@ $ErrorActionPreference= 'Inquire'
 ******************************************************************************* #>
 # starting release 24.05.1 credentials are managed from PSWallet
 Write-Host -NoNewline "Credential management... "
-$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1" -ascript 'AutoreplyAPI'
+$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1"
 if ($pswout.Count -eq 4) {
     $UPN = $pswout[0]
     $clientID = $pswout[1]
