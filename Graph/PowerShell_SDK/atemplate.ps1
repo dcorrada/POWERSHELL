@@ -49,7 +49,6 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                             CREDENTIALS MANAGEMENT
 ******************************************************************************* #>
-<#  per accedere direttamente senza app sbloccare da graph explorer #>
 Write-Host -NoNewline "Credential management... "
 $pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1"
 if ($pswout.Count -eq 4) {
@@ -66,8 +65,11 @@ if ($pswout.Count -eq 4) {
 }
 
 Connect-MgGraph -Scopes "User.Read.All" -ClientId $clientID -TenantId $tenantID 
-
-
+<# 
+In order to connect without any registered AzureApp (aka ClientID and TenantID
+options from the above cmdlet) you have to manually authorize such Scopes you 
+would like to access (ie through the Graph Explorer web interface) 
+#>
 
 
 <# *******************************************************************************
