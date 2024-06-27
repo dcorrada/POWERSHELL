@@ -46,9 +46,20 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
-<# *******************************************************************************
+<# 
+*******************************************************************************
                             CREDENTIALS MANAGEMENT
-******************************************************************************* #>
+*******************************************************************************
+This section retrieve all informations needed to connect using client secret 
+credential method as described in:
+https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.authentication/connect-mggraph?view=graph-powershell-1.0#example-8-using-client-secret-credentials
+
+Alternatively you can connect interactively via delegate access as described in:
+https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.authentication/connect-mggraph?view=graph-powershell-1.0#example-4-delegated-access-custom-application-for-microsoft-graph-powershell
+
+Registration of an ad hoc Azure app is required for such athentication methods.
+For more details see AZURE_APP.txt file in the parent folder.
+#>
 Write-Host -NoNewline "Credential management... "
 $pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1"
 if ($pswout.Count -eq 4) {
@@ -63,13 +74,14 @@ if ($pswout.Count -eq 4) {
     Pause
     exit
 }
+$ClientSecretCredential = New-Object System.Management.Automation.PSCredential($clientID, (ConvertTo-SecureString $Clientsecret -AsPlainText -Force))
 
-Connect-MgGraph -Scopes "User.Read.All" -ClientId $clientID -TenantId $tenantID 
-<# 
-In order to connect without any registered AzureApp (aka ClientID and TenantID
-options from the above cmdlet) you have to manually authorize such Scopes you 
-would like to access (ie through the Graph Explorer web interface) 
-#>
+# connect using client secret (not tested yet)
+# Connect-MgGraph -TenantId $tenantID -ClientSecretCredential $ClientSecretCredential
+
+# connect interactively via delegate access
+Connect-MgGraph -ClientId $clientID -TenantId $tenantID 
+
 
 
 <# *******************************************************************************

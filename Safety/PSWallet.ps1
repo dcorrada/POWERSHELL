@@ -4,7 +4,7 @@ Param([string]$ExtScript='PSWallet', [string]$ExtKey='NULL',
 
 <#
 Name......: PSWallet.ps1
-Version...: 24.06.2
+Version...: 24.07.1
 Author....: Dario CORRADA
 
 PSWallet aims to be the credential manager tool in order to handle the various 
@@ -519,7 +519,7 @@ VALUES ('$($AddEntry.APPNAME.Text)',
     } elseif ($ExtAction -eq 'listGraph') {
         $SQLiteConnection.Open()
         $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-SELECT UPN, APPNAME, SECRETEXPDATE
+SELECT UPN, APPNAME, SECRETEXPDATE, SECRETNAME
 FROM Graph
 WHERE SCRIPT = '$ExtScript'
 "@
@@ -528,7 +528,15 @@ WHERE SCRIPT = '$ExtScript'
             Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
         } else {
             foreach ($item in $TheResult) {
-                Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $($item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"))"
+                $BestBefore = $item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"
+                $Today = Get-Date -format "yyyy-MM-dd"
+                if ($item.SECRETNAME -eq 'SecretName') {
+                    Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (NO secret)"
+                } elseif ($BestBefore -lt $Today) {
+                    Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret EXPIRED)"
+                } else {
+                    Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $BestBefore)"
+                }
             }
         }
         $TheAction = 'read table'

@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 24.06.1
+Version...: 24.07.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -67,7 +67,6 @@ if ($pswout.Count -eq 4) {
     $UPN = $pswout[0]
     $clientID = $pswout[1]
     $tenantID = $pswout[2]
-    $Clientsecret = $pswout[3]
     Write-Host -ForegroundColor Green ' Ok'
 } else {
     [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
@@ -80,7 +79,7 @@ if ($pswout.Count -eq 4) {
 Write-Host -NoNewline "Connecting to the Tenant..."
 $ErrorActionPreference= 'Stop'
 Try {
-    $splash = Connect-MgGraph -Scopes 'User.Read.All','Organization.Read.All' -ClientId $clientID -TenantId $tenantID 
+    $splash = Connect-MgGraph -ClientId $clientID -TenantId $tenantID 
     Write-Host -ForegroundColor Green ' Ok'
     $ErrorActionPreference= 'Inquire'
 }
@@ -108,6 +107,8 @@ foreach ($item in (Get-MgSubscribedSku | Select -Property SkuPartNumber, Consume
     }
 }
 Write-Host -ForegroundColor Cyan " Found $($avail_lics.Count) active SKU"
+
+
 
 #
 #

@@ -5,7 +5,7 @@ param (
 
 <#
 Name......: AppKeyring.ps1
-Version...: 24.06.1
+Version...: 24.07.1
 Author....: Dario CORRADA
 
 This script is a frontend for external PSWallet calls, dedicated for the 
@@ -103,7 +103,11 @@ if ((Test-Path -Path $WhereIsMyWallet -PathType Leaf) -and (Test-Path -Path $Whe
                     $isfirst = $false
                 }
                 $astring = "$($entry.UPN) on $($entry.APP)`n$($entry.EXP)"
-                $choices += RadioButton -form $formlist -x 20 -y $they -w 450 -h 50 -checked $isfirst -text $astring
+                if ($entry.EXP -eq '(secret EXPIRED)') {
+                    $choices += RadioButton -form $formlist -x 20 -y $they -w 450 -h 50 -checked $isfirst -text $astring -enabled $false
+                } else {
+                    $choices += RadioButton -form $formlist -x 20 -y $they -w 450 -h 50 -checked $isfirst -text $astring
+                }
                 $they += 50 
             }
             RETRYButton -form $formlist -x 280 -y ($they + 30) -w 120 -text "Update secret" 
