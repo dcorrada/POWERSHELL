@@ -1,6 +1,6 @@
 <#
 Name......: AzureDevices.ps1
-Version...: 23.06.1
+Version...: 24.06.1
 Author....: Dario CORRADA
 
 This script will connect to Azure AD and query a detailed list of device properties
@@ -31,7 +31,7 @@ $workdir = $workdir.Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-# Import-Module -Name "$workdir\Modules\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
@@ -44,6 +44,12 @@ try {
 $ErrorActionPreference= 'Inquire'
 
 # connect to Tenant
+<#
+In that cases in which MFA has been enabled on Microsot 365 accounts the option 
+"-Credential" of cmdlet "Connect-MsolService" doesn't work.
+Rather such cmdlet should be used without prior specification of any credential 
+(a dialog of registered account will appear, instead).
+#>
 # $credits = LoginWindow
 $ErrorActionPreference= 'Stop'
 Try {

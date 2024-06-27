@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.06.1
+Version...: 24.06.2
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -45,7 +45,7 @@ $swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $false -x 20 -y 260 -text "TreeSize"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
 $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
@@ -78,30 +78,23 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC', $msstore_opts
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC (64-bit)', $winget_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"     
         } elseif ($item -eq 'Chrome') {
-            Write-Host -NoNewline "Download launcher..."
-            $download.Downloadfile("http://dl.google.com/chrome/install/375.126/chrome_installer.exe", "$tmppath\ChromeSetup.exe")
-            #Invoke-WebRequest -Uri 'http://dl.google.com/chrome/install/375.126/chrome_installer.exe' -OutFile "$tmppath\ChromeSetup.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\ChromeSetup.exe" -Wait
-            Write-Host -ForegroundColor Green " DONE" 
-            <# disabled installation through winget, see https://stackoverflow.com/questions/75647313/winget-install-my-app-receives-installer-hash-does-not-match
+            <# 
+            There are several packages relayed to various Chrome flavours. 
+            I selected 'Google Chrome (EXE)' package and not 'Google Chrome' one, beause of this:
+            https://stackoverflow.com/questions/75647313/winget-install-my-app-receives-installer-hash-does-not-match
+            #>  
             Write-Host -NoNewline "Installing Google Chrome..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome', $winget_opts
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome (EXE)', $winget_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE" 
-            #>  
         } elseif ($item -eq 'Revo Uninstaller') {
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://www.revouninstaller.com/download-freeware-version.php", "$tmppath\Revo.exe")
-            #Invoke-WebRequest -Uri 'https://www.revouninstaller.com/download-freeware-version.php' -OutFile "$tmppath\Revo.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\Revo.exe" -Wait
+            Write-Host -NoNewline "Installing Revo Uninstaller..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Revo Uninstaller', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq 'Skype') {
             Write-Host -NoNewline "Download software..."
@@ -113,12 +106,9 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Start-Process -FilePath "$tmppath\Skype.exe" -Wait
             Write-Host -ForegroundColor Green " DONE"        
         } elseif ($item -eq 'Speccy') {
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://download.ccleaner.com/spsetup132.exe", "$tmppath\Speccy.exe")
-            #Invoke-WebRequest -Uri 'https://download.ccleaner.com/spsetup132.exe' -OutFile "$tmppath\Speccy.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\Speccy.exe" -Wait
+            Write-Host -NoNewline "Installing Speccy..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Speccy', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"   
         } elseif ($item -eq 'Supremo') {
             Write-Host -NoNewline "Download software..."
@@ -145,17 +135,9 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE" 
         } elseif ($item -eq '7ZIP') {            
-            <# the version stored on MSstore has less features
             Write-Host -NoNewline "Installing 7-Zip..."
-            winget install  "7-Zip for Windows" --source msstore --accept-package-agreements --accept-source-agreements
-            Write-Host -ForegroundColor Green " DONE"
-            #>
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://www.7-zip.org/a/7z2301-x64.exe", "$tmppath\7Zip.exe")
-            #Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z2301-x64.exe' -OutFile "$tmppath\7Zip.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\7Zip.exe" -Wait
+            $StagingArgumentList = 'install  "{0}" {1}' -f '7-Zip', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'TempMonitor') {
             Write-Host -NoNewline "Download software..."

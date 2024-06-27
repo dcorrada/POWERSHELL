@@ -1,6 +1,6 @@
 <#
 Name......: Autoreply.ps1
-Version...: 24.05.1
+Version...: 24.06.1
 Author....: Dario CORRADA
 
 This script sets an autoreply message in Outlook. In the following example I will set an autoreply from 04:00pm to 09:00am of the day after. 
@@ -37,6 +37,8 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
+[System.Windows.MessageBox]::Show("Such script should be deprecated`nTry the Graph version AutoreplySDK.ps1",'PLEASE NOTE','Ok','Warning') > $null
+
 # closing Outlook
 $answ = [System.Windows.MessageBox]::Show("Click Ok to close Outlook client...",'WARNING','Ok','Warning')
 $ErrorActionPreference= 'SilentlyContinue'
@@ -53,6 +55,11 @@ if ($outproc -ne $null) {
 }
 $ErrorActionPreference= 'Inquire'
 
+<#
+In that cases in which MFA has been enabled on Microsot 365 accounts the option 
+"-Credential" of cmdlet "Connect-MsolService" doesn't work.
+Rather such cmdlet should be used without prior specification of any credential 
+(a dialog of registered account will appear, instead).
 # credential management
 $pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'Autoreply'
 if ($pswout.Count -eq 2) {
@@ -64,13 +71,28 @@ if ($pswout.Count -eq 2) {
 Connect-ExchangeOnline -Credential $UserCredential
 $pswout[0] -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" | Out-Null
 $unique = $matches[1]
+#>
+Connect-ExchangeOnline
+$AccessForm = FormBase -w 380 -h 200 -text 'SENDER'
+Label -form $AccessForm -x 10 -y 20 -w 150 -text 'User Principal Name (UPN):' | Out-Null
+$usrname = TxtBox -form $AccessForm -text 'foo@bar.baz' -x 160 -y 20 -w 190
+Label -form $AccessForm -x 100 -y 55 -w 280 -h 40 -text @"
+            +++ Please Note +++
+The UPN should be the same one 
+   you will connect to Graph with
+"@ | Out-Null
+OKButton -form $AccessForm -x 120 -y 110 -w 120 -text "Ok"
+$resultButton = $AccessForm.ShowDialog()
+$UPN = $usrname.Text
+$UPN -match "^([a-zA-Z_\-\.\\\s0-9:]+)@.+$" | Out-Null
+$unique = $matches[1]
 
 <#
 # If you need to set specific time zone you can list those locally stored in the registry as follows
 $TimeZone = Get-ChildItem "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Time zones" | foreach {Get-ItemProperty $_.PSPath}
 $TimeZone | sort Display | Format-Table -Auto PSChildname,Display
 #>
-Set-MailboxRegionalConfiguration -TimeZone 'UTC' -Identity $unique
+Set-MailboxRegionalConfiguration -TimeZone "W. Europe Standard Time" -Identity $unique
 
 # setting autoreply
 $message = @'
