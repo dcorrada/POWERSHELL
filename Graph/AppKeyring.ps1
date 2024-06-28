@@ -1,7 +1,4 @@
-param (
-    [Parameter(Mandatory=$false)]
-    [string]$ascript='AppKeyring'
-)
+param ([string]$ascript='AppKeyring')
 
 <#
 Name......: AppKeyring.ps1
