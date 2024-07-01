@@ -1,10 +1,13 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 24.07.1
+Version...: 24.07.2
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
+
+Thx to Ali TAJRAN for the useful notes about Get-MgUser on:
+https://www.alitajran.com/get-mguser/ 
 #>
 
 
@@ -108,40 +111,42 @@ foreach ($item in (Get-MgSubscribedSku | Select -Property SkuPartNumber, Consume
 }
 Write-Host -ForegroundColor Cyan " Found $($avail_lics.Count) active SKU"
 
-
-
-#
-#
-# ***TODO*** si prosegue da qui...
-#
-#
+# SkuID to SkuPartNumber hash table
+$SkuID2name = @{}
+Get-MgSubscribedSku | Select -Property SkuId, SkuPartNumber | foreach { 
+    $SkuID2name[$_.SkuId] = $_.SkuPartNumber 
+}
 
 # retrieve all users list
 $MsolUsrData = @{} 
-$tot = (Get-MsolUser -All).Count
+$tot = (Get-MgUser -All).Count
 $usrcount = 0
 $parsebar = ProgressBar
-foreach ($item in (Get-MsolUser -All | Sort-Object DisplayName)) {
+
+$MgUsrs = Get-MgUser -All -Property UserPrincipalName, DisplayName, UserType, accountEnabled, CreatedDateTime, assignedLicenses  `
+    | Select-Object UserPrincipalName, DisplayName, UserType, accountEnabled, CreatedDateTime, assignedLicenses
+foreach ($item in ($MgUsrs | Sort-Object DisplayName)) {
     $usrcount ++
     Write-Host -NoNewline "Getting data from [$($item.DisplayName)]... "     
 
     $MsolUsrData[$item.UserPrincipalName] = @{
-        BLOCKED         = $item.BlockCredential
+        BLOCKED         = !($item.AccountEnabled)
         DESC            = $item.DisplayName
         USRNAME         = $item.UserPrincipalName
-        LICENSED        = $item.IsLicensed
+        LICENSED        = ($item.AssignedLicenses.Count -ge 1)
         LICENSES        = @{ # default values assuming no license assigned
             'NONE'        = Get-Date -format "yyyy/MM/dd"
         }
         USRTYPE         = $item.UserType
-        CREATED         = $item.WhenCreated | Get-Date -format "yyyy/MM/dd"
+        CREATED         = $item.CreatedDateTime | Get-Date -format "yyyy/MM/dd"
     }
 
     if ($MsolUsrData[$item.UserPrincipalName].LICENSED -eq "True") {
         $MsolUsrData[$item.UserPrincipalName].LICENSES = @{} # re-init for updating licenses
-        foreach ($accountsku in $item.Licenses.AccountSku.SkuPartNumber) {
-            if ($avail_lics.ContainsKey($accountsku)) { # filtering only managed licenses
-                $MsolUsrData[$item.UserPrincipalName].LICENSES[$accountsku] = Get-Date -format "yyyy/MM/dd"
+        foreach ($accountsku in $item.AssignedLicenses) {            
+            $SkuName = $SkuID2name[$accountsku.SkuID]
+            if ($avail_lics.ContainsKey($SkuName)) { # filtering only managed licenses
+                $MsolUsrData[$item.UserPrincipalName].LICENSES[$SkuName] = Get-Date -format "yyyy/MM/dd"
             }
         }
         Write-Host -ForegroundColor Blue "$($MsolUsrData[$item.UserPrincipalName].LICENSES.Count) license(s) assigned"
@@ -169,7 +174,8 @@ foreach ($item in (Get-MsolUser -All | Sort-Object DisplayName)) {
 Write-Host -ForegroundColor Green " DONE"
 $parsebar[0].Close()
 
-
+# disconnect from Tenant
+$infoLogout = Disconnect-Graph
 
 <# *******************************************************************************
                             CREATING UPDATED DATAFRAMES
