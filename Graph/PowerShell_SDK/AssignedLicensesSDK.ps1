@@ -101,7 +101,7 @@ Catch {
 Write-Host -NoNewline "Looking for available licenses..."
 $avail_lics = @{}
 $AccountName = (Get-MgSubscribedSku)[1].AccountName
-foreach ($item in (Get-MgSubscribedSku | Select -Property SkuPartNumber, ConsumedUnits -ExpandProperty PrepaidUnits)) {
+foreach ($item in (Get-MgSubscribedSku | Select-Object -Property SkuPartNumber, ConsumedUnits -ExpandProperty PrepaidUnits)) {
     if ($item.Enabled -lt 10000) { # excluding the broadest licenses
         $avail_lics[$item.SkuPartNumber] = @{
             TOTAL   = $item.Enabled
@@ -113,7 +113,7 @@ Write-Host -ForegroundColor Cyan " Found $($avail_lics.Count) active SKU"
 
 # SkuID to SkuPartNumber hash table
 $SkuID2name = @{}
-Get-MgSubscribedSku | Select -Property SkuId, SkuPartNumber | foreach { 
+Get-MgSubscribedSku | Select-Object -Property SkuId, SkuPartNumber | foreach { 
     $SkuID2name[$_.SkuId] = $_.SkuPartNumber 
 }
 
