@@ -1,15 +1,3 @@
-<#
-Name......: AzureDevices.ps1
-Version...: 24.06.1
-Author....: Dario CORRADA
-
-This script will connect to Azure AD and query a detailed list of device properties
-
-For more info see:
-https://learn.microsoft.com/en-us/powershell/module/azuread/get-azureaddevice
-
-#>
-
 # elevated script execution with admin privileges
 $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
 $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
@@ -20,7 +8,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AzureDevices\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureDevices\.ps1$" > $null
 $workdir = $matches[1]
 <# for testing purposes
 $workdir = Get-Location
@@ -31,7 +19,50 @@ $workdir = $workdir.Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\Modules\Forms.psm1"
+Import-Module -Name "$workdir\Forms.psm1"
+
+
+# retrieve credentials
+Write-Host -NoNewline "Credential management... "
+$cercaWally = 'C:\Users\dario.corrada\Desktop\SCRIPT MIEI\Graph\AppKeyring.ps1'
+if (!(Test-Path -Path $cercaWally -PathType Leaf)) {
+    $cercaWally = 'C:\Users\korda\Desktop\POWERSHELL\Graph\AppKeyring.ps1'
+}
+$pswout = PowerShell.exe -file $cercaWally
+if ($pswout.Count -eq 4) {
+    $UPN = $pswout[0]
+    $clientID = $pswout[1]
+    $tenantID = $pswout[2]
+    Write-Host -ForegroundColor Green ' Ok'
+} else {
+    [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+    Pause
+    exit
+}
+
+# connect to Tenant
+Write-Host -NoNewline "Connecting to the Tenant..."
+$ErrorActionPreference= 'Stop'
+Try {
+    $splash = Connect-MgGraph -ClientId $clientID -TenantId $tenantID 
+    Write-Host -ForegroundColor Green ' Ok'
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    [System.Windows.MessageBox]::Show("Error connecting to the Tenant",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
+    Pause
+    exit
+}
+
+# get available groups and related members
+Write-Host -NoNewline "Retrieving device list... "
+$GroupList = Get-MgDevice -All  -Property ... `
+    | Select-Object ...
+Write-Host -ForegroundColor Green 'Ok'
+
+<# some stuff to review... 
 
 # import the AzureAD module
 $ErrorActionPreference= 'Stop'
@@ -44,16 +75,9 @@ try {
 $ErrorActionPreference= 'Inquire'
 
 # connect to Tenant
-<#
-In that cases in which MFA has been enabled on Microsot 365 accounts the option 
-"-Credential" of cmdlet "Connect-MsolService" doesn't work.
-Rather such cmdlet should be used without prior specification of any credential 
-(a dialog of registered account will appear, instead).
-#>
-# $credits = LoginWindow
 $ErrorActionPreference= 'Stop'
 Try {
-    Connect-AzureAD #-Credential $credits
+    Connect-AzureAD
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
@@ -110,26 +134,21 @@ foreach ($item in $rawdata) {
     [System.Windows.Forms.Application]::DoEvents()
 }
 $parsebar[0].Close()
+#>
 
+# disconnect from Tenant
+$infoLogout = Disconnect-Graph
 
 # writing output file
 Write-Host -NoNewline "Writing output file... "
-[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-$OpenFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-$OpenFileDialog.Title = "Save File"
-$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Desktop"
-$OpenFileDialog.filter = 'CSV file (*.csv)| *.csv'
-$OpenFileDialog.filename = 'AzureDevices'
-$OpenFileDialog.ShowDialog() | Out-Null
-$outfile = $OpenFileDialog.filename
+$outfile = "C:\Users\$env:USERNAME\Downloads\" + (Get-Date -format "yyMMdd") + '-AzureDevices.csv'
 
-'UPTIME;OSTYPE;OSVERSION;HOSTNAME;OWNER;EMAIL' | Out-File $outfile -Encoding utf8
 
 $i = 1
 $totrec = $parseddata.Count
 $parsebar = ProgressBar
 foreach ($item in $parseddata.Keys) {
-    $string = ("{0};{1};{2};{3};{4};{5}" -f ($parseddata[$item].LastLogon,$parseddata[$item].OSType,$parseddata[$item].OSVersion,$parseddata[$item].HostName,$parseddata[$item].Owner,$parseddata[$item].Email))
+    $string = ("AGM{0:d5};{1};{2};{3};{4};{5};{6}" -f ($i,$parseddata[$item].LastLogon,$parseddata[$item].OSType,$parseddata[$item].OSVersion,$parseddata[$item].HostName,$parseddata[$item].Owner,$parseddata[$item].Email))
     $string = $string -replace ';\s*;', ';NULL;'
     $string = $string -replace ';+\s*$', ';NULL'
     $string = $string -replace ';', '";"'

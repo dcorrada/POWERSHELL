@@ -1,32 +1,28 @@
 **************************************************
 * Azure App - obtaining Client ID and Secret Key *
 **************************************************
+see also: https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
 
-1. Login to Microsoft Azure console
-Navigate to Azure Active Directory* and click on App Registration from the left 
-panel (the first item under management section).
+1. Register a new app
+Navigate to the Azure Portal https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
+Click on New Registration and  get a name to your app.
 
-(*) alternatively navigate to this URL, redirecting to Azure AD B2C:
-https://portal.azure.com/#view/Microsoft_AAD_B2CAdmin/TenantManagementMenuBlade/~/overview
-
-
-2. Register a new App
-Once you clicked on "New Registration" button (from the header of the App 
-Registration tab) you can get a name to your app. You should restrict it for 
-internal accounts only (the option described as "Single Tenant").
+2. Initial configs
+For Supported account types, select "Accounts in this organization directory - Single Tenant".
+For Redirect URI select "Public client/native - Mobile/Desktop" and specify URI value: http://localhost
 
 3. Create a Secret Key
-From the overview of the new app created you can create a secret by clicking on 
-the link "Add a Certificate or a Secret"
+From the overview of the new app so created add a secret by clicking on the link "Add a Certificate or a Secret"
 
-4. Check authorizations and scopes
-Please check the right permission(s) before integrates the app credentials into 
-a new script. An overview of them can be obtained from the Graph Explorer 
-platform, clicking on "Modify permissions" tab:
+4. Assign scopes
+Please check the right permission(s) of each scopes the app should be authorized. 
+An overview of them can be obtained from the Graph Explorer platform, clicking on "Modify permissions" tab:
 https://developer.microsoft.com/en-us/graph/graph-explorer
+From the API authorizations section of the new app created you can add the required scopes.
 
-Furthemore you can get, from Graph Explorer, specific permissions for the app:
-GET https://graph.microsoft.com/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')?$select=id,appId,displayName,appRoles,oauth2PermissionScopes,resourceSpecificApplicationPermissions
+5. Assign users and groups
+Go to Enterprise applications and select the application you just created.
+Under Manage, select Properties and set "Assignment required?" to Yes. Then select Save.
+Under Manage, select Users and groups and add the users and groups permitted to use this application.
+Once you've added all the users and groups, select Assign.
 
-More infoprmations are available at:
-https://learn.microsoft.com/en-us/graph/permissions-reference

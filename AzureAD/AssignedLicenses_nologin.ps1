@@ -22,7 +22,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\ALT\\AssignedLicenses_nologin\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AssignedLicenses_nologin\.ps1$" > $null
 $workdir = $matches[1]
 <# for testing purposes
 $workdir = Get-Location
@@ -59,12 +59,7 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                             FETCHING DATA FROM TENANT
 ******************************************************************************* #>
-$answ = [System.Windows.MessageBox]::Show("Load .csv file from tenant?",'INFILE','YesNo','Warning')
-if ($answ -eq "No") {    
-    Write-Host -ForegroundColor red "Aborting..."
-    Start-Sleep -Seconds 1
-    Exit
-}
+$answ = [System.Windows.MessageBox]::Show("Load .csv file from tenant",'INFILE','Ok','Info')
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Open File"
@@ -80,8 +75,8 @@ $Heather = 'blocked', 'city', 'state', 'dept', 'DirSyncEnabled', 'DisplayName',
     'addres', 'pswdComplex', 'title', 'zone', 'UPN', 'created'
 $A = Get-Content -Path $infile
 $A = $A[1..($A.Count - 1)]
-$A | Out-File -FilePath $infile
-$UsrRawdata = Import-Csv -Path $infile -Header $Heather
+$A | Out-File -FilePath "C:\Users\$env:USERNAME\Downloads\headless.csv"
+$UsrRawdata = Import-Csv -Path "C:\Users\$env:USERNAME\Downloads\headless.csv" -Header $Heather
 
 # retrieve all users list
 $MsolUsrData = @{} 
@@ -146,12 +141,7 @@ $parsebar[0].Close()
 <# *******************************************************************************
                             CREATING UPDATED DATAFRAMES
 ******************************************************************************* #>
-$answ = [System.Windows.MessageBox]::Show("Load .xlsx reference file?",'INFILE','YesNo','Warning')
-if ($answ -eq "No") {    
-    Write-Host -ForegroundColor red "Aborting..."
-    Start-Sleep -Seconds 1
-    Exit
-}
+$answ = [System.Windows.MessageBox]::Show("Load .xlsx reference file",'INFILE','Ok','Info')
 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Open File"
@@ -368,6 +358,26 @@ foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Lic
     }
 }
 Pause
+
+foreach ($currentUPN in $MsolUsrData.Key) {
+    if ($MsolUsrData[$currentUPN].USRTYPE -eq 'na') {
+        $typefixForm = FormBase -w 400 -h 160  -text 'NEW USER TYPE'
+        Label -form $typefixForm -x 20 -y 15 -w 200 -h 20 -text 'UPN' | Out-Null
+        Label -form $typefixForm -x 240 -y 15 -w 60 -h 20 -text 'Member' | Out-Null
+        Label -form $typefixForm -x 310 -y 15 -w 60 -h 20 -text 'Guest' | Out-Null
+        Label -form $typefixForm -x 20 -y 40 -w 220 -text $currentUPN | Out-Null
+        $okMember = RadioButton -form $typefixForm -x 255 -y 33 -w 30 -checked $true
+        $okGuest = RadioButton -form $typefixForm -x 325 -y 33 -w 30 -checked $false
+        OKButton -form $typefixForm -x 130 -y 80 -text "Ok" | Out-Null
+        $result = $typefixForm.ShowDialog()
+        if ($okMember.Checked) {
+            $MsolUsrData[$currentUPN].USRTYPE = 'Member'
+        } elseif ($okGuest.Checked) {
+            $MsolUsrData[$currentUPN].USRTYPE = 'Guest'
+        }
+    }
+}
+
 $Assigned_Licenses_dataframe = @()
 foreach ($item in $MsolUsrData.Keys) {
     foreach ($subitem in $MsolUsrData[$item].LICENSES.Keys) {

@@ -11,11 +11,9 @@ It requires the Application/Delegated Permission (MailboxSettings.ReadWrite)
 Check it out on Graph Explorer "Modify permissions" tab.
 
 
-*** TO FIX ***
-Received 803 from server, maybe:
- * the registered app needs further permissions
- * the JSON in <$BodyJsonSETOOF> is not correctly formatted
-#>
+*** WONTFIX(?) ***
+I still stuck in troubleshooting - getting 400 or 403 errors - probably due to:
+https://learn.microsoft.com/en-us/graph/resolve-auth-errors#400-bad-request-or-403-forbidden-does-the-user-comply-with-their-organizations-conditional-access-ca-policies
 
 <# *******************************************************************************
                                     HEADER
@@ -52,7 +50,7 @@ $ErrorActionPreference= 'Inquire'
 ******************************************************************************* #>
 # starting release 24.05.1 credentials are managed from PSWallet
 Write-Host -NoNewline "Credential management... "
-$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1" -ascript 'AutoreplyAPI'
+$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1"
 if ($pswout.Count -eq 4) {
     $UPN = $pswout[0]
     $clientID = $pswout[1]
@@ -71,7 +69,7 @@ if ($pswout.Count -eq 4) {
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Select Mail Message"
 $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
-$OpenFileDialog.filter = 'Txt file (*.txt)| *.txt'
+$OpenFileDialog.filter = 'html file (*.html)| *.html'
 $OpenFileDialog.ShowDialog() | Out-Null
 $InFile = $OpenFileDialog.filename
 $MessageInaBottle = Get-Content -Path $InFile | Out-String

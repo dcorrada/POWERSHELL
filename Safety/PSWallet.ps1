@@ -4,7 +4,7 @@ Param([string]$ExtScript='PSWallet', [string]$ExtKey='NULL',
 
 <#
 Name......: PSWallet.ps1
-Version...: 24.06.2
+Version...: 24.07.2
 Author....: Dario CORRADA
 
 PSWallet aims to be the credential manager tool in order to handle the various 
@@ -165,12 +165,13 @@ $howmuch = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "SELECT
 if ($howmuch.Count -eq 0) { # just perform single check a day
     Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query "DELETE FROM Logs WHERE UPTIME < DATETIME('now', '$BackInTime');"
     Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
     'history clean $BackInTime',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+    '$ExtScript'
 );
 "@
 }
@@ -193,6 +194,9 @@ if ($ExtScript -eq 'PSWallet') {
 
         if ($resultButton -eq 'RETRY') {
             if ($importCredits.Checked -eq $true) {
+                # for future edits: "Logs" table should be not imported
+                Write-Host -NoNewline 'Importing...'
+
                 [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
                 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
                 $OpenFileDialog.Title = "Import Table"
@@ -200,13 +204,10 @@ if ($ExtScript -eq 'PSWallet') {
                 $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
                 $OpenFileDialog.ShowDialog() | Out-Null
                 $ImportFile = $OpenFileDialog.filename 
-                
-                $headers = Compare-Object -ReferenceObject ('USER', 'PSWD', 'SCRIPT') -DifferenceObject ((Import-Excel -Path $ImportFile | Get-Member).Name)
-                if ($headers.SideIndicator -contains '<=') {
-                    [System.Windows.MessageBox]::Show("Required fields doesn't match",'ERROR','Ok','Error')
-                } else {
-                    Write-Host -NoNewline 'Importing...'
-                    $ImportedTable = Import-Excel -Path $ImportFile | ForEach-Object {
+                $Worksheet_list = Get-ExcelSheetInfo -Path $ImportFile
+
+                if ($Worksheet_list.Name -contains 'Credits') {
+                    $ImportedCredits = Import-Excel -Path $ImportFile -WorksheetName 'Credits' | ForEach-Object {
                         Write-Host -NoNewline '.'
                         New-Object -TypeName PSObject -Property @{
                             USER    = $_.USER
@@ -214,7 +215,7 @@ if ($ExtScript -eq 'PSWallet') {
                             SCRIPT  = $_.SCRIPT
                         } | Select USER, PSWD, SCRIPT
                     }
-                    $DataTable = $ImportedTable | Out-DataTable
+                    $DataTable = $ImportedCredits | Out-DataTable
                     # purge any existing record
                     $SQLiteConnection.Open()
                     Write-Host -NoNewline '.'
@@ -222,38 +223,71 @@ if ($ExtScript -eq 'PSWallet') {
                     # insert new records
                     $stdout = Invoke-SQLiteBulkCopy -DataTable $DataTable -SQLiteConnection $SQLiteConnection -Table Credits -NotifyAfter 0 -ConflictClause Ignore -Force
                     Write-Host -NoNewline '.'
-                    Write-Host -ForegroundColor Green ' DONE'
-                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+                    $SQLiteConnection.Close()
+                }
+
+                if ($Worksheet_list.Name -contains 'Graph') {
+                    $ImportedGraph = Import-Excel -Path $ImportFile -WorksheetName 'Graph' | ForEach-Object {
+                        Write-Host -NoNewline '.'
+                        New-Object -TypeName PSObject -Property @{
+                            APPNAME         = $_.APPNAME
+                            APPID           = $_.APPID
+                            OBJID           = $_.OBJID
+                            TENANTID        = $_.TENANTID
+                            SECRETNAME      = $_.SECRETNAME
+                            SECRETID        = $_.SECRETID
+                            SECRETVALUE     = EncryptString -keyfile $keyfile -instring $_.SECRETVALUE
+                            SECRETEXPDATE   = ($_.SECRETEXPDATE |Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString()
+                            UPN             = $_.UPN
+                            SCRIPT          = $_.SCRIPT
+                        } | Select APPNAME, APPID, OBJID, TENANTID, SECRETNAME, SECRETID, SECRETVALUE,SECRETEXPDATE, UPN, SCRIPT
+                    }
+                    $DataTable = $ImportedGraph | Out-DataTable
+                    # purge any existing record
+                    $SQLiteConnection.Open()
+                    Write-Host -NoNewline '.'
+                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'DELETE FROM `Graph`;'
+                    # insert new records
+                    $stdout = Invoke-SQLiteBulkCopy -DataTable $DataTable -SQLiteConnection $SQLiteConnection -Table Graph -NotifyAfter 0 -ConflictClause Ignore -Force
+                    Write-Host -NoNewline '.'
+                    $SQLiteConnection.Close()
+                }
+                
+                Write-Host -ForegroundColor Green ' DONE'
+
+                $SQLiteConnection.Open()
+                Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
     'import table',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+    '$ExtScript'
 );
 "@
-                    $SQLiteConnection.Close()
-                }
+                $SQLiteConnection.Close()
             } elseif ($exportCredits.Checked -eq $true) {
                 Write-Host -NoNewline 'Exporting...'
+                
+                [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+                $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+                $SaveFileDialog.Title = "Export Credits"
+                $SaveFileDialog.initialDirectory = "C:$env:HOMEPATH\Downloads"
+                $SaveFileDialog.FileName = 'PSWallet.xlsx'
+                $SaveFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+                $SaveFileDialog.ShowDialog() | Out-Null
+                $ExportFile = $SaveFileDialog.filename
+                $XlsPkg = Open-ExcelPackage -Path $ExportFile -Create
+
                 $SQLiteConnection.Open()
-                $rawdata = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
+                $rawdataCredits = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Credits`;'
+                $rawdataGraph = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Graph`;'
+                $rawdataLogs = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query 'SELECT * FROM `Logs`;'
                 $SQLiteConnection.Close()
-                if ($rawdata -eq $null) {
-                    [System.Windows.MessageBox]::Show("Database empty, no data to export",'INFO','Ok','Warning') | Out-Null
-                } else {
-                    $SQLiteConnection.Open()
-                    Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
-VALUES (
-    '$($env:USERNAME)',
-    '$($env:COMPUTERNAME)',
-    'export table',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
-);
-"@
-                    $SQLiteConnection.Close()
-                    $ExportedTable = $rawdata | ForEach-Object {
+                
+                if (!($rawdataCredits -eq $null)) {
+                    $exportedCredits = $rawdataCredits | ForEach-Object {
                         Write-Host -NoNewline '.'
                         New-Object -TypeName PSObject -Property @{
                             USER    = $_.USER
@@ -261,21 +295,57 @@ VALUES (
                             SCRIPT  = $_.SCRIPT
                         } | Select USER, PSWD, SCRIPT
                     }
-                    [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-                    $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-                    $SaveFileDialog.Title = "Export Credits"
-                    $SaveFileDialog.initialDirectory = "C:$env:HOMEPATH\Downloads"
-                    $SaveFileDialog.FileName = 'PSWallet.xlsx'
-                    $SaveFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
-                    $SaveFileDialog.ShowDialog() | Out-Null
-                    $ExportFile = $SaveFileDialog.filename
-
                     Write-Host -NoNewline '.'
-                    $XlsPkg = Open-ExcelPackage -Path $ExportFile -Create
-                    $XlsPkg = $ExportedTable | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium3' -AutoSize -PassThru
-                    Close-ExcelPackage -ExcelPackage $XlsPkg
-                    Write-Host -ForegroundColor Green ' DONE'
+                    $XlsPkg = $exportedCredits | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Credits' -TableName 'Credits' -TableStyle 'Medium4' -AutoSize -PassThru
                 }
+                if (!($rawdataGraph -eq $null)) {
+                    $exportedGraph = $rawdataGraph | ForEach-Object {
+                        Write-Host -NoNewline '.'
+                        New-Object -TypeName PSObject -Property @{
+                            APPNAME         = $_.APPNAME
+                            APPID           = $_.APPID
+                            OBJID           = $_.OBJID
+                            TENANTID        = $_.TENANTID
+                            SECRETNAME      = $_.SECRETNAME
+                            SECRETID        = $_.SECRETID
+                            SECRETVALUE     = DecryptString -keyfile $keyfile -instring $_.SECRETVALUE
+                            SECRETEXPDATE   = $_.SECRETEXPDATE
+                            UPN             = $_.UPN
+                            SCRIPT          = $_.SCRIPT
+                        } | Select APPNAME, APPID, OBJID, TENANTID, SECRETNAME, SECRETID, SECRETVALUE,SECRETEXPDATE, UPN, SCRIPT
+                    }
+                    Write-Host -NoNewline '.'
+                    $XlsPkg = $exportedGraph | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Graph' -TableName 'Graph' -TableStyle 'Medium2' -AutoSize -PassThru
+                }
+                if (!($rawdataLogs -eq $null)) {
+                    $exportedLogs = $rawdataLogs | ForEach-Object {
+                        Write-Host -NoNewline '.'
+                        New-Object -TypeName PSObject -Property @{
+                            USER    = $_.USER
+                            HOST    = $_.HOST
+                            ACTION  = $_.ACTION
+                            UPTIME  = $_.UPTIME
+                            SCRIPT  = $_.SCRIPT
+                        } | Select USER, HOST, ACTION, UPTIME, SCRIPT
+                    }
+                    Write-Host -NoNewline '.'
+                    $XlsPkg = $exportedLogs | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'Logs' -TableName 'Logs' -TableStyle 'Medium1' -AutoSize -PassThru
+                }
+                Close-ExcelPackage -ExcelPackage $XlsPkg
+
+                $SQLiteConnection.Open()
+                Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
+VALUES (
+    '$($env:USERNAME)',
+    '$($env:COMPUTERNAME)',
+    'export table',
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+    '$ExtScript'
+);
+"@
+                $SQLiteConnection.Close()
+                Write-Host -ForegroundColor Green ' DONE'
             } elseif ($editCredits.Checked -eq $true) {
                 Write-Host -NoNewline 'Editing...'
                 $SQLiteConnection.Open()
@@ -325,12 +395,13 @@ VALUES (
 
                         $SQLiteConnection.Open()
                         Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
     'edit row',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+    '$ExtScript'
 );
 "@
                         $SQLiteConnection.Close()
@@ -370,12 +441,13 @@ VALUES (
 
                             $SQLiteConnection.Open()
                             Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-INSERT INTO Logs (USER, HOST, ACTION, UPTIME) 
+INSERT INTO Logs (USER, HOST, ACTION, UPTIME, SCRIPT) 
 VALUES (
     '$($env:USERNAME)',
     '$($env:COMPUTERNAME)',
     'delete row',
-    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())'
+    '$((Get-Date -format "yyyy-MM-dd HH:mm:ss").ToString())',
+    '$ExtScript'
 );
 "@
                             $SQLiteConnection.Close()
@@ -519,7 +591,7 @@ VALUES ('$($AddEntry.APPNAME.Text)',
     } elseif ($ExtAction -eq 'listGraph') {
         $SQLiteConnection.Open()
         $TheResult = Invoke-SqliteQuery -SQLiteConnection $SQLiteConnection -Query @"
-SELECT UPN, APPNAME, SECRETEXPDATE
+SELECT UPN, APPNAME, SECRETEXPDATE, SECRETNAME
 FROM Graph
 WHERE SCRIPT = '$ExtScript'
 "@
@@ -528,7 +600,15 @@ WHERE SCRIPT = '$ExtScript'
             Write-Host -ForegroundColor Yellow 'PSWallet>>> NO DATA FOUND'
         } else {
             foreach ($item in $TheResult) {
-                Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $($item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"))"
+                $BestBefore = $item.SECRETEXPDATE | Get-Date -format "yyyy-MM-dd"
+                $Today = Get-Date -format "yyyy-MM-dd"
+                if ($item.SECRETNAME -eq 'SecretName') {
+                    Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (NO secret)"
+                } elseif ($BestBefore -lt $Today) {
+                    Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret EXPIRED)"
+                } else {
+                    Write-Host -ForegroundColor Cyan "PSWallet>>> $($item.UPN) <-> $($item.APPNAME) (secret will expires on $BestBefore)"
+                }
             }
         }
         $TheAction = 'read table'

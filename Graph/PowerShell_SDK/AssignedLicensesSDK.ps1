@@ -1,10 +1,13 @@
 <#
-Name......: AssignedLicenses.ps1
-Version...: 24.06.1
+Name......: AssignedLicensesSDK.ps1
+Version...: 24.07.2
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
 license(s) are assigned to each user, then create/edit an excel report file.
+
+Thx to Ali TAJRAN for the useful notes about Get-MgUser on:
+https://www.alitajran.com/get-mguser/ 
 #>
 
 
@@ -21,7 +24,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureAD\\AssignedLicenses\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Graph\\PowerShell_SDK\\AssignedLicensesSDK\.ps1$" > $null
 $workdir = $matches[1]
 <# for testing purposes
 $workdir = Get-Location
@@ -38,13 +41,12 @@ $ErrorActionPreference= 'Stop'
 do {
     try {
         Import-Module -Name "$workdir\Modules\Forms.psm1"
-        Import-Module MSOnline
         Import-Module ImportExcel
         $ThirdParty = 'Ok'
     } catch {
-        if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
-            Install-Module MSOnline -Confirm:$False -Force
-            [System.Windows.MessageBox]::Show("Installed [MSOnline] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
+        if (!(((Get-InstalledModule).Name) -contains 'Microsoft.Graph')) {
+            Install-Module Microsoft.Graph -Scope AllUsers -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [Microsoft.Graph] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
             Install-Module ImportExcel -Confirm:$False -Force
@@ -59,38 +61,29 @@ do {
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
-<#
-In that cases in which MFA has been enabled on Microsot 365 accounts the option 
-"-Credential" of cmdlet "Connect-MsolService" doesn't work.
-Rather such cmdlet should be used without prior specification of any credential 
-(a dialog of registered account will appear, instead).
-
-*******************************************************************************
+<# *******************************************************************************
                             CREDENTIALS MANAGEMENT
-*******************************************************************************
-# starting release 24.05.1 credentials are managed from PSWallet
+******************************************************************************* #>
 Write-Host -NoNewline "Credential management... "
-$pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'AssignedLicenses'
-if ($pswout.Count -eq 2) {
-    $credits = New-Object System.Management.Automation.PSCredential($pswout[0], (ConvertTo-SecureString $pswout[1] -AsPlainText -Force))
+$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1"
+if ($pswout.Count -eq 4) {
+    $UPN = $pswout[0]
+    $clientID = $pswout[1]
+    $tenantID = $pswout[2]
+    Write-Host -ForegroundColor Green ' Ok'
 } else {
     [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
-    Write-Host -ForegroundColor Red "Ko"
+    Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
     Pause
     exit
 }
-Write-Host -ForegroundColor Green 'Ok'
-#>
 
-<# *******************************************************************************
-                            FETCHING DATA FROM TENANT
-******************************************************************************* #>
 # connect to Tenant
 Write-Host -NoNewline "Connecting to the Tenant..."
 $ErrorActionPreference= 'Stop'
 Try {
-    Connect-MsolService # -Credential $credits
-    Write-Host -ForegroundColor Green " OK"
+    $splash = Connect-MgGraph -ClientId $clientID -TenantId $tenantID 
+    Write-Host -ForegroundColor Green ' Ok'
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
@@ -100,47 +93,60 @@ Catch {
     exit
 }
 
-# retrieve the available licenses, complete list of possible account sku is available on:
-# https://learn.microsoft.com/en-us/azure/active-directory/enterprise-users/licensing-service-plan-reference
+
+<# *******************************************************************************
+                            FETCHING DATA FROM TENANT
+******************************************************************************* #>
+# retrieve the available licenses
 Write-Host -NoNewline "Looking for available licenses..."
 $avail_lics = @{}
-$AccountName = (Get-MsolAccountSku)[1].AccountName
-foreach ($item in (Get-MsolAccountSku)) {
-    if ($item.ActiveUnits -lt 10000) { # excluding the broadest licenses
+$AccountName = (Get-MgSubscribedSku)[1].AccountName
+foreach ($item in (Get-MgSubscribedSku | Select-Object -Property SkuPartNumber, ConsumedUnits -ExpandProperty PrepaidUnits)) {
+    if ($item.Enabled -lt 10000) { # excluding the broadest licenses
         $avail_lics[$item.SkuPartNumber] = @{
-            TOTAL   = $item.ActiveUnits
-            AVAIL   = ($item.ActiveUnits - $item.ConsumedUnits) 
+            TOTAL   = $item.Enabled
+            AVAIL   = ($item.Enabled - $item.ConsumedUnits) 
         }
     }
 }
 Write-Host -ForegroundColor Cyan " Found $($avail_lics.Count) active SKU"
 
+# SkuID to SkuPartNumber hash table
+$SkuID2name = @{}
+Get-MgSubscribedSku | Select-Object -Property SkuId, SkuPartNumber | foreach { 
+    $SkuID2name[$_.SkuId] = $_.SkuPartNumber 
+}
+
 # retrieve all users list
 $MsolUsrData = @{} 
-$tot = (Get-MsolUser -All).Count
+$tot = (Get-MgUser -All).Count
 $usrcount = 0
 $parsebar = ProgressBar
-foreach ($item in (Get-MsolUser -All | Sort-Object DisplayName)) {
+
+$MgUsrs = Get-MgUser -All -Property UserPrincipalName, DisplayName, UserType, accountEnabled, CreatedDateTime, assignedLicenses  `
+    | Select-Object UserPrincipalName, DisplayName, UserType, accountEnabled, CreatedDateTime, assignedLicenses
+foreach ($item in ($MgUsrs | Sort-Object DisplayName)) {
     $usrcount ++
     Write-Host -NoNewline "Getting data from [$($item.DisplayName)]... "     
 
     $MsolUsrData[$item.UserPrincipalName] = @{
-        BLOCKED         = $item.BlockCredential
+        BLOCKED         = !($item.AccountEnabled)
         DESC            = $item.DisplayName
         USRNAME         = $item.UserPrincipalName
-        LICENSED        = $item.IsLicensed
+        LICENSED        = ($item.AssignedLicenses.Count -ge 1)
         LICENSES        = @{ # default values assuming no license assigned
             'NONE'        = Get-Date -format "yyyy/MM/dd"
         }
         USRTYPE         = $item.UserType
-        CREATED         = $item.WhenCreated | Get-Date -format "yyyy/MM/dd"
+        CREATED         = $item.CreatedDateTime | Get-Date -format "yyyy/MM/dd"
     }
 
     if ($MsolUsrData[$item.UserPrincipalName].LICENSED -eq "True") {
         $MsolUsrData[$item.UserPrincipalName].LICENSES = @{} # re-init for updating licenses
-        foreach ($accountsku in $item.Licenses.AccountSku.SkuPartNumber) {
-            if ($avail_lics.ContainsKey($accountsku)) { # filtering only managed licenses
-                $MsolUsrData[$item.UserPrincipalName].LICENSES[$accountsku] = Get-Date -format "yyyy/MM/dd"
+        foreach ($accountsku in $item.AssignedLicenses) {            
+            $SkuName = $SkuID2name[$accountsku.SkuID]
+            if ($avail_lics.ContainsKey($SkuName)) { # filtering only managed licenses
+                $MsolUsrData[$item.UserPrincipalName].LICENSES[$SkuName] = Get-Date -format "yyyy/MM/dd"
             }
         }
         Write-Host -ForegroundColor Blue "$($MsolUsrData[$item.UserPrincipalName].LICENSES.Count) license(s) assigned"
@@ -168,7 +174,8 @@ foreach ($item in (Get-MsolUser -All | Sort-Object DisplayName)) {
 Write-Host -ForegroundColor Green " DONE"
 $parsebar[0].Close()
 
-
+# disconnect from Tenant
+$infoLogout = Disconnect-Graph
 
 <# *******************************************************************************
                             CREATING UPDATED DATAFRAMES
