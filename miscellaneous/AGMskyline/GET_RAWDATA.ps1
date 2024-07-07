@@ -8,7 +8,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\GET_RAWDATA\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\miscellaneous\\AGMskyline\\GET_RAWDATA\.ps1$" > $null
 $workdir = $matches[1]
 <# alternative for testing
 $workdir = Get-Location
@@ -49,7 +49,7 @@ $form_panel.ShowDialog() | Out-Null
 
 foreach ($item in $swlist) {
     if ($item.Checked) {
-        $scriptfile = $workdir + '\RAWDATA\' + $item.Text + '.ps1'
+        $scriptfile = $workdir + '\miscellaneous\AGMskyline' + $item.Text + '.ps1'
         Clear-Host
         Write-Host -ForegroundColor Yellow "Launching <$scriptfile>..."
         PowerShell.exe -file "$scriptfile"

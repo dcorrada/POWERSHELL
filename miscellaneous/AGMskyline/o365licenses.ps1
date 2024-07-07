@@ -8,7 +8,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\o365licenses\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\miscellaneous\\AGMskyline\\o365licenses\.ps1$" > $null
 $workdir = $matches[1]
 <# alternative for testing
 $workdir = Get-Location
@@ -19,15 +19,11 @@ $workdir = $workdir.Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # retrieve credentials
 Write-Host -NoNewline "Credential management... "
-$cercaWally = 'C:\Users\dario.corrada\Desktop\SCRIPT MIEI\Graph\AppKeyring.ps1'
-if (!(Test-Path -Path $cercaWally -PathType Leaf)) {
-    $cercaWally = 'C:\Users\korda\Desktop\POWERSHELL\Graph\AppKeyring.ps1'
-}
-$pswout = PowerShell.exe -file $cercaWally
+$pswout = PowerShell.exe -file "$workdir\Graph\AppKeyring.ps1"
 if ($pswout.Count -eq 4) {
     $UPN = $pswout[0]
     $clientID = $pswout[1]

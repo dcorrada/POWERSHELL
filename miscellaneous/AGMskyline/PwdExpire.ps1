@@ -8,7 +8,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\PwdExpire\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\miscellaneous\\AGMskyline\\PwdExpire\.ps1$" > $null
 $workdir = $matches[1]
 <# alternative for testing
 $workdir = Get-Location
@@ -19,7 +19,7 @@ $workdir = $workdir.Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # import Active Directory module
 if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }

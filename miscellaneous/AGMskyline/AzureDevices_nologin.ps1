@@ -8,7 +8,7 @@ if ($testadmin -eq $false) {
 
 # get working directory
 $fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AzureDevices_nologin\.ps1$" > $null
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\miscellaneous\\AGMskyline\\AzureDevices_nologin\.ps1$" > $null
 $workdir = $matches[1]
 <# for testing purposes
 $workdir = Get-Location
@@ -19,7 +19,7 @@ $workdir = $workdir.Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # carico il csv estratto dal tenant web
 $answ = [System.Windows.MessageBox]::Show("Disponi di un file CSV con separatore <,> ?",'INFILE','YesNo','Warning')
