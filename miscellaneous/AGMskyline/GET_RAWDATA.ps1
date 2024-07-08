@@ -49,7 +49,7 @@ $form_panel.ShowDialog() | Out-Null
 
 foreach ($item in $swlist) {
     if ($item.Checked) {
-        $scriptfile = $workdir + '\miscellaneous\AGMskyline' + $item.Text + '.ps1'
+        $scriptfile = $workdir + '\miscellaneous\AGMskyline\' + $item.Text + '.ps1'
         Clear-Host
         Write-Host -ForegroundColor Yellow "Launching <$scriptfile>..."
         PowerShell.exe -file "$scriptfile"

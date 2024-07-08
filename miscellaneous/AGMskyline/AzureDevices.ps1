@@ -19,7 +19,7 @@ $workdir = $workdir.Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-Import-Module -Name "$workdir\\miscellaneous\\AGMskyline\Forms.psm1"
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 
 # retrieve credentials
@@ -52,65 +52,44 @@ Catch {
     exit
 }
 
-# get available groups and related members
+# get registered devices ande related owners
 Write-Host -NoNewline "Retrieving device list... "
-$GroupList = Get-MgDevice -All  -Property ... `
-    | Select-Object ...
-Write-Host -ForegroundColor Green 'Ok'
+$deviceList = Get-MgDevice -All  -Property Id, DisplayName, OperatingSystem, OperatingSystemVersion, ApproximateLastSignInDateTime `
+    | Select-Object Id, DisplayName, OperatingSystem, OperatingSystemVersion, ApproximateLastSignInDateTime
 
-<# some stuff to review... 
-
-# import the AzureAD module
-$ErrorActionPreference= 'Stop'
-try {
-    Import-Module AzureAD
-} catch {
-    Install-Module AzureAD -Confirm:$False -Force
-    Import-Module AzureAD
-}
-$ErrorActionPreference= 'Inquire'
-
-# connect to Tenant
-$ErrorActionPreference= 'Stop'
-Try {
-    Connect-AzureAD
-    $ErrorActionPreference= 'Inquire'
-}
-Catch {
-    Write-Host -ForegroundColor Red "*** ERROR ACCESSING TENANT ***"
-    # Write-Output "`nError: $($error[0].ToString())"
-    Pause
-    exit
-}
-
-# Get a list of all devices and initialize dataframe for collecting data
-$rawdata = Get-AzureADDevice -All $true
 $parseddata = @{}
-
-$tot = $rawdata.Count
+$tot = $deviceList.Count
 $i = 0
 $parsebar = ProgressBar
-foreach ($item in $rawdata) {
+foreach ($currentDevice in $deviceList) {
     $i++
-    $ownedby = Get-AzureADDeviceRegisteredOwner -ObjectId $item.ObjectId
-    $akey = $item.DisplayName
-    if ($parseddata.ContainsKey($akey)) {
-        $uptime = $item.ApproximateLastLogonTimeStamp | Get-Date -f yyy-MM-dd
-        if ($uptime -gt $parseddata[$akey].LastLogon) {
-            $parseddata[$akey].LastLogon = $uptime
-            $parseddata[$akey].OSType = $item.DeviceOSType
-            $parseddata[$akey].OSVersion = $item.DeviceOSVersion
-            $parseddata[$akey].Owner = $ownedby.DisplayName
-            $parseddata[$akey].Email = $ownedby.UserPrincipalName
+    $OwnerShip = Get-MgDeviceRegisteredOwner -DeviceId $currentDevice.Id | Select-Object AdditionalProperties
+    $owners = @{}
+    if ($OwnerShip.AdditionalProperties.'@odata.type' -eq '#microsoft.graph.user') {
+        $fullname = $OwnerShip.AdditionalProperties.displayName
+        $upn = $OwnerShip.AdditionalProperties.userPrincipalName
+    } else {
+        $fullname = 'nobody'
+        $upn = 'none'
+    }
+
+    if ($parseddata.ContainsKey($currentDevice.DisplayName)) {
+        $uptime = $currentDevice.ApproximateLastSignInDateTime | Get-Date -f yyy-MM-dd
+        if ($uptime -gt $parseddata[$currentDevice.DisplayName].LastLogon) {
+            $parseddata[$currentDevice.DisplayName].LastLogon = $uptime
+            $parseddata[$currentDevice.DisplayName].OSType = $currentDevice.OperatingSystem
+            $parseddata[$currentDevice.DisplayName].OSVersion = $currentDevice.OperatingSystemVersion
+            $parseddata[$currentDevice.DisplayName].Owner = $fullname
+            $parseddata[$currentDevice.DisplayName].Email = $upn
         }
     } else {
-        $parseddata[$akey] = @{
-            'LastLogon' = $item.ApproximateLastLogonTimeStamp | Get-Date -f yyy-MM-dd
-            'OSType' = $item.DeviceOSType
-            'OSVersion' = $item.DeviceOSVersion
-            'HostName' = $item.DisplayName
-            'Owner' = $ownedby.DisplayName
-            'Email' = $ownedby.UserPrincipalName        
+        $parseddata[$currentDevice.DisplayName] = @{
+            'LastLogon' = $currentDevice.ApproximateLastSignInDateTime | Get-Date -f yyy-MM-dd
+            'OSType' = $currentDevice.OperatingSystem
+            'OSVersion' = $currentDevice.OperatingSystemVersion
+            'HostName' = $currentDevice.DisplayName
+            'Owner' = $fullname
+            'Email' = $upn
         }
     }
 
@@ -129,8 +108,8 @@ foreach ($item in $rawdata) {
     }
     [System.Windows.Forms.Application]::DoEvents()
 }
+Write-Host -ForegroundColor Green 'Ok'
 $parsebar[0].Close()
-#>
 
 # disconnect from Tenant
 $infoLogout = Disconnect-Graph
