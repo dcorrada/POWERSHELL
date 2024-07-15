@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.06.2
+Version...: 24.07.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -41,7 +41,7 @@ $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Open Hardware Monitor"
 $swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Revo Uninstaller"
-$swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Skype"
+$swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Office 365 Desktop"
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
@@ -96,14 +96,10 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Revo Uninstaller', $winget_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"   
-        } elseif ($item -eq 'Skype') {
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://go.skype.com/windows.desktop.download", "$tmppath\Skype.exe")
-            #Invoke-WebRequest -Uri 'https://go.skype.com/windows.desktop.download' -OutFile "$tmppath\Skype.exe"
-            Write-Host -ForegroundColor Green " DONE"
-            $answ = [System.Windows.MessageBox]::Show("After installation close all Skype instances to proceed...",'WARNING','Ok','Warning')
-            Write-Host -NoNewline "Install software..."
-            Start-Process -FilePath "$tmppath\Skype.exe" -Wait
+        } elseif ($item -eq 'Office Desktop') {
+            Write-Host -NoNewline "Installing Microsoft Office 365..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Microsoft 365 Apps for enterprise', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"        
         } elseif ($item -eq 'Speccy') {
             Write-Host -NoNewline "Installing Speccy..."
@@ -118,11 +114,10 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -NoNewline "Install software..."
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'Teams') {
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64", "C:\Users\Public\Desktop\Teams_Installer.exe")
-            #Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkID=869426&clcid=0x410&culture=it-it&country=IT&lm=deeplink&lmsrc=groupChatMarketingPageWeb&cmpid=directDownloadWin64' -OutFile "C:\Users\Public\Desktop\Teams_Installer.exe"
+            Write-Host -NoNewline "Installing Microsoft Teams..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Microsoft Teams', $winget_opts
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"
-            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'WatchGuard') {
             Write-Host -NoNewline "Download software..."
             #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_7_2/WG-MVPN-SSL_12_7_2.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
