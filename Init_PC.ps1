@@ -4,7 +4,7 @@ Version...: 24.07.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
-* install Chrome, AcrobatDC, 7Zip, Supremo;
+* install Chrome, AcrobatDC, 7Zip, Supremo, Microsoft 365 apps;
 * create a local account with admin privileges;
 * set hostname according to the serial number.
 #>
@@ -41,7 +41,7 @@ $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Open Hardware Monitor"
 $swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Revo Uninstaller"
-$swlist['Skype'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Office 365 Desktop"
+$swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Office 365 Desktop"
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
@@ -96,7 +96,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Revo Uninstaller', $winget_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"   
-        } elseif ($item -eq 'Office Desktop') {
+        } elseif ($item -eq 'Office 365 Desktop') {
             Write-Host -NoNewline "Installing Microsoft Office 365..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Microsoft 365 Apps for enterprise', $winget_opts
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
@@ -115,7 +115,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'Teams') {
             Write-Host -NoNewline "Installing Microsoft Teams..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Microsoft Teams', $winget_opts
+            $StagingArgumentList = 'install  "{0}" {1} {2}' -f 'Microsoft Teams', $winget_opts, '--id Microsoft.Teams'
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'WatchGuard') {
