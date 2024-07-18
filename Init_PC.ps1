@@ -70,8 +70,8 @@ if (($info[2] -match 'Windows 10') -and ($winget_exe -eq $null)) {
     [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null  
     $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 }
-$msstore_opts = '--source msstore --accept-package-agreements --accept-source-agreements --silent'
-$winget_opts = '--source winget --accept-package-agreements --accept-source-agreements --silent'
+$msstore_opts = '--source msstore --scope machine --accept-package-agreements --accept-source-agreements --silent'
+$winget_opts = '--source winget --scope machine --accept-package-agreements --accept-source-agreements --silent'
 Write-Host -ForegroundColor Green " DONE"
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
