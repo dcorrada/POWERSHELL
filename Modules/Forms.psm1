@@ -73,7 +73,7 @@ function RadioButton {
 Export-ModuleMember -Function RadioButton
 
 function TxtBox {
-    param ($form, $x, $y, $w = 200, $h = 30, $text, $masked = $false)
+    param ($form, $x, $y, $w = 200, $h = 30, $text, $masked = $false, $multiline = $false)
 
     $obj = New-Object System.Windows.Forms.TextBox
     $obj.Location = "$x,$y"
@@ -81,6 +81,10 @@ function TxtBox {
     $obj.Text = $text
     if ($masked) {
         $obj.PasswordChar = '*'
+    }
+    if ($multiline) {
+        $obj.Multiline = $true
+        $obj.Scrollbars = 'Vertical'
     }
     $form.Controls.Add($obj)
 
