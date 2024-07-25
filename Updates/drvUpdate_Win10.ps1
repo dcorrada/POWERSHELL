@@ -41,8 +41,8 @@ $ErrorActionPreference= 'Inquire'
 Add-WUServiceManager -ServiceID "7971f918-a847-4430-9279-4a52d1efe18d" -Confirm:$false
 
 # install the drivers updates twice
-Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$False -UpdateType Driver -MicrosoftUpdate -ForceDownload -ForceInstall -ErrorAction SilentlyContinue | Out-File "C:\Users\$env:USERNAME\Desktop\$(get-date -f yyyy-MM-dd)-drvupdate.log" -force
-Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$False -UpdateType Driver -MicrosoftUpdate -ForceDownload -ForceInstall -ErrorAction SilentlyContinue | Out-File "C:\Users\$env:USERNAME\Desktop\$(get-date -f yyyy-MM-dd)-drvupdate.log" -force
+Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$False -UpdateType Driver -MicrosoftUpdate -ForceDownload -ForceInstall -ErrorAction SilentlyContinue | Out-File "$env:USERPROFILE\Downloads\$(get-date -f yyyy-MM-dd)-drvupdate.log" -force
+Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$False -UpdateType Driver -MicrosoftUpdate -ForceDownload -ForceInstall -ErrorAction SilentlyContinue | Out-File "$env:USERPROFILE\Downloads\$(get-date -f yyyy-MM-dd)-drvupdate.log" -force
 
 # reboot
 $answ = [System.Windows.MessageBox]::Show("Reboot computer?",'REBOOT','YesNo','Info')

@@ -82,7 +82,7 @@ foreach ($box in $boxes) {
 
 # looking for any Azure AD account
 Connect-MsolService
-$outfile = "C:\Users\$env:USERNAME\Desktop\ZOMBIE.csv"
+$outfile = "$env:USERPROFILE\Downloads\ZOMBIE.csv"
 "FULLNAME;USERNAME;OU" | Out-File $outfile -Encoding utf8
 foreach ($item in ($rawdata.Keys | Sort-Object)) {
     Write-Host -NoNewline "Checking [$item]..."

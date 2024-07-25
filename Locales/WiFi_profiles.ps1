@@ -26,7 +26,7 @@ $result = $form_modalita.ShowDialog()
 if ($result -eq "OK") {
     if ($esporta.Checked) {
         # export profiles
-        $dest = "C:\Users\$env:USERNAME\Desktop\wifi_profiles"
+        $dest = "$env:USERPROFILE\Downloads\wifi_profiles"
         Write-Host "Export WiFi profiles..."
         New-Item -ItemType directory -Path $dest
         netsh wlan export profile key=clear folder=$dest

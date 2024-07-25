@@ -37,8 +37,8 @@ Label -form $AccessForm -x 10 -y 50 -w 80 -text 'Password:' | Out-Null
 $passwd = TxtBox -form $AccessForm -x 100 -y 50 -w 170 -masked $true
 $pswadd = CheckBox -form $AccessForm -x 10 -y 80 -text 'Add new credential to PSWallet' 
 if (!(Test-Path -Path "$env:LOCALAPPDATA\PSWallet.sqlite" -PathType Leaf)) { $pswadd.Enabled = $false }
-RETRYButton -form $AccessForm -x 150 -y 120 -w 120 -text "PSWallet user list" 
-OKButton -form $AccessForm -x 20 -y 120 -w 120 -text "Directly access"
+RETRYButton -form $AccessForm -x 150 -y 120 -w 120 -text "PSWallet user list" | Out-Null
+OKButton -form $AccessForm -x 20 -y 120 -w 120 -text "Directly access" | Out-Null
 $resultButton = $AccessForm.ShowDialog()
 
 $WhereIsMyWallet =  "$workdir\Safety\PSWallet.ps1"
@@ -111,7 +111,7 @@ if ($resultButton -eq 'RETRY') {
         Label -form $AccessForm -x 10 -y 50 -w 80 -text 'Password:' | Out-Null
         $passwd = TxtBox -form $AccessForm -x 100 -y 50 -w 170 -masked $true
         Label -form $AccessForm -x 75 -y 90 -text '*** No PSWallet found ***' | Out-Null
-        OKButton -form $AccessForm -x 75 -y 120 -w 120 -text "Directly access"
+        OKButton -form $AccessForm -x 75 -y 120 -w 120 -text "Directly access" | Out-Null
         $resultButton = $AccessForm.ShowDialog()
         $ausr = $usrname.Text
         $apwd = $passwd.Text

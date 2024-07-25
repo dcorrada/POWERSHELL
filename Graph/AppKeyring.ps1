@@ -107,8 +107,8 @@ if ((Test-Path -Path $WhereIsMyWallet -PathType Leaf) -and (Test-Path -Path $Whe
                 }
                 $they += 50 
             }
-            RETRYButton -form $formlist -x 280 -y ($they + 30) -w 120 -text "Update secret" 
-            OKButton -form $formlist -x 30 -y ($they + 30) -w 120 -text "Access"
+            RETRYButton -form $formlist -x 280 -y ($they + 30) -w 120 -text "Update secret" | Out-Null
+            OKButton -form $formlist -x 30 -y ($they + 30) -w 120 -text "Access" | Out-Null
             $resultButton = $formlist.ShowDialog()
             foreach ($item in $choices) {
                 if ($item.Checked) {

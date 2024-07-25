@@ -112,7 +112,7 @@ foreach ($item in ($usrcandidates.Keys | Sort-Object)) {
     $vpos += 25
 }
 $vpos += 20
-OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
+OKButton -form $form_panel -x 90 -y $vpos -text "Ok" | Out-Null
 $result = $form_panel.ShowDialog()
 
 # perform operations

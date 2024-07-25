@@ -40,7 +40,7 @@ foreach ($computer_name in $computer_list.Name) {
     $i++
 }
 
-$outfile = "C:\Users\$env:USERNAME\Desktop\AD_computers.csv"
+$outfile = "$env:USERPROFILE\Downloads\AD_computers.csv"
 "Name;OrganizationalUnit;Created;LastLogonDate;OperatingSystem;OperatingSystemVersion;Description" | Out-File $outfile -Encoding ASCII -Append
 foreach ($pc in $rawdata.Keys) {
     $new_record = @(
