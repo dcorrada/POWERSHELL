@@ -19,10 +19,6 @@ will be ignored).
 
 The GitHub API Token will be cached on local machine across PowerShell 
 sessions.  To clear caching, call "Clear-GitHubAuthentication".
-
-+++ TODO +++
-* Fix history list (duplicated items, invert sorting)
-* Sort and/or mark folders and scripts separately
 #>
 
 <# *******************************************************************************
@@ -154,7 +150,12 @@ while ($continueBrowsing) {
         } else {
             $gotcha = $false
         }
-        $choices += RadioButton -form $adialog -x 20 -y $they -checked $gotcha -text $ItemName
+        if ($ItemName -match "\.ps1$") {
+            $aText = $ItemName
+        } else {
+            $aText = '[+] ' + $ItemName
+        }
+        $choices += RadioButton -form $adialog -x 20 -y $they -checked $gotcha -text $aText
         $they += 30 
     }
 
@@ -185,7 +186,8 @@ while ($continueBrowsing) {
     }
     foreach ($currentOpt in $choices) {
         if ($currentOpt.Checked) {
-            $isChecked = "$($currentOpt.Text)"
+            $currentOpt.Text -match "^(\[\+\] )*(.+)$" | Out-Null
+            $isChecked = "$($matches[2])"
             foreach ($anItem in $CurrentItems) {
                 if ($anItem.NAME -eq $isChecked) {
                     $selectedItem.NAME = "$($anItem.NAME)"
@@ -331,7 +333,7 @@ PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
                                     CLEANING
 ******************************************************************************* #>
 
-# update history
+# update history (up to 5 items)
 if ($cachedItems.NAME -cnotcontains $selectedItem.NAME) {
     $cachedItems = ,(New-Object -TypeName PSObject -Property @{
         NAME    = $selectedItem.NAME
@@ -339,7 +341,11 @@ if ($cachedItems.NAME -cnotcontains $selectedItem.NAME) {
         URL     = $selectedItem.URL
     } | Select NAME, PATH, URL) + $cachedItems
 }
-$cachedItems[($cachedItems.Count - 5)..($cachedItems.Count - 1)] | Export-Csv -Path $cacheFile -NoTypeInformation
+if ($cachedItems.Count -lt 6) {
+    $cachedItems | Export-Csv -Path $cacheFile -NoTypeInformation
+} else {
+    $cachedItems[0..4] | Export-Csv -Path $cacheFile -NoTypeInformation
+}
 
 # delete temps
 $answ = [System.Windows.MessageBox]::Show("Delete downloaded files?",'CLEAN','YesNo','Info')
