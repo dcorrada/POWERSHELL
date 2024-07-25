@@ -42,7 +42,7 @@ $textBox = New-Object System.Windows.Forms.TextBox
 $textBox.Location = New-Object System.Drawing.Point(10,60)
 $textBox.Size = New-Object System.Drawing.Size(350,30)
 $form_IP.Controls.Add($textBox)
-OKButton -form $form_IP -x 100 -y 100 -text "Ok"
+OKButton -form $form_IP -x 100 -y 100 -text "Ok" | Out-Null
 $form_IP.Add_Shown({$textBox.Select()})
 $result = $form_IP.ShowDialog()
 if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -63,7 +63,7 @@ $migrazione_dati = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "
 $network_map = CheckBox -form $form_panel -checked $false -x 20 -y 80 -text "Map shared paths"
 $BitLocker_services = CheckBox -form $form_panel -checked $false -x 20 -y 110 -text "Enable BitLocker"
 $wifi_profiles = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "WiFi profiles migration"
-OKButton -form $form_panel -x 100 -y 190 -text "Ok"
+OKButton -form $form_panel -x 100 -y 190 -text "Ok" | Out-Null
 $result = $form_panel.ShowDialog()
 
 #lancio i singoli moduli selezionati dal pannello di controllo
@@ -121,7 +121,7 @@ if ($BitLocker_services.Checked -eq $true) {
     $form_modalita = FormBase -w 300 -h 175 -text "CRYPTO LEVEL"
     $tpm = RadioButton -form $form_modalita -checked $true -x 30 -y 20 -text "TPM"
     $pin  = RadioButton -form $form_modalita -checked $false -x 30 -y 50 -text "TPM + PIN"
-    OKButton -form $form_modalita -x 90 -y 90 -text "Ok"
+    OKButton -form $form_modalita -x 90 -y 90 -text "Ok" | Out-Null
     $result = $form_modalita.ShowDialog()
     if ($result -eq "OK") {
         if ($tpm.Checked) {
@@ -140,8 +140,7 @@ if ($BitLocker_services.Checked -eq $true) {
             $pwds.Size = New-Object System.Drawing.Size(450,30)
             $pwds.PasswordChar = '*'
             $form.Controls.Add($pwds)
-            $OKButton = New-Object System.Windows.Forms.Button
-            OKButton -form $form -x 200 -y 120 -text "Ok"
+            OKButton -form $form -x 200 -y 120 -text "Ok" | Out-Null
             $form.Topmost = $true
             $result = $form.ShowDialog()
             $thepin = $pwds.Text

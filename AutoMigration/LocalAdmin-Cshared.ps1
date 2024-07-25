@@ -57,7 +57,7 @@ foreach ($elem in $userlist) {
     }
 }
 $vpos += 20
-OKButton -form $form_panel -x 90 -y $vpos -text "Ok"
+OKButton -form $form_panel -x 90 -y $vpos -text "Ok" | Out-Null
 $result = $form_panel.ShowDialog()
 foreach ($box in $boxes) {
     if ($box.Checked -eq $true) {

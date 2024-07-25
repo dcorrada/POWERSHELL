@@ -44,7 +44,7 @@ $replaceBox = New-Object System.Windows.Forms.TextBox
 $replaceBox.Location = New-Object System.Drawing.Point(180,50)
 $replaceBox.Size = New-Object System.Drawing.Size(120,30)
 $form_EXP.Controls.Add($replaceBox)
-OKButton -form $form_EXP -x 75 -y 90 -text "Ok"
+OKButton -form $form_EXP -x 75 -y 90 -text "Ok" | Out-Null
 $form_EXP.Add_Shown({$replaceBox.Select()})
 $form_EXP.Add_Shown({$searchBox.Select()})
 $result = $form_EXP.ShowDialog()
