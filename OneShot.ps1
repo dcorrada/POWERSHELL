@@ -333,11 +333,11 @@ PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
 
 # update history
 if ($cachedItems.NAME -cnotcontains $selectedItem.NAME) {
-    $cachedItems += New-Object -TypeName PSObject -Property @{
+    $cachedItems = ,(New-Object -TypeName PSObject -Property @{
         NAME    = $selectedItem.NAME
         PATH    = $selectedItem.PATH
         URL     = $selectedItem.URL
-    } | Select NAME, PATH, URL
+    } | Select NAME, PATH, URL) + $cachedItems
 }
 $cachedItems[($cachedItems.Count - 5)..($cachedItems.Count - 1)] | Export-Csv -Path $cacheFile -NoTypeInformation
 
