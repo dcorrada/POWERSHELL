@@ -6,12 +6,16 @@ Author....: Dario CORRADA
 This script recursively look for .ps1 files, grep and replace a string inside them
 #>
 
+# get working directory
+$fullname = $MyInvocation.MyCommand.Path
+$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Grep-Replace\.ps1$" > $null
+$workdir = $matches[1]
+
 # header
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
-$workdir = Get-Location
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # asking search path
@@ -40,7 +44,7 @@ $replaceBox = New-Object System.Windows.Forms.TextBox
 $replaceBox.Location = New-Object System.Drawing.Point(180,50)
 $replaceBox.Size = New-Object System.Drawing.Size(120,30)
 $form_EXP.Controls.Add($replaceBox)
-OKButton -form $form_EXP -x 75 -y 90 -text "Ok"
+OKButton -form $form_EXP -x 75 -y 90 -text "Ok" | Out-Null
 $form_EXP.Add_Shown({$replaceBox.Select()})
 $form_EXP.Add_Shown({$searchBox.Select()})
 $result = $form_EXP.ShowDialog()

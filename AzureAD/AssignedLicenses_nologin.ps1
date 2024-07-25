@@ -75,8 +75,8 @@ $Heather = 'blocked', 'city', 'state', 'dept', 'DirSyncEnabled', 'DisplayName',
     'addres', 'pswdComplex', 'title', 'zone', 'UPN', 'created'
 $A = Get-Content -Path $infile
 $A = $A[1..($A.Count - 1)]
-$A | Out-File -FilePath "C:\Users\$env:USERNAME\Downloads\headless.csv"
-$UsrRawdata = Import-Csv -Path "C:\Users\$env:USERNAME\Downloads\headless.csv" -Header $Heather
+$A | Out-File -FilePath "$env:USERPROFILE\Downloads\headless.csv"
+$UsrRawdata = Import-Csv -Path "$env:USERPROFILE\Downloads\headless.csv" -Header $Heather
 
 # retrieve all users list
 $MsolUsrData = @{} 

@@ -26,9 +26,9 @@ if ($ou_available.Name -contains $ou2find) {
         $string = "CN=" + $ou2find + $suffix
         $computer_list = Get-ADComputer -Filter * -SearchBase $string
     }
-    $computer_list.Name >> "C:\Users\$env:USERNAME\Desktop\OU_$ou2find.log"
+    $computer_list.Name >> "$env:USERPROFILE\Downloads\OU_$ou2find.log"
     Write-Host -Nonewline "Computer list saved in "
-    Write-Host -ForegroundColor Green "C:\Users\$env:USERNAME\Desktop\OU_$ou2find.log"
+    Write-Host -ForegroundColor Green "$env:USERPROFILE\Downloads\OU_$ou2find.log"
 } else {
     Write-Host -ForegroundColor Red "OU unknown"
 }

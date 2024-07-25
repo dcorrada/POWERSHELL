@@ -82,7 +82,7 @@ $ErrorActionPreference= 'Inquire'
 Disconnect-AzureAD
 
 # output dataframe to a CSV file
-$outfile = "C:\Users\$env:USERNAME\Desktop\AzureAD.csv"
+$outfile = "$env:USERPROFILE\Downloads\AzureAD.csv"
 Write-Host -NoNewline "Writing to $outfile... "
 
 $header = @($local_array[0].Keys)

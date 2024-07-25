@@ -40,7 +40,7 @@ $ErrorActionPreference= 'Inquire'
 # Get-Windowsupdate
 
 # install the updates
-Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$False | Out-File "C:\Users\$env:USERNAME\Desktop\$(get-date -f yyyy-MM-dd)-WindowsUpdate.log" -force
+Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$False | Out-File "$env:USERPROFILE\Downloads\$(get-date -f yyyy-MM-dd)-WindowsUpdate.log" -force
 
 # reboot
 $answ = [System.Windows.MessageBox]::Show("Reboot computer?",'REBOOT','YesNo','Info')
