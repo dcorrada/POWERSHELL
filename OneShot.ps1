@@ -325,8 +325,7 @@ Write-Host -ForegroundColor Green "DONE"
 Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
 Start-Sleep -Milliseconds 1000
 Clear-Host
-#PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
-PowerShell.exe "& ""C:\Users\dario.corrada\Desktop\InitPC.ps1"
+PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
 
 <# *******************************************************************************
                                     CLEANING
