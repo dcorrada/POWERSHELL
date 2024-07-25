@@ -59,7 +59,7 @@ $groupname = $DropDown.Text
 $ADmembers = Get-ADGroupMember -id $groupname -Recursive 
 
 
-$outfile = "C:\Users\$env:USERNAME\Desktop\ADGroup_members.csv"
+$outfile = "$env:USERPROFILE\Downloads\ADGroup_members.csv"
 "Name;Type;OrganizationalUnit" | Out-File $outfile -Encoding ASCII -Append
 foreach ($member in $ADmembers) {
     $member.distinguishedName -match ",OU=([a-zA-Z_\-\.\s0-9]+)," > $null

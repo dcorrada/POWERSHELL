@@ -48,7 +48,7 @@ foreach ($auser in $user_list) {
 Write-Host "DONE"
 $ErrorActionPreference= 'Inquire'
 
-$outfile = "C:\Users\$env:USERNAME\Desktop\AD_Users.csv"
+$outfile = "$env:USERPROFILE\Downloads\AD_Users.csv"
 "UserName;OrganizationalUnit;Company;Created;Department;Description;DisplayName;EmailAddress;LastLogonDate;Office;Title" | Out-File $outfile -Encoding ASCII -Append
 foreach ($usr in $rawdata.Keys) {
     $uname = $usr.ToLower()

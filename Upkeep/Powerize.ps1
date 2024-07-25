@@ -153,5 +153,5 @@ Set-PowerSchemeSettings -HibernateTimeoutAC 0
 Set-PowerSchemeSettings -HibernateTimeoutDC 0
 
 # print out a battery report
-$outfile = "C:\Users\$env:USERNAME\Desktop\BATTERY_REPORT.html"
+$outfile = "$env:USERPROFILE\Downloads\BATTERY_REPORT.html"
 powercfg.exe /batteryreport /output $outfile

@@ -78,7 +78,7 @@ $groupid = $local_hash[$DropDown.Text]
 # retrieve group members
 $memberlist = Get-MsolGroupMember -GroupObjectId $groupid
 
-$outfile = "C:\Users\$env:USERNAME\Desktop\DLmembers.csv"
+$outfile = "$env:USERPROFILE\Downloads\DLmembers.csv"
 
 $header = 'TYPE;MAIL;FULLNAME'
 $header | Out-File $outfile -Encoding UTF8 -Append
