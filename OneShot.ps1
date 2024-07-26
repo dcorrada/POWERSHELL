@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.08.b
+Version...: 24.08.2
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -77,6 +77,11 @@ The script can still be run, but GitHub will limit your usage to 60 queries per 
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
+# GitHub coordinates
+$theOwner = 'dcorrada'
+$theRepo = 'POWERSHELL'
+$theBranch = 'master'
+
 # get working directory
 $workdir = "$env:USERPROFILE\Downloads\dcorrada.OneShot"
 if (Test-Path $workdir) {
@@ -86,8 +91,9 @@ New-Item -ItemType directory -Path $workdir > $null
 New-Item -ItemType directory -Path "$workdir\Modules" > $null
 $download = New-Object net.webclient
 foreach ($psm1File in (Get-GitHubContent `
-    -OwnerName 'dcorrada' `
-    -RepositoryName 'POWERSHELL' `
+    -OwnerName $theOwner `
+    -RepositoryName $theRepo `
+    -BranchName  $theBranch `
     -Path 'Modules').entries) {
         if ($psm1File.type -eq 'file') {
             $download.Downloadfile("$($psm1File.download_url)", "$workdir\Modules\$($psm1File.name)")
@@ -117,8 +123,9 @@ $currentFolder = 'root'
 
 # filtering only scripts and paths (nor modules folder)
 $CurrentItems = (Get-GitHubContent `
-    -OwnerName 'dcorrada' `
-    -RepositoryName 'POWERSHELL' `
+    -OwnerName $theOwner `
+    -RepositoryName $theRepo `
+    -BranchName  $theBranch `
     ).entries | ForEach-Object {
         if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
             New-Object -TypeName PSObject -Property @{
@@ -137,7 +144,7 @@ while ($continueBrowsing) {
     if ($hmin -lt 500) {
         $hmin = 500
     }
-    $adialog = FormBase -w 720 -h $hmin -text "SELECT AN ITEM [$currentFolder]"
+    $adialog = FormBase -w 720 -h $hmin -text "SELECT AN ITEM [$currentFolder]@$theBranch"
     $they = 20
     $choices = @()
 
@@ -167,6 +174,8 @@ while ($continueBrowsing) {
     $PreviousBut.DialogResult = [System.Windows.Forms.DialogResult]::CANCEL
     $NextBut = OKButton -form $adialog -x 305 -y 230 -w 75 -text "GO"
     $PreviewBut = RETRYButton -form $adialog -x 580 -y 230 -text "Preview"
+    $AbortBut = RETRYButton -form $adialog -x 580 -y 270 -text "Quit"
+    $AbortBut.DialogResult = [System.Windows.Forms.DialogResult]::ABORT
     
     # list of items form history file
     Label -form $adialog -x 230 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
@@ -212,8 +221,9 @@ while ($continueBrowsing) {
         if ([string]::IsNullOrEmpty($selectedItem.URL)) {
             $arrayContent = @("Items in folder [$($currentOpt.Text)]:", "")
             foreach ($entry in (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 -Path $selectedItem.PATH
                 ).entries) {
                     $arrayContent += "  * $($entry.name)"
@@ -234,8 +244,9 @@ while ($continueBrowsing) {
             $isChecked = 'none'
             $currentFolder = '/' + $selectedItem.PATH
             $CurrentItems = (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 -Path $selectedItem.PATH
                 ).entries | ForEach-Object {
                     if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
@@ -257,8 +268,9 @@ while ($continueBrowsing) {
             if ($currentFolder -match "(^/.+)/[a-zA-Z_\-\.0-9]+$") {
                 $currentFolder = $matches[1]
                 $CurrentItems = (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 -Path $currentFolder
                 ).entries | ForEach-Object {
                     if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
@@ -272,8 +284,9 @@ while ($continueBrowsing) {
             } else {
                 $currentFolder = 'root'
                 $CurrentItems = (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 ).entries | ForEach-Object {
                     if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
                         New-Object -TypeName PSObject -Property @{
@@ -285,6 +298,10 @@ while ($continueBrowsing) {
                 }
             }
         }
+    
+    # actions for clicking [Quit] button
+    } elseif ($goahead -eq 'ABORT') {
+        exit
     }
 
 }
@@ -324,10 +341,14 @@ if ($found.Count -ge 1) {
 Write-Host -ForegroundColor Green "DONE"
 
 # run the script
-Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
-Start-Sleep -Milliseconds 1000
-Clear-Host
-PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
+if ($selectedItem.NAME -eq 'OneShot.ps1') {
+    [System.Windows.MessageBox]::Show("OneShot does not lauch itself,a fresh version is downloaded in `n[$workdir]",'UPDATE','Ok','Info') | Out-Null
+} else {
+    Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
+    Start-Sleep -Milliseconds 1000
+    Clear-Host
+    PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
+}
 
 <# *******************************************************************************
                                     CLEANING
@@ -348,8 +369,11 @@ if ($cachedItems.Count -lt 6) {
 }
 
 # delete temps
-$answ = [System.Windows.MessageBox]::Show("Delete downloaded files?",'CLEAN','YesNo','Info')
-if ($answ -eq "Yes") {
-    Set-Location $env:USERPROFILE     
-    Remove-Item -Path $workdir -Recurse -Force > $null
+if ($selectedItem.NAME -cne 'OneShot.ps1') {
+    $answ = [System.Windows.MessageBox]::Show("Your script [$($selectedItem.NAME)] is terminated: `ndo you want to locally delete it?",'CLEAN','YesNo','Info')
+    if ($answ -eq "Yes") {
+        Set-Location $env:USERPROFILE     
+        Remove-Item -Path $workdir -Recurse -Force > $null
+    }
 }
+
