@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.08.2
+Version...: 24.08.3
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -24,6 +24,17 @@ sessions.  To clear caching, call "Clear-GitHubAuthentication".
 <# *******************************************************************************
                                     HEADER
 ******************************************************************************* #>
+# check execution policy
+foreach ($item in (Get-ExecutionPolicy -List)) {
+    if(($item.Scope -eq 'LocalMachine') -and ($item.ExecutionPolicy -cne 'Bypass')) {
+        Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:`n"
+        Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force`n"
+        Write-Host -NoNewline "Afterwards restart this script. "
+        Pause
+        Exit
+    }
+}
+
 # elevated script execution with admin privileges
 $ErrorActionPreference= 'Stop'
 try {
@@ -35,12 +46,30 @@ try {
     }
 }
 catch {
-    Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:"
-    Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force"
-    Write-Host "Afterwards restart this script"
+    Write-Output "`nError: $($error[0].ToString())"
     Pause
+    exit
 }
 $ErrorActionPreference= 'Inquire'
+
+# check NuGet
+foreach ($pp in (Get-PackageProvider)) {
+    if ($pp.Name -eq 'NuGet') {
+        $foundit = $pp.Name
+    }
+}
+if ($foundit -ne 'NuGet') {
+    $ErrorActionPreference= 'Stop'
+    Try {
+        Install-PackageProvider -Name "NuGet" -MinimumVersion "2.8.5.208" -Force
+    }
+    Catch {
+        Write-Output "`nError: $($error[0].ToString())"
+        Pause
+        exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
