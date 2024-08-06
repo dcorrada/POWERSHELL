@@ -1,12 +1,17 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.07.1
+Version...: 24.08.beta
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
 * install Chrome, AcrobatDC, 7Zip, Supremo, Microsoft 365 apps;
 * create a local account with admin privileges;
 * set hostname according to the serial number.
+
+*** TESTING ***
+[24-08-06] Handling exceptions that occur during winget installations of 
+Acrobat Reader DC (error 3010) and Microsoft Teams ("La configurazione di 
+sistema corrente non supporta l'installazione di questo pacchetto.")
 #>
 
 # elevated script execution with admin privileges
@@ -70,17 +75,35 @@ if (($info[2] -match 'Windows 10') -and ($winget_exe -eq $null)) {
     [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null  
     $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 }
+Write-Host -ForegroundColor Green " DONE"
+
 $msstore_opts = '--source msstore --scope machine --accept-package-agreements --accept-source-agreements --silent'
 $winget_opts = '--source winget --scope machine --accept-package-agreements --accept-source-agreements --silent'
-Write-Host -ForegroundColor Green " DONE"
+
+[System.Windows.MessageBox]::Show("Currently winget handling exception(s) `nis focused on IT-it language",'PLEASE NOTE','Ok','Warning') | Out-Null
+# for more deeply inspection "Start-Process" cmdlet could be run also with "-RedirectStandardError" option
+
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
+            <#
+            In rare cases error 3010 appeared during installation: nevertheless Acrobat seems to correctly run without any expected crash or further fails.
+            In the worst case try the following steps and see if that works for you:
+            * Run the Acrobat cleaner tool https://labs.adobe.com/downloads/acrobatcleaner.html
+            * Reboot the computer
+            * Reinstall the application using the link https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
+            #>
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC (64-bit)', $winget_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE"     
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Acrobat.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq 'Chrome') {
             <# 
             There are several packages relayed to various Chrome flavours. 
@@ -89,23 +112,47 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             #>  
             Write-Host -NoNewline "Installing Google Chrome..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome (EXE)', $winget_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE" 
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Chrome.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            } 
         } elseif ($item -eq 'Revo Uninstaller') {
             Write-Host -NoNewline "Installing Revo Uninstaller..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Revo Uninstaller', $winget_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE"   
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Revo.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq 'Office 365 Desktop') {
             Write-Host -NoNewline "Installing Microsoft Office 365..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Microsoft 365 Apps for enterprise', $winget_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE"        
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_o365.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq 'Speccy') {
             Write-Host -NoNewline "Installing Speccy..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Speccy', $winget_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE"   
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Speccy.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq 'Supremo') {
             Write-Host -NoNewline "Download software..."
             #$download.Downloadfile("https://www.agmsolutions.net/wp-content/uploads/assistenza/Assistenza_Remota.exe", "$env:PUBLIC\Desktop\Supremo.exe")
@@ -116,8 +163,21 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq 'Teams') {
             Write-Host -NoNewline "Installing Microsoft Teams..."
             $StagingArgumentList = 'install  "{0}" {1} {2}' -f 'Microsoft Teams', $winget_opts, '--id Microsoft.Teams'
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE"
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Teams.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } elseif ($stdout -match "La configurazione di sistema corrente non supporta l'installazione di questo pacchetto") {
+                Write-Host -ForegroundColor Red " FAILED"
+                Write-Host -NoNewline "Downloading standalone installer..."                
+                $download.Downloadfile("https://statics.teams.cdn.office.net/production-windows-x64/enterprise/webview2/lkg/MSTeams-x64.msix", "C:\Users\Public\Desktop\MSTeams-x64.msix")
+                Write-Host -ForegroundColor Green " DONE"
+                [System.Windows.MessageBox]::Show("Please run the installer file [MSTeams-x64.msix] `nonce the target account has been logged in",'INFO','Ok','Info') | Out-Null
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq 'WatchGuard') {
             Write-Host -NoNewline "Download software..."
             #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_7_2/WG-MVPN-SSL_12_7_2.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
@@ -127,13 +187,25 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE" 
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Treesize.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq '7ZIP') {            
             Write-Host -NoNewline "Installing 7-Zip..."
             $StagingArgumentList = 'install  "{0}" {1}' -f '7-Zip', $winget_opts
-            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow
-            Write-Host -ForegroundColor Green " DONE"
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_7zip.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            if ($stdout -match "Installazione riuscita") {
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq 'TempMonitor') {
             Write-Host -NoNewline "Download software..."
             $download.Downloadfile("https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip", "$tmppath\openhardwaremonitor-v0.9.6.zip")
