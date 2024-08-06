@@ -1,6 +1,6 @@
 <#
 Name......: PPPC.ps1
-Version...: 24.05.1
+Version...: 24.08.1
 Author....: Dario CORRADA
 
 Pipeline per la preparazione di nuovi PC
@@ -89,10 +89,16 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.
 New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
 @"
 copy "$tmppath\STEP02.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-PowerShell.exe "& "'$tmppath\AD\Join2Domain.ps1'
+PowerShell.exe "& "'$tmppath\Init_PC.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
 "@ | Out-File "$tmppath\STEP01.cmd" -Encoding ASCII -Append
 
+New-Item -ItemType file -Path "$tmppath\STEP02.cmd" > $null
+@"
+copy "$tmppath\STEP03.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+PowerShell.exe "& "'$tmppath\AD\Join2Domain.ps1'
+del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP01.cmd"
+"@ | Out-File "$tmppath\STEP02.cmd" -Encoding ASCII -Append
 
 <# [231018] Rimuovo dal templato il lancio di questi script, in attesa di aggiornamenti interni
 PowerShell.exe "& "'$tmppath\AD\JoinUser.ps1'
@@ -100,29 +106,28 @@ pause
 PowerShell.exe "& "'$tmppath\AzureAD\CreateMSAccount.ps1'
 pause
 #>
-New-Item -ItemType file -Path "$tmppath\STEP02.cmd" > $null
+New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
 @"
-copy "$tmppath\STEP03.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+copy "$tmppath\STEP04.cmd" "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 PowerShell.exe "& "'$tmppath\Check_NuGet.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
 pause
 PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
 pause
-PowerShell.exe "& "'$tmppath\Updates\Update_Win10.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP02.cmd"
-"@ | Out-File "$tmppath\STEP02.cmd" -Encoding ASCII -Append
+"@ | Out-File "$tmppath\STEP03.cmd" -Encoding ASCII -Append
 
-New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
+New-Item -ItemType file -Path "$tmppath\STEP04.cmd" > $null
 @"
 PowerShell.exe "& "'$tmppath\Updates\drvUpdate_Win10.ps1'
 pause
 rd /s /q "$tmppath"
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP03.cmd"
-"@ | Out-File "$tmppath\STEP03.cmd" -Encoding ASCII -Append
+"@ | Out-File "$tmppath\STEP04.cmd" -Encoding ASCII -Append
 
 # copio il primo batch file per il riavvio successivo
 Copy-Item -Path "$tmppath\STEP01.cmd" -Destination "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 
 # lancio lo STEP00
-PowerShell.exe "& ""$tmppath\Init_PC.ps1"
+PowerShell.exe "& ""$tmppath\Updates\Update_Win10.ps1"
