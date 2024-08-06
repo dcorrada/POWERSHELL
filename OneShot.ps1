@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.08.b
+Version...: 24.08.3
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -24,6 +24,17 @@ sessions.  To clear caching, call "Clear-GitHubAuthentication".
 <# *******************************************************************************
                                     HEADER
 ******************************************************************************* #>
+# check execution policy
+foreach ($item in (Get-ExecutionPolicy -List)) {
+    if(($item.Scope -eq 'LocalMachine') -and ($item.ExecutionPolicy -cne 'Bypass')) {
+        Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:`n"
+        Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force`n"
+        Write-Host -NoNewline "Afterwards restart this script. "
+        Pause
+        Exit
+    }
+}
+
 # elevated script execution with admin privileges
 $ErrorActionPreference= 'Stop'
 try {
@@ -35,12 +46,30 @@ try {
     }
 }
 catch {
-    Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:"
-    Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force"
-    Write-Host "Afterwards restart this script"
+    Write-Output "`nError: $($error[0].ToString())"
     Pause
+    exit
 }
 $ErrorActionPreference= 'Inquire'
+
+# check NuGet
+foreach ($pp in (Get-PackageProvider)) {
+    if ($pp.Name -eq 'NuGet') {
+        $foundit = $pp.Name
+    }
+}
+if ($foundit -ne 'NuGet') {
+    $ErrorActionPreference= 'Stop'
+    Try {
+        Install-PackageProvider -Name "NuGet" -MinimumVersion "2.8.5.208" -Force
+    }
+    Catch {
+        Write-Output "`nError: $($error[0].ToString())"
+        Pause
+        exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
@@ -77,6 +106,11 @@ The script can still be run, but GitHub will limit your usage to 60 queries per 
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
+# GitHub coordinates
+$theOwner = 'dcorrada'
+$theRepo = 'POWERSHELL'
+$theBranch = 'master'
+
 # get working directory
 $workdir = "$env:USERPROFILE\Downloads\dcorrada.OneShot"
 if (Test-Path $workdir) {
@@ -86,8 +120,9 @@ New-Item -ItemType directory -Path $workdir > $null
 New-Item -ItemType directory -Path "$workdir\Modules" > $null
 $download = New-Object net.webclient
 foreach ($psm1File in (Get-GitHubContent `
-    -OwnerName 'dcorrada' `
-    -RepositoryName 'POWERSHELL' `
+    -OwnerName $theOwner `
+    -RepositoryName $theRepo `
+    -BranchName  $theBranch `
     -Path 'Modules').entries) {
         if ($psm1File.type -eq 'file') {
             $download.Downloadfile("$($psm1File.download_url)", "$workdir\Modules\$($psm1File.name)")
@@ -117,8 +152,9 @@ $currentFolder = 'root'
 
 # filtering only scripts and paths (nor modules folder)
 $CurrentItems = (Get-GitHubContent `
-    -OwnerName 'dcorrada' `
-    -RepositoryName 'POWERSHELL' `
+    -OwnerName $theOwner `
+    -RepositoryName $theRepo `
+    -BranchName  $theBranch `
     ).entries | ForEach-Object {
         if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
             New-Object -TypeName PSObject -Property @{
@@ -137,7 +173,7 @@ while ($continueBrowsing) {
     if ($hmin -lt 500) {
         $hmin = 500
     }
-    $adialog = FormBase -w 720 -h $hmin -text "SELECT AN ITEM [$currentFolder]"
+    $adialog = FormBase -w 850 -h $hmin -text "SELECT AN ITEM [$currentFolder]@$theBranch"
     $they = 20
     $choices = @()
 
@@ -155,24 +191,26 @@ while ($continueBrowsing) {
         } else {
             $aText = '[+] ' + $ItemName
         }
-        $choices += RadioButton -form $adialog -x 20 -y $they -checked $gotcha -text $aText
+        $choices += RadioButton -form $adialog -x 20 -y $they -w 230 -checked $gotcha -text $aText
         $they += 30 
     }
 
     # preview text box
-    TxtBox -form $adialog -x 230 -y 20 -w 450 -h 200 -text $intoBox -multiline $true | Out-Null
+    TxtBox -form $adialog -x 260 -y 20 -w 550 -h 200 -text $intoBox -multiline $true | Out-Null
     
     # buttons
-    $PreviousBut = RETRYButton -form $adialog -x 230 -y 230 -w 75 -text "UP"
+    $PreviousBut = RETRYButton -form $adialog -x 260 -y 230 -w 75 -text "UP"
     $PreviousBut.DialogResult = [System.Windows.Forms.DialogResult]::CANCEL
-    $NextBut = OKButton -form $adialog -x 305 -y 230 -w 75 -text "GO"
-    $PreviewBut = RETRYButton -form $adialog -x 580 -y 230 -text "Preview"
+    $NextBut = OKButton -form $adialog -x 335 -y 230 -w 75 -text "GO"
+    $PreviewBut = RETRYButton -form $adialog -x 710 -y 230 -text "Preview"
+    $AbortBut = RETRYButton -form $adialog -x 710 -y 270 -text "Quit"
+    $AbortBut.DialogResult = [System.Windows.Forms.DialogResult]::ABORT
     
     # list of items form history file
-    Label -form $adialog -x 230 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
+    Label -form $adialog -x 260 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
     $they = 300
     foreach ($cachedItem in $cachedItems) {
-        $choices += RadioButton -form $adialog -x 240 -y $they -checked $false -text $cachedItem.NAME
+        $choices += RadioButton -form $adialog -x 270 -y $they -checked $false -text $cachedItem.NAME
         $they += 25
     }
 
@@ -212,8 +250,9 @@ while ($continueBrowsing) {
         if ([string]::IsNullOrEmpty($selectedItem.URL)) {
             $arrayContent = @("Items in folder [$($currentOpt.Text)]:", "")
             foreach ($entry in (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 -Path $selectedItem.PATH
                 ).entries) {
                     $arrayContent += "  * $($entry.name)"
@@ -234,8 +273,9 @@ while ($continueBrowsing) {
             $isChecked = 'none'
             $currentFolder = '/' + $selectedItem.PATH
             $CurrentItems = (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 -Path $selectedItem.PATH
                 ).entries | ForEach-Object {
                     if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
@@ -257,8 +297,9 @@ while ($continueBrowsing) {
             if ($currentFolder -match "(^/.+)/[a-zA-Z_\-\.0-9]+$") {
                 $currentFolder = $matches[1]
                 $CurrentItems = (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 -Path $currentFolder
                 ).entries | ForEach-Object {
                     if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
@@ -272,8 +313,9 @@ while ($continueBrowsing) {
             } else {
                 $currentFolder = 'root'
                 $CurrentItems = (Get-GitHubContent `
-                -OwnerName 'dcorrada' `
-                -RepositoryName 'POWERSHELL' `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
                 ).entries | ForEach-Object {
                     if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
                         New-Object -TypeName PSObject -Property @{
@@ -285,6 +327,10 @@ while ($continueBrowsing) {
                 }
             }
         }
+    
+    # actions for clicking [Quit] button
+    } elseif ($goahead -eq 'ABORT') {
+        exit
     }
 
 }
@@ -324,10 +370,14 @@ if ($found.Count -ge 1) {
 Write-Host -ForegroundColor Green "DONE"
 
 # run the script
-Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
-Start-Sleep -Milliseconds 1000
-Clear-Host
-PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
+if ($selectedItem.NAME -eq 'OneShot.ps1') {
+    [System.Windows.MessageBox]::Show("OneShot does not lauch itself, fresh version is downloaded in `n[$workdir]",'UPDATE','Ok','Info') | Out-Null
+} else {
+    Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
+    Start-Sleep -Milliseconds 1000
+    Clear-Host
+    PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
+}
 
 <# *******************************************************************************
                                     CLEANING
@@ -348,8 +398,11 @@ if ($cachedItems.Count -lt 6) {
 }
 
 # delete temps
-$answ = [System.Windows.MessageBox]::Show("Delete downloaded files?",'CLEAN','YesNo','Info')
-if ($answ -eq "Yes") {
-    Set-Location $env:USERPROFILE     
-    Remove-Item -Path $workdir -Recurse -Force > $null
+if ($selectedItem.NAME -cne 'OneShot.ps1') {
+    $answ = [System.Windows.MessageBox]::Show("Your script [$($selectedItem.NAME)] is terminated: `ndo you want to locally delete it?",'CLEAN','YesNo','Info')
+    if ($answ -eq "Yes") {
+        Set-Location $env:USERPROFILE     
+        Remove-Item -Path $workdir -Recurse -Force > $null
+    }
 }
+
