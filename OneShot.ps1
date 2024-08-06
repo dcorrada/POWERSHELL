@@ -173,7 +173,7 @@ while ($continueBrowsing) {
     if ($hmin -lt 500) {
         $hmin = 500
     }
-    $adialog = FormBase -w 720 -h $hmin -text "SELECT AN ITEM [$currentFolder]@$theBranch"
+    $adialog = FormBase -w 850 -h $hmin -text "SELECT AN ITEM [$currentFolder]@$theBranch"
     $they = 20
     $choices = @()
 
@@ -191,26 +191,26 @@ while ($continueBrowsing) {
         } else {
             $aText = '[+] ' + $ItemName
         }
-        $choices += RadioButton -form $adialog -x 20 -y $they -checked $gotcha -text $aText
+        $choices += RadioButton -form $adialog -x 20 -y $they -w 230 -checked $gotcha -text $aText
         $they += 30 
     }
 
     # preview text box
-    TxtBox -form $adialog -x 230 -y 20 -w 450 -h 200 -text $intoBox -multiline $true | Out-Null
+    TxtBox -form $adialog -x 260 -y 20 -w 550 -h 200 -text $intoBox -multiline $true | Out-Null
     
     # buttons
-    $PreviousBut = RETRYButton -form $adialog -x 230 -y 230 -w 75 -text "UP"
+    $PreviousBut = RETRYButton -form $adialog -x 260 -y 230 -w 75 -text "UP"
     $PreviousBut.DialogResult = [System.Windows.Forms.DialogResult]::CANCEL
-    $NextBut = OKButton -form $adialog -x 305 -y 230 -w 75 -text "GO"
-    $PreviewBut = RETRYButton -form $adialog -x 580 -y 230 -text "Preview"
-    $AbortBut = RETRYButton -form $adialog -x 580 -y 270 -text "Quit"
+    $NextBut = OKButton -form $adialog -x 335 -y 230 -w 75 -text "GO"
+    $PreviewBut = RETRYButton -form $adialog -x 710 -y 230 -text "Preview"
+    $AbortBut = RETRYButton -form $adialog -x 710 -y 270 -text "Quit"
     $AbortBut.DialogResult = [System.Windows.Forms.DialogResult]::ABORT
     
     # list of items form history file
-    Label -form $adialog -x 230 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
+    Label -form $adialog -x 260 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
     $they = 300
     foreach ($cachedItem in $cachedItems) {
-        $choices += RadioButton -form $adialog -x 240 -y $they -checked $false -text $cachedItem.NAME
+        $choices += RadioButton -form $adialog -x 270 -y $they -checked $false -text $cachedItem.NAME
         $they += 25
     }
 
@@ -371,7 +371,7 @@ Write-Host -ForegroundColor Green "DONE"
 
 # run the script
 if ($selectedItem.NAME -eq 'OneShot.ps1') {
-    [System.Windows.MessageBox]::Show("OneShot does not lauch itself,a fresh version is downloaded in `n[$workdir]",'UPDATE','Ok','Info') | Out-Null
+    [System.Windows.MessageBox]::Show("OneShot does not lauch itself, fresh version is downloaded in `n[$workdir]",'UPDATE','Ok','Info') | Out-Null
 } else {
     Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
     Start-Sleep -Milliseconds 1000

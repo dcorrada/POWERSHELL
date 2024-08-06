@@ -218,18 +218,6 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
     }
 }
 
-# remove Skype startup
-New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | Out-Null
-$startups = Get-CimInstance Win32_StartupCommand | Select-Object Name,Location
-foreach ($startup in $startups){
-    if ($startup.Name -eq 'Skype for Desktop'){
-        $number = ($startup.Location).IndexOf("\")
-        $location = ($startup.Location).Insert("$number",":")
-        Write-Output "Disabling $($startup.Name) from $location)"
-        Remove-ItemProperty -Path "$location" -Name "$($startup.name)" 
-    }
-}
-
 Remove-Item $tmppath -Recurse -Force
 
 
