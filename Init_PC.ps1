@@ -8,10 +8,28 @@ This script finalize fresh OS installations:
 * create a local account with admin privileges;
 * set hostname according to the serial number.
 
+
+
 *** TESTING ***
-[24-08-06] Handling exceptions that occur during winget installations of 
-Acrobat Reader DC (error 3010) and Microsoft Teams ("La configurazione di 
-sistema corrente non supporta l'installazione di questo pacchetto.")
+
+[Acrobat Reader DC]
+In rare cases error 3010 appeared during installation: nevertheless Acrobat 
+seems to correctly run without any expected crash or further fails.
+In the worst case try the following steps and see if that works for you:
+  * Run the Acrobat cleaner tool https://labs.adobe.com/downloads/acrobatcleaner.html
+  * Reboot the computer
+  * Reinstall the application using the link https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
+
+[Microsoft Teams]
+Direct installation through winget returns error message "La configurazione di 
+sistema corrente non supporta l'installazione di questo pacchetto". Current 
+workaround download msix file which it should be manually run for installation.
+A putative fix to test could be to create item "AllowAllTrustedApps" (-Value 1 
+-PropertyType DWord) onto reg path "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Appx"
+See also https://learn.microsoft.com/en-us/microsoftteams/troubleshoot/teams-administration/fix-new-teams-installation-issues
+
+[WhatchGuard]
+New VPN client version
 #>
 
 # elevated script execution with admin privileges
@@ -87,17 +105,11 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader DC') {
-            <#
-            In rare cases error 3010 appeared during installation: nevertheless Acrobat seems to correctly run without any expected crash or further fails.
-            In the worst case try the following steps and see if that works for you:
-            * Run the Acrobat cleaner tool https://labs.adobe.com/downloads/acrobatcleaner.html
-            * Reboot the computer
-            * Reinstall the application using the link https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
-            #>
             Write-Host -NoNewline "Installing Acrobat Reader DC..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC (64-bit)', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Acrobat.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
@@ -114,6 +126,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome (EXE)', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Chrome.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
@@ -125,6 +138,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Revo Uninstaller', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Revo.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
@@ -136,6 +150,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Microsoft 365 Apps for enterprise', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_o365.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
@@ -147,6 +162,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Speccy', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Speccy.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
@@ -180,8 +196,8 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             }
         } elseif ($item -eq 'WatchGuard') {
             Write-Host -NoNewline "Download software..."
-            #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_7_2/WG-MVPN-SSL_12_7_2.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
-            $download.Downloadfile("https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_7_2/WG-MVPN-SSL_12_7_2.exe", "C:\Users\Public\Desktop\WatchGuard.exe")
+            #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
+            $download.Downloadfile("https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe", "C:\Users\Public\Desktop\WatchGuard.exe")
             Write-Host -ForegroundColor Green " DONE"
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
@@ -189,6 +205,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Treesize.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
@@ -200,6 +217,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $StagingArgumentList = 'install  "{0}" {1}' -f '7-Zip', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_7zip.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
