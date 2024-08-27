@@ -24,8 +24,8 @@ In the worst case try the following steps and see if that works for you:
 Direct installation through winget returns error message "La configurazione di 
 sistema corrente non supporta l'installazione di questo pacchetto". Current 
 workaround download msix file which it should be manually run for installation.
-A putative fix to test could be to create item "AllowAllTrustedApps" (-Value 1 
--PropertyType DWord) onto reg path "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Appx"
+A putative fix to test could be to enable item "AllowAllTrustedApps" from 
+registry path "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Appx"
 See also https://learn.microsoft.com/en-us/microsoftteams/troubleshoot/teams-administration/fix-new-teams-installation-issues
 
 [WhatchGuard]
@@ -100,6 +100,10 @@ $winget_opts = '--source winget --scope machine --accept-package-agreements --ac
 
 [System.Windows.MessageBox]::Show("Currently winget handling exception(s) `nis focused on IT-it language",'PLEASE NOTE','Ok','Warning') | Out-Null
 # for more deeply inspection "Start-Process" cmdlet could be run also with "-RedirectStandardError" option
+
+# enabling msix installations
+$regpath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Appx'
+New-ItemProperty -Path $regpath -Name 'AllowAllTrustedApps' -Value 1 -PropertyType DWord
 
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
