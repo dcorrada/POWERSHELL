@@ -236,8 +236,16 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
     }
 }
 
+# removing temp files
 Remove-Item $tmppath -Recurse -Force
-
+$answ = [System.Windows.MessageBox]::Show("Remove log files of installations?",'TEMPORARY','YesNo','Info')
+if ($answ -eq "Yes") {
+    foreach($aLog in (Get-ChildItem "$env:USERPROFILE\Downloads").Name) {
+        if ($alog -match "^wgetstdout_.+\.log?") {
+            Remove-Item "$env:USERPROFILE\Downloads\$aLog" -Force
+        }
+    }
+}
 
 # creating local account
 $answ = [System.Windows.MessageBox]::Show("Create local account?",'ACCOUNT','YesNo','Info')
