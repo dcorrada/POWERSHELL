@@ -59,6 +59,25 @@ Param(
     }
 }
 
+# check NuGet
+foreach ($pp in (Get-PackageProvider)) {
+    if ($pp.Name -eq 'NuGet') {
+        $foundit = $pp.Name
+    }
+}
+if ($foundit -ne 'NuGet') {
+    $ErrorActionPreference= 'Stop'
+    Try {
+        Install-PackageProvider -Name "NuGet" -MinimumVersion "2.8.5.208" -Force
+    }
+    Catch {
+        Write-Output "`nError: $($error[0].ToString())"
+        Pause
+        exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
+
 # creo una cartella temporanea e scarico gli script
 $tmppath = 'C:\PPPCtemp'
 if (Test-Path $tmppath) {
@@ -81,9 +100,7 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\Update_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Upkeep\Powerize.ps1' -DestinationPath "$tmppath\Upkeep"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\Stargate.ps1' -DestinationPath "$tmppath\Safety"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Check_NuGet.ps1' -DestinationPath $tmppath
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
-
 
 # creo i file batch per gli step da eseguire
 New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
@@ -108,8 +125,6 @@ pause
 #>
 New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
 @"
-PowerShell.exe "& "'$tmppath\Check_NuGet.ps1'
-pause
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
 pause
 PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
