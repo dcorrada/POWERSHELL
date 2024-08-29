@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.08.beta
+Version...: 24.08.2
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -8,28 +8,9 @@ This script finalize fresh OS installations:
 * create a local account with admin privileges;
 * set hostname according to the serial number.
 
-
-
-*** TESTING ***
-
-[Acrobat Reader DC]
-In rare cases error 3010 appeared during installation: nevertheless Acrobat 
-seems to correctly run without any expected crash or further fails.
-In the worst case try the following steps and see if that works for you:
-  * Run the Acrobat cleaner tool https://labs.adobe.com/downloads/acrobatcleaner.html
-  * Reboot the computer
-  * Reinstall the application using the link https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
-
-[Microsoft Teams]
-Direct installation through winget returns error message "La configurazione di 
-sistema corrente non supporta l'installazione di questo pacchetto". Current 
-workaround download msix file which it should be manually run for installation.
-A putative fix to test could be to enable item "AllowAllTrustedApps" from 
-registry path "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Appx"
-See also https://learn.microsoft.com/en-us/microsoftteams/troubleshoot/teams-administration/fix-new-teams-installation-issues
-
-[WhatchGuard]
-New VPN client version
++++ KNOWN BUGS +++
+Teams wont be installed machinewide from winget. As temporary workaround a msix 
+installer will be manually downloaded and asked install it afterwards.
 #>
 
 # elevated script execution with admin privileges
@@ -100,10 +81,6 @@ $winget_opts = '--source winget --scope machine --accept-package-agreements --ac
 
 [System.Windows.MessageBox]::Show("Currently winget handling exception(s) `nis focused on IT-it language",'PLEASE NOTE','Ok','Warning') | Out-Null
 # for more deeply inspection "Start-Process" cmdlet could be run also with "-RedirectStandardError" option
-
-# enabling msix installations
-$regpath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Appx'
-New-ItemProperty -Path $regpath -Name 'AllowAllTrustedApps' -Value 1 -PropertyType DWord
 
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
@@ -181,23 +158,23 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -NoNewline "Install software..."
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'Teams') {
+            Write-Host -NoNewline "Downloading standalone installer..."                
+            $download.Downloadfile("https://statics.teams.cdn.office.net/production-windows-x64/enterprise/webview2/lkg/MSTeams-x64.msix", "C:\Users\Public\Desktop\MSTeams-x64.msix")
+            Write-Host -ForegroundColor Green " DONE"
+            [System.Windows.MessageBox]::Show("Please run the installer file [MSTeams-x64.msix] `nonce the target account has been logged in",'INFO','Ok','Info') | Out-Null
+            <#
             Write-Host -NoNewline "Installing Microsoft Teams..."
             $StagingArgumentList = 'install  "{0}" {1} {2}' -f 'Microsoft Teams', $winget_opts, '--id Microsoft.Teams'
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Teams.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
-                Write-Host -ForegroundColor Green " DONE"
-            } elseif ($stdout -match "La configurazione di sistema corrente non supporta l'installazione di questo pacchetto") {
-                Write-Host -ForegroundColor Red " FAILED"
-                Write-Host -NoNewline "Downloading standalone installer..."                
-                $download.Downloadfile("https://statics.teams.cdn.office.net/production-windows-x64/enterprise/webview2/lkg/MSTeams-x64.msix", "C:\Users\Public\Desktop\MSTeams-x64.msix")
-                Write-Host -ForegroundColor Green " DONE"
-                [System.Windows.MessageBox]::Show("Please run the installer file [MSTeams-x64.msix] `nonce the target account has been logged in",'INFO','Ok','Info') | Out-Null
+                Write-Host -ForegroundColor Green " DONE"   
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
+            #>
         } elseif ($item -eq 'WatchGuard') {
             Write-Host -NoNewline "Download software..."
             #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
