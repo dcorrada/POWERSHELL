@@ -85,34 +85,13 @@ if ($answ -eq "Yes") {
 }
 
 # seleziono la cartella dove sono presenti i file csv dei dati da caricare
-$AssemblyFullName = 'System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
-$Assembly = [System.Reflection.Assembly]::Load($AssemblyFullName)
-$OpenFileDialog = [System.Windows.Forms.OpenFileDialog]::new()
-$OpenFileDialog.InitialDirectory = "C:\Users\$env:USERNAME\Downloads\"
-$OpenFileDialog.AddExtension = $false
-$OpenFileDialog.CheckFileExists = $false
-$OpenFileDialog.DereferenceLinks = $true
-$OpenFileDialog.Filter = "Folders|`n"
-$OpenFileDialog.Multiselect = $false
-$OpenFileDialog.Title = "Select folder"
-$OpenFileDialogType = $OpenFileDialog.GetType()
-$FileDialogInterfaceType = $Assembly.GetType('System.Windows.Forms.FileDialogNative+IFileDialog')
-$IFileDialog = $OpenFileDialogType.GetMethod('CreateVistaDialog',@('NonPublic','Public','Static','Instance')).Invoke($OpenFileDialog,$null)
-$OpenFileDialogType.GetMethod('OnBeforeVistaDialog',@('NonPublic','Public','Static','Instance')).Invoke($OpenFileDialog,$IFileDialog)
-[uint32]$PickFoldersOption = $Assembly.GetType('System.Windows.Forms.FileDialogNative+FOS').GetField('FOS_PICKFOLDERS').GetValue($null)
-$FolderOptions = $OpenFileDialogType.GetMethod('get_Options',@('NonPublic','Public','Static','Instance')).Invoke($OpenFileDialog,$null) -bor $PickFoldersOption
-$FileDialogInterfaceType.GetMethod('SetOptions',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$FolderOptions)
-$VistaDialogEvent = [System.Activator]::CreateInstance($AssemblyFullName,'System.Windows.Forms.FileDialog+VistaDialogEvents',$false,0,$null,$OpenFileDialog,$null,$null).Unwrap()
-[uint32]$AdviceCookie = 0
-$AdvisoryParameters = @($VistaDialogEvent,$AdviceCookie)
-$AdviseResult = $FileDialogInterfaceType.GetMethod('Advise',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$AdvisoryParameters)
-$AdviceCookie = $AdvisoryParameters[1]
-$Result = $FileDialogInterfaceType.GetMethod('Show',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,[System.IntPtr]::Zero)
-$FileDialogInterfaceType.GetMethod('Unadvise',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$AdviceCookie)
-if ($Result -eq [System.Windows.Forms.DialogResult]::OK) {
-    $FileDialogInterfaceType.GetMethod('GetResult',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$null)
-}
-$sharepath = $OpenFileDialog.FileName
+[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
+$foldername = New-Object System.Windows.Forms.FolderBrowserDialog
+$foldername.RootFolder = "MyComputer"
+$foldername.ShowNewFolderButton = $false
+$foldername.Description = "Seleziona la cartella dove sono `npresenti i file csv da caricare"
+$foldername.ShowDialog() > $null
+$sharepath = $foldername.SelectedPath
 
 if ((Get-ChildItem -Path ($sharepath + '\*.csv')).Count -le 0) {
     Write-Host -NoNewline "No csv file found..."
@@ -172,31 +151,30 @@ foreach ($afile in (Get-ChildItem -Path ($sharepath + '\*.csv') -Name)) {
                 $totrec = $rawdata.Count
                 $parsebar = ProgressBar
                 for ($i = 0; $i -lt $rawdata.Count; $i++) {
-                    <# *** WORKAROUND PROBLEMA BUFFERING ***
-
-                        Ho notato che, nel loop sulle query di INSERT, lo script rimane talvolta 
-                        incantato dopo circa 10-20 inserimenti di record per poi ripartire. Potrebbe 
-                        essere un problema di "buffering" legato al commit. 
-                        
-                        Questo workaround lancia INSERT a blocchi di 10 alla volta, quindi mette uno
-                        sleep per permettere il triggering dell'autocommit.
-                        
-                        Sull'argomento qui c'è la pagina di riferimento di MySQL:
-
-                        https://dev.mysql.com/doc/refman/8.0/en/innodb-autocommit-commit-rollback.html
-                    #>
-                    for ($k = 0; $k -lt 20; $k++) {
+                    # il limite di $k indica il numero di valori da inserire per ogni query di INSERT
+                    for ($k = 0; $k -lt 50; $k++) {
                         if ($i -lt $rawdata.Count) {
                             $rawvalue = $rawdata[$i] -replace "'", "\'" # escaping single quote, see https://stackoverflow.com/questions/4803354/how-do-i-insert-a-special-character-such-as-into-mysql
                             $rawvalue = $rawvalue -replace '"', "'"
                             $rawvalue = $rawvalue -replace ';', ", "
-                            Invoke-SqlQuery -Query "INSERT INTO $tablename VALUES ($rawvalue)"
+                            if ($k -eq 0) {
+                                $QueryString = "INSERT INTO $tablename VALUES ($rawvalue)"
+                            } else {
+                                $QueryString = $QueryString + ",($rawvalue)"
+                            }
                             $i++
-                            Start-Sleep -Milliseconds 50
                         }
                     }
                     $i--
+                    Invoke-SqlQuery -Query "$QueryString"
                     Start-Sleep -Milliseconds 100
+                    <# *** BUFFERING ***
+                        Inserisco uno sleep per permettere il triggering dell'autocommit.
+                        Sull'argomento qui c'è la pagina di riferimento di MySQL:
+
+                        https://dev.mysql.com/doc/refman/8.0/en/innodb-autocommit-commit-rollback.html
+                    #>
+                    $QueryString = $null
                     $rawvalue = $null
 
                     # progress
