@@ -38,7 +38,7 @@ $infile = $OpenFileDialog.filename
 
 $rawdata = Import-Csv -Path $infile
 $chomp = @()
-$selected_fields = ('timestamp', 'action_type', '"fullname', 'email', 'deleted_at', 'asset', 'serial', 'status')
+$selected_fields = ('timestamp', 'action_type', 'fullname', 'email', 'deleted_at', 'asset', 'serial', 'status')
 foreach ($item in $rawdata) {
     $arecord = @{}
     foreach ($akey in $selected_fields) {
@@ -59,39 +59,6 @@ foreach ($item in $rawdata) {
     $chomp += $arecord
 }
 
-
-
-
-$rawdata = Get-Content $infile
-$headers = $rawdata[0].Split(';')
-$chomp = @()
-$selected_fields = ('"timestamp"', '"action_type"', '"fullname"', '"email"', '"deleted_at"', '"asset"', '"serial"', '"status"')
-for ($i = 1; $i -lt $rawdata.Count; $i++) {
-    $rawvalues = $rawdata[$i].Split(';')
-    $arecord = @{}
-    for ($j = 0; $j -lt $headers.Count; $j++) {
-        $akey = $headers[$j]
-        if ($akey -in $selected_fields) {
-            $avalue = $rawvalues[$j]
-            $avalue = $avalue -replace '"', ''
-            if ($akey -eq '"timestamp"') {
-                $matches = @()
-                $avalue -match "^([0-9\-]+)" > $null
-                $arecord["$akey"] = $matches[1]
-            } elseif ($akey -eq '"deleted_at"') {
-                if ($avalue -eq 'NULL') {
-                    $arecord["$akey"] = 'ASSUNTO'                    
-                } else {
-                    $arecord["$akey"] = 'CESSATO'
-                }
-            } else {
-                $arecord["$akey"] = $avalue
-            }
-        }
-    }
-    $chomp += $arecord
-}
-
 # writing output file
 Write-Host -NoNewline "Writing output file... "
 $outfile = "C:\Users\$env:USERNAME\Downloads\" + (Get-Date -format "yyMMdd") + '-CheckinFrom.csv'
@@ -101,7 +68,7 @@ $i = 1
 $totrec = $chomp.Count
 $parsebar = ProgressBar
 foreach ($item in $chomp) {
-    $string = ("AGM{0:d5};{1};{2};{3};{4};{5};{6};{7};{8}" -f ($i,$item['"timestamp"'],$item['"action_type"'],$item['"fullname"'],$item['"email"'],$item['"deleted_at"'],$item['"asset"'],$item['"serial"'],$item['"status"']))
+    $string = ("AGM{0:d5};{1};{2};{3};{4};{5};{6};{7};{8}" -f ($i,$item['timestamp'],$item['action_type'],$item['fullname'],$item['email'],$item['deleted_at'],$item['asset'],$item['serial'],$item['status']))
     $string = $string -replace ';\s*;', ';NULL;'
     $string = $string -replace ';+\s*$', ';NULL'
     $string = $string -replace ';\s\[\];', ';NULL;'
