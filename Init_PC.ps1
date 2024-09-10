@@ -92,6 +92,9 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
+                if (Test-Path -Path "$env:PUBLIC\Desktop\Adobe Acrobat.lnk" -PathType Leaf) {
+                    Remove-Item -Path "$env:PUBLIC\Desktop\Adobe Acrobat.lnk" -Force
+                }
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
@@ -122,7 +125,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Revo Uninstaller.lnk" -PathType Leaf) {
-                    Move-Item -Path "$env:PUBLIC\Desktop\Revo Uninstaller.lnk" -Destination "$env:USERPROFILE\Desktop\Revo Uninstaller.lnk"
+                    Remove-Item -Path "$env:PUBLIC\Desktop\Revo Uninstaller.lnk" -Force
                 }
                 Write-Host -ForegroundColor Green " DONE"
             } else {
@@ -149,7 +152,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $stdout = Get-Content -Raw $winget_stdout_file
             if ($stdout -match "Installazione riuscita") {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Speccy.lnk" -PathType Leaf) {
-                    Move-Item -Path "$env:PUBLIC\Desktop\Speccy.lnk" -Destination "$env:USERPROFILE\Desktop\Speccy.lnk"
+                    Remove-Item -Path "$env:PUBLIC\Desktop\Speccy.lnk" -Force
                 }
                 Write-Host -ForegroundColor Green " DONE"
             } else {
