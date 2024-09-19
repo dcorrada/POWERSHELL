@@ -6,10 +6,8 @@ Author....: Dario CORRADA
 This script recursively look for .ps1 files, grep and replace a string inside them
 #>
 
-# get working directory
-$fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Grep-Replace\.ps1$" > $null
-$workdir = $matches[1]
+# just pipe more than single "Split-Path" if the script maps to nested subfolders
+$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent
 
 # header
 $WarningPreference = 'SilentlyContinue'
@@ -52,15 +50,16 @@ $result = $form_EXP.ShowDialog()
 
 $filelist = Get-ChildItem -Recurse -Path $foldername.SelectedPath -Filter "*.ps1"
 foreach ($infile in $filelist) {
-    Write-Host -ForegroundColor Cyan -NoNewline "Parsing" $infile.FullName
     if ($replaceBox.Text -eq "") {
-        Write-Host " "
         $found = Get-content -path $infile.FullName | Select-String -pattern $searchBox.Text -encoding ASCII -CaseSensitive
-        foreach ($newline in $found) {
-            Write-Host $newline
+        if ($found.Count -ge 1) {
+            Write-Host -ForegroundColor Cyan "$($infile.FullName)"
+            foreach ($newline in $found) {
+                Write-Host "  $newline"
+            }
         }
     } else {
-        
+        Write-Host -ForegroundColor Cyan -NoNewline "Parsing" $infile.FullName
         ((Get-Content -path $infile.FullName -Raw) -replace $searchBox.Text,$replaceBox.Text) | Set-Content -Path $infile.FullName
         Write-Host -ForegroundColor Green " DONE"
     }
