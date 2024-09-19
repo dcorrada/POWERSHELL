@@ -6,13 +6,33 @@ Author....: Dario CORRADA
 Pipeline per la preparazione di nuovi PC
 #>
 
-# elevated script execution with admin privileges
-$currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-$testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-if ($testadmin -eq $false) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
-    exit $LASTEXITCODE
+# check execution policy
+foreach ($item in (Get-ExecutionPolicy -List)) {
+    if(($item.Scope -eq 'LocalMachine') -and ($item.ExecutionPolicy -cne 'Bypass')) {
+        Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:`n"
+        Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force`n"
+        Write-Host -NoNewline "Afterwards restart this script. "
+        Pause
+        Exit
+    }
 }
+
+# elevated script execution with admin privileges
+$ErrorActionPreference= 'Stop'
+try {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+    $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    if ($testadmin -eq $false) {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+        exit $LASTEXITCODE
+    }
+}
+catch {
+    Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+$ErrorActionPreference= 'Inquire'
 
 # header 
 $WarningPreference = 'SilentlyContinue'
@@ -130,7 +150,6 @@ pause
 PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Updates\drvUpdate_Win10.ps1'
-pause
 rd /s /q "$tmppath"
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP03.cmd"
 "@ | Out-File "$tmppath\STEP03.cmd" -Encoding ASCII -Append
