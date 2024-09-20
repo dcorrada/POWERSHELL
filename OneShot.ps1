@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.08.3
+Version...: 24.09.1
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -110,6 +110,7 @@ $ErrorActionPreference= 'Inquire'
 $theOwner = 'dcorrada'
 $theRepo = 'POWERSHELL'
 $theBranch = 'master'
+$altBranches = Get-GitHubRepositoryBranch -OwnerName $theOwner -RepositoryName $theRepo 
 
 # get working directory
 $workdir = "$env:USERPROFILE\Downloads\dcorrada.OneShot"
@@ -177,6 +178,16 @@ while ($continueBrowsing) {
     $they = 20
     $choices = @()
 
+    $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
+    $ExLinkLabel.Location = New-Object System.Drawing.Size(510,($hmin - 80))
+    $ExLinkLabel.Size = New-Object System.Drawing.Size(300,30)
+    $ExLinkLabel.LinkColor = "BLUE"
+    $ExLinkLabel.Text = "Get more info about my repository"
+    $ExLinkLabel.TextAlign = 'MiddleRight'
+    $ExLinkLabel.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)
+    $ExLinkLabel.add_Click({[system.Diagnostics.Process]::start("https://github.com/dcorrada/POWERSHELL")})
+    $adialog.Controls.Add($ExLinkLabel)
+
     # list of items in the current path
     foreach ($ItemName in ($CurrentItems.Name | Sort-Object)) {
         if (($isChecked -eq 'none') -and ($choices.Count -lt 1)) {
@@ -205,6 +216,12 @@ while ($continueBrowsing) {
     $PreviewBut = RETRYButton -form $adialog -x 710 -y 230 -text "Preview"
     $AbortBut = RETRYButton -form $adialog -x 710 -y 270 -text "Quit"
     $AbortBut.DialogResult = [System.Windows.Forms.DialogResult]::ABORT
+
+    # list of alternative branches
+    $centar = Label -form $adialog -x 430 -y 230 -h 30 -w 70 -text "Alternative Branches"
+    $centar.TextAlign = 'MiddleCenter'
+    $DropBranch = DropDown -form $adialog -x 510 -y 235 -w 150 -opts ($altBranches.BranchName | Sort-Object)
+    $DropBranch.text = $theBranch
     
     # list of items form history file
     Label -form $adialog -x 260 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
@@ -269,7 +286,27 @@ while ($continueBrowsing) {
 
     # actions for clicking [GO] button
     } elseif ($goahead -eq 'OK') {
-        if ([string]::IsNullOrEmpty($selectedItem.URL)) {
+        $intoBox = ''
+        if ($theBranch -ne $DropBranch.text) {
+            # change branch and reset to the root path
+            $isChecked = 'none'
+            $theBranch = $DropBranch.text
+            $currentFolder = 'root'
+            $CurrentItems = (Get-GitHubContent `
+                -OwnerName $theOwner `
+                -RepositoryName $theRepo `
+                -BranchName  $theBranch `
+                ).entries | ForEach-Object {
+                    if ((($_.type -eq 'dir') -or ($_.name -match "\.ps1$")) -and !($_.name -eq 'Modules')) {
+                        New-Object -TypeName PSObject -Property @{
+                            NAME    = $_.name
+                            PATH    = $_.path
+                            URL     = $_.download_url
+                        } | Select NAME, PATH, URL   
+                    }
+                }
+        } elseif ([string]::IsNullOrEmpty($selectedItem.URL)) {
+            # navigate a path
             $isChecked = 'none'
             $currentFolder = '/' + $selectedItem.PATH
             $CurrentItems = (Get-GitHubContent `
@@ -287,12 +324,14 @@ while ($continueBrowsing) {
                     }
                 }
         } else {
+            # run the script
             $continueBrowsing = $false
         }
 
     # actions for clicking [UP] button
     } elseif ($goahead -eq 'CANCEL') {
         $isChecked = 'none'
+        $intoBox = ''
         if ($currentFolder -ne 'root') {
             if ($currentFolder -match "(^/.+)/[a-zA-Z_\-\.0-9]+$") {
                 $currentFolder = $matches[1]
@@ -330,6 +369,8 @@ while ($continueBrowsing) {
     
     # actions for clicking [Quit] button
     } elseif ($goahead -eq 'ABORT') {
+        Set-Location $env:USERPROFILE     
+        Remove-Item -Path $workdir -Recurse -Force > $null
         exit
     }
 
