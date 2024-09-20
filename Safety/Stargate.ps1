@@ -11,24 +11,51 @@ Author....: Dario CORRADA
 This script is a minimal frontend for external PSWallet calls
 #>
 
-# elevated script execution with admin privileges
-$currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-$testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-if ($testadmin -eq $false) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
-    exit $LASTEXITCODE
+<# *******************************************************************************
+                                    HEADER
+******************************************************************************* #>
+# check execution policy
+foreach ($item in (Get-ExecutionPolicy -List)) {
+    if(($item.Scope -eq 'LocalMachine') -and ($item.ExecutionPolicy -cne 'Bypass')) {
+        Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:`n"
+        Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force`n"
+        Write-Host -NoNewline "Afterwards restart this script. "
+        Pause
+        Exit
+    }
 }
 
-# get working directory
-$fullname = $MyInvocation.MyCommand.Path
-$fullname -match "([a-zA-Z_\-\.\\\s0-9:]+)\\Safety\\Stargate\.ps1$" > $null
-$workdir = $matches[1]
+# elevated script execution with admin privileges
+$ErrorActionPreference= 'Stop'
+try {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+    $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    if ($testadmin -eq $false) {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+        exit $LASTEXITCODE
+    }
+}
+catch {
+    Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+$ErrorActionPreference= 'Inquire'
 
-# header 
+# just pipe more than single "Split-Path" if the script maps to nested subfolders
+$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent
+
+# graphical stuff
+$WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
+
+
+<# *******************************************************************************
+                                    BODY
+******************************************************************************* #>
 
 $AccessForm = FormBase -w 300 -h 210 -text 'ACCESS'
 Label -form $AccessForm -x 10 -y 20 -w 80 -text 'Username:' | Out-Null

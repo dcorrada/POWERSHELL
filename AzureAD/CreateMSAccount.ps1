@@ -6,14 +6,51 @@ Author....: Dario CORRADA
 This script will create a new account on MSOnline and assign Office 365 license
 #>
 
-# elevated script execution with admin privileges
-$currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-$testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-if ($testadmin -eq $false) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
-    exit $LASTEXITCODE
+<# *******************************************************************************
+                                    HEADER
+******************************************************************************* #>
+# check execution policy
+foreach ($item in (Get-ExecutionPolicy -List)) {
+    if(($item.Scope -eq 'LocalMachine') -and ($item.ExecutionPolicy -cne 'Bypass')) {
+        Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:`n"
+        Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force`n"
+        Write-Host -NoNewline "Afterwards restart this script. "
+        Pause
+        Exit
+    }
 }
 
+# elevated script execution with admin privileges
+$ErrorActionPreference= 'Stop'
+try {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+    $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    if ($testadmin -eq $false) {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+        exit $LASTEXITCODE
+    }
+}
+catch {
+    Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+# just pipe more than single "Split-Path" if the script maps to nested subfolders
+$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent
+
+# graphical stuff
+$WarningPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+Import-Module -Name "$workdir\Modules\Forms.psm1"
+
+
+<# *******************************************************************************
+                                    BODY
+******************************************************************************* #>
 # header 
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
@@ -24,14 +61,6 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 $answ = [System.Windows.MessageBox]::Show("Proceed to create Office 365 account?",'ACCOUNT','YesNo','Info')
 if ($answ -eq "No") {
     Exit
-}
-
-# looking for NuGet Package Provider
-try {
-    $pp = Get-PackageProvider -Name NuGet
-}
-catch {
-    Install-PackageProvider -Name NuGet -Confirm:$True -MinimumVersion "2.8.5.216" -Force
 }
 
 # define username
