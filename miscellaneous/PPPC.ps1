@@ -150,8 +150,9 @@ pause
 PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Updates\drvUpdate_Win10.ps1'
-rd /s /q "$tmppath"
+timeout 10 > nul
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP03.cmd"
+rd /s /q "$tmppath"
 "@ | Out-File "$tmppath\STEP03.cmd" -Encoding ASCII -Append
 
 # copio il primo batch file per il riavvio successivo
