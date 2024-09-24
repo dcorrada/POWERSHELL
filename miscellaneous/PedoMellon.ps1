@@ -33,18 +33,53 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
+
+<# *******************************************************************************
+                                    METHODS
+******************************************************************************* #>
+
+# https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/get-random?view=powershell-5.1
+
+function TerraForm {
+    param (
+        [string]$instring, # input string
+        [int]$mlength = 10 # minimum char length
+    )
+
+    # SHUFFLE - split the imput string into blocks of 3 chars and shuffle them
+    $shuffled = @()
+    for ($i = 0; $i -lt $instring.Length; $i = $i+3) {
+        if (($i+2) -lt $instring.Length) {
+            $shuffled += $instring.Substring($i,3)
+        } else {
+            $shuffled += $instring.Substring($i)
+        }
+    }
+    $shuffled = $shuffled | Sort-Object { Get-Random }
+    $TheSpice = -join $shuffled
+
+    return $TheSpice
+}
+
+
+
+
 <# *******************************************************************************
                                     DIALOG
 ******************************************************************************* #>
 if ([string]::IsNullOrEmpty($UsrStr)) {
+
+    $TheUsrn = "Insert here a username..."
+    $ThePswd = "here there is a pswd!"
+
     $continueBrowsing = $true
     while ($continueBrowsing) {
         $TheDialog = FormBase -w 850 -h 230 -text "PEDO MELLON A MINNO"
 
         # string area
-        $UsrBox = TxtBox -form $TheDialog -x 20 -y 20 -h 35 -w 200 -text "Insert here a username..."
+        $UsrBox = TxtBox -form $TheDialog -x 20 -y 20 -h 35 -w 200 -text $TheUsrn
         $UsrBox.Font = [System.Drawing.Font]::new("Arial", 11)
-        $PwdBox = TxtBox -form $TheDialog -x 20 -y 60 -h 35 -w 200 -text "here there is a pswd!" # sostituire con la variabile contenente la passsword
+        $PwdBox = TxtBox -form $TheDialog -x 20 -y 60 -h 35 -w 200 -text $ThePswd
         $PwdBox.ReadOnly = $true
         $PwdBox.Font = [System.Drawing.Font]::new("Courier New", 11)
 
@@ -62,7 +97,8 @@ if ([string]::IsNullOrEmpty($UsrStr)) {
         if ($ButtHead -eq 'IGNORE') { 
             [System.Windows.Forms.Clipboard]::SetText($PwdBox.Text)
         } elseif ($ButtHead -eq 'RETRY') {
-            # generate another password
+            $ThePswd = TerraForm -instring $UsrBox.Text
+            $TheUsrn = $UsrBox.Text
         } elseif ($ButtHead -eq 'OK') {
             $continueBrowsing = $false
         }
