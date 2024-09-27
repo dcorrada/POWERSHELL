@@ -2,7 +2,8 @@ param (
     [string]$UserString,                # input string
     [int]$MinimumLength = 10,           # minimum char length
     [switch]$ShuffleBlock = $true,      # split the imput string into blocks of 3 chars and shuffle them
-    [switch]$UpperCase = $true          # capitalize letters
+    [switch]$UpperCase = $true,         # capitalize letters
+    [switch]$TransLite = $true          # transliterate
 )
 
 <#
@@ -66,10 +67,13 @@ function TerraForm {
         [string]$instring,
         [int]$mlength,     
         [string]$shuffle,
-        [string]$capitals
+        [string]$capitals,
+        [string]$tranx
     )
 
+    # lowerize and remove wildcard chars
     $TheSpice = $instring.ToLower()
+    $TheSpice = $TheSpice -replace "[\s\\:]+",''
 
     if ($shuffle -eq "True") {
         $shuffled = @()
@@ -95,12 +99,36 @@ function TerraForm {
         $TheSpice = -join $splitted
     }
     
+    if ($tranx -eq "True") {
+        # init transliterate dictionary
+        $keys = @('a','b','c','d','e','g','i','l','o','s','z')
+        $vals = @('*','6','(','>','3','9','!','1','@','$','2')            
+        $dict = @{}
+        for ($i = 0; $i -lt $keys.Count; $i++) {
+            $dict["$($keys[$i])"] = "$($vals[$i])"
+        }
+
+        $splitted = $TheSpice.ToCharArray()
+        for ($i = 0; $i -lt $splitted.Count; $i++) {
+            $akey = "$($splitted[$i])".ToLower()
+            $DnD = Get-Random -Maximum 3
+            if (($dict.ContainsKey($akey)) -and ($DnD -eq 1)) {
+                $splitted[$i] = "$($dict[$akey])"
+            }
+        }
+        $TheSpice = -join $splitted
+    }
+
     <#  +++ TODO +++
-        * translitterazione
         * inserzioni/delezioni
         * inversione
-        * troncare/espandere su $mlength
     #>
+
+    if ($TheSpice.Length -gt $MinimumLength) {
+        $TheSpice = $TheSpice.Substring(0,$MinimumLength)
+    } elseif ($TheSpice.Length -lt $MinimumLength) {
+        # expand with numbers and special chars
+    }
 
     return $TheSpice
 }
@@ -150,11 +178,11 @@ update it as well.
         # methods area
         $OptsLabel = Label -form $TheDialog -x 250 -y 110 -h 20 -text "OPTIONS" 
         $OptsLabel.Font = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
-        Label -form $TheDialog -x 250 -y 135 -w 120 -h 20 -text "Minimum Char Length" | Out-Null
+        Label -form $TheDialog -x 250 -y 135 -w 120 -h 20 -text "Characters Length" | Out-Null
         $CharLengthOpt = TxtBox -form $TheDialog -x 370 -y 132 -w 30 -text $MinimumLength
         $ShuffleOpt = CheckBox -form $TheDialog -x 250 -y 155 -checked $ShuffleBlock -text "Block Shuffle"
         $UpperOpt = CheckBox -form $TheDialog -x 250 -y 185 -checked $UpperCase -text "Capitalize Letters"
-        $TransOpt = CheckBox -form $TheDialog -x 250 -y 215 -enabled $false -text "Transliterate"
+        $TransOpt = CheckBox -form $TheDialog -x 250 -y 215 -checked $TransLite -text "Transliterate"
         $IndelOpt = CheckBox -form $TheDialog -x 250 -y 245 -enabled $false -text "Add Indels"
         $RecertOpt = CheckBox -form $TheDialog -x 250 -y 275 -enabled $false -text "Block Revert"
 
@@ -172,15 +200,17 @@ update it as well.
             # cached params
             $UserString     = $UsrBox.Text
             $MinimumLength  = $CharLengthOpt.Text
-            $ShuffleBlock   =  $ShuffleOpt.Checked
+            $ShuffleBlock   = $ShuffleOpt.Checked
             $UpperCase      = $UpperOpt.Checked
+            $TransLite      = $TransOpt.Checked
 
             # generate string
             $ThePswd = TerraForm `
                 -instring   $UserString `
                 -mlength    $MinimumLength `
                 -shuffle    $ShuffleBlock.ToString() `
-                -capitals   $UpperCase.ToString()
+                -capitals   $UpperCase.ToString() `
+                -tranx      $TransLite.ToString()
         } elseif ($ButtHead -eq 'OK') {
             $continueBrowsing = $false
         }
