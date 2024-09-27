@@ -29,6 +29,12 @@ $ErrorActionPreference= 'Inquire'
 # just pipe more than single "Split-Path" if the script maps to nested subfolders
 $workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent | Split-Path -Parent
 
+# graphical stuff
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+Import-Module -Name "$workdir\Modules\Forms.psm1"
+
 # carico il csv preprocessato (caricare l'estrazione dal filtro di GFI in excel ed esportare il file nel formato "CSV (delimitato da separatore di elenco)")
 $answ = [System.Windows.MessageBox]::Show("Disponi di un file CSV?",'INFILE','YesNo','Warning')
 if ($answ -eq "No") {    
