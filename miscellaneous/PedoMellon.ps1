@@ -13,6 +13,8 @@ Author....: Dario CORRADA
 
 This script is a password generator: the strings generated should be easy to keep 
 in mind but complex enough to decipher, as well
+
+Thx to Marco Motta for his sharing of precious suggestions
 #>
 
 <# *******************************************************************************
@@ -101,8 +103,8 @@ function TerraForm {
     
     if ($tranx -eq "True") {
         # init transliterate dictionary
-        $keys = @('a','b','c','d','e','g','i','l','o','s','z')
-        $vals = @('*','6','(','>','3','9','!','1','@','$','2')            
+        $keys = @('a','b','c','e','g','i','l','o','s','z')
+        $vals = @('*','6','(','3','9','!','1','@','$','2')            
         $dict = @{}
         for ($i = 0; $i -lt $keys.Count; $i++) {
             $dict["$($keys[$i])"] = "$($vals[$i])"
@@ -119,6 +121,18 @@ function TerraForm {
         $TheSpice = -join $splitted
     }
 
+    # charsets
+    for ($i = 48; $i -lt 58; $i++) {
+        $numbers += [char]$i
+    }
+    for ($i = 65; $i -lt 91; $i++) {
+        $letters += [char]$i
+    }
+    for ($i = 97; $i -lt 123; $i++) {
+        $letters += [char]$i
+    }
+    $specials = '!$?*_+#@^=%'
+
     <#  +++ TODO +++
         * inserzioni/delezioni
         * inversione
@@ -127,7 +141,12 @@ function TerraForm {
     if ($TheSpice.Length -gt $MinimumLength) {
         $TheSpice = $TheSpice.Substring(0,$MinimumLength)
     } elseif ($TheSpice.Length -lt $MinimumLength) {
-        # expand with numbers and special chars
+        $renmants = $MinimumLength - $TheSpice.Length
+        $charset = ($specials + $numbers).ToCharArray()
+        for ($i = 0; $i -lt $renmants; $i++) {
+            $idx = Get-Random -Maximum $charset.Count
+            $TheSpice += "$($charset[$idx])"
+        }
     }
 
     return $TheSpice
@@ -141,12 +160,12 @@ function TerraForm {
 ******************************************************************************* #>
 if ([string]::IsNullOrEmpty($UserString)) {
 
-    $UserString = "Insert here a username..."
-    $ThePswd = "here there is a pswd!"
+    $UserString = "Insert a username..."
+    $ThePswd = "Here the passowrd!"
 
     $continueBrowsing = $true
     while ($continueBrowsing) {
-        $TheDialog = FormBase -w 460 -h 360 -text "PEDO MELLON A MINNO"
+        $TheDialog = FormBase -w 470 -h 360 -text "Pedo Mellon a Minno"
 
         # disclaimer
         $Disclaimer = Label -form $TheDialog -x 20 -y 10 -w 410 -text 'PLEASE NOTE'
@@ -156,7 +175,7 @@ if ([string]::IsNullOrEmpty($UserString)) {
         $Disclaimer.ForeColor = 'Yellow'
         $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
         $ExLinkLabel.Location = New-Object System.Drawing.Size(20,45)
-        $ExLinkLabel.Size = New-Object System.Drawing.Size(420,65)
+        $ExLinkLabel.Size = New-Object System.Drawing.Size(410,65)
         $ExLinkLabel.LinkColor = "Blue"
         $ExLinkLabel.Font = [System.Drawing.Font]::new("Arial", 10)
         $ExLinkLabel.Text = @"
