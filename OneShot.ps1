@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.09.2
+Version...: 24.10.1
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -401,12 +401,21 @@ $download.Downloadfile("$($selectedItem.URL)", "$runpath\$($selectedItem.NAME)")
 Write-Host -ForegroundColor Green "DONE"
 
 Write-Host -NoNewline "Looking for dependencies... "
+
+# requiring PedoMellon password generator
+if ($selectedItem.NAME -match 'Init_PC.ps1') {
+    New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PedoMellon.ps1', "$workdir\Safety\PedoMellon.ps1")    
+}
+
+# script dedicated to MS Graph
 if ($runpath -match 'Graph') {
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Graph/AppKeyring.ps1', "$workdir\Graph\AppKeyring.ps1")
     New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PSWallet.ps1', "$workdir\Safety\PSWallet.ps1")
 }
 
+# stuff scripts adopting PSWallet keyring
 $found = Get-content -path "$runpath\$($selectedItem.NAME)" | Select-String -pattern 'Stargate.ps1' -encoding ASCII -CaseSensitive
 if ($found.Count -ge 1) {
     if (!(Test-Path "$workdir\Safety")) {

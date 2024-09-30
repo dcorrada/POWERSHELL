@@ -20,10 +20,9 @@ Thx to Marco Motta for his sharing of precious suggestions
 
 +++ TODO +++
 * MUTATION FREQUENCIES
-  Introduce freq parameters to fine tune the occurrency of each method adopted in this script (aka define variables to set the "-Maximum" parameter for each "$DnD = Get-Random" line invoked)
-
-* SILENT MODE
-  Write the CLI behaviour (no GUI)
+  Introduce freq parameters to fine tune the occurrency of each method adopted 
+  in this script (aka define variables to set the "-Maximum" parameter for 
+  each "$DnD = Get-Random" line invoked)
 #>
 
 <# *******************************************************************************
@@ -289,5 +288,13 @@ update it as well.
                                  HEADLESS
 ******************************************************************************* #>
 } else {
-    # TODO
+    $ThePswd = TerraForm `
+                -instring   $UserString `
+                -mlength    $MinimumLength `
+                -shuffle    $ShuffleBlock.ToString() `
+                -capitals   $UpperCase.ToString() `
+                -tranx      $TransLite.ToString() `
+                -indel      $InsDels.ToString() `
+                -revo       $Reverso.ToString()
+    Write-Host "$ThePswd"
 }

@@ -281,8 +281,16 @@ if ($answ -eq "Yes") {
     if ($personal.Checked) {
         $thepasswd = $apass.Text
     } elseif ($randomic.Checked) {
-        Add-Type -AssemblyName 'System.Web'
-        $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
+        $WhereIsPedoMellon =  "$workdir\Safety\PedoMellon.ps1"
+        if (Test-Path -Path $WhereIsPedoMellon -PathType Leaf) {
+            $thepasswd =  PowerShell.exe -file $WhereIsPedoMellon `
+                -UserString $username  `
+                -MinimumLength 10
+        } else { # old method
+            Add-Type -AssemblyName 'System.Web'
+            $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
+        }
+
     }
     Write-Host "Username...: " -NoNewline
     Write-Host $username -ForegroundColor Cyan
