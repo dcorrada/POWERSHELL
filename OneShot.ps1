@@ -226,10 +226,11 @@ while ($continueBrowsing) {
     $DropBranch.text = $theBranch
     
     # list of items form history file
-    Label -form $adialog -x 260 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
-    $they = 300
+    $astoria = Label -form $adialog -x 260 -y 290 -h 25 -text "RECENT LAUNCHES:"
+    $astoria.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)
+    $they = 310
     foreach ($cachedItem in $cachedItems) {
-        $choices += RadioButton -form $adialog -x 270 -y $they -checked $false -text $cachedItem.LABEL
+        $choices += RadioButton -form $adialog -x 270 -y $they -w 300 -checked $false -text $cachedItem.LABEL
         $they += 25
     }
 
