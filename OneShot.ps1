@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.09.2
+Version...: 24.10.1
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -181,7 +181,6 @@ while ($continueBrowsing) {
     $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
     $ExLinkLabel.Location = New-Object System.Drawing.Size(510,($hmin - 80))
     $ExLinkLabel.Size = New-Object System.Drawing.Size(300,30)
-    $ExLinkLabel.LinkColor = "BLUE"
     $ExLinkLabel.Text = "Get more info about my repository"
     $ExLinkLabel.TextAlign = 'MiddleRight'
     $ExLinkLabel.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)
@@ -226,10 +225,11 @@ while ($continueBrowsing) {
     $DropBranch.text = $theBranch
     
     # list of items form history file
-    Label -form $adialog -x 260 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
-    $they = 300
+    $astoria = Label -form $adialog -x 260 -y 290 -h 25 -text "RECENT LAUNCHES:"
+    $astoria.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)
+    $they = 310
     foreach ($cachedItem in $cachedItems) {
-        $choices += RadioButton -form $adialog -x 270 -y $they -checked $false -text $cachedItem.LABEL
+        $choices += RadioButton -form $adialog -x 270 -y $they -w 300 -checked $false -text $cachedItem.LABEL
         $they += 25
     }
 
@@ -401,12 +401,21 @@ $download.Downloadfile("$($selectedItem.URL)", "$runpath\$($selectedItem.NAME)")
 Write-Host -ForegroundColor Green "DONE"
 
 Write-Host -NoNewline "Looking for dependencies... "
+
+# requiring PedoMellon password generator
+if ($selectedItem.NAME -match 'Init_PC.ps1') {
+    New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PedoMellon.ps1', "$workdir\Safety\PedoMellon.ps1")    
+}
+
+# script dedicated to MS Graph
 if ($runpath -match 'Graph') {
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Graph/AppKeyring.ps1', "$workdir\Graph\AppKeyring.ps1")
     New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PSWallet.ps1', "$workdir\Safety\PSWallet.ps1")
 }
 
+# stuff scripts adopting PSWallet keyring
 $found = Get-content -path "$runpath\$($selectedItem.NAME)" | Select-String -pattern 'Stargate.ps1' -encoding ASCII -CaseSensitive
 if ($found.Count -ge 1) {
     if (!(Test-Path "$workdir\Safety")) {
