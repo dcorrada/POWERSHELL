@@ -181,7 +181,6 @@ while ($continueBrowsing) {
     $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
     $ExLinkLabel.Location = New-Object System.Drawing.Size(510,($hmin - 80))
     $ExLinkLabel.Size = New-Object System.Drawing.Size(300,30)
-    $ExLinkLabel.LinkColor = "BLUE"
     $ExLinkLabel.Text = "Get more info about my repository"
     $ExLinkLabel.TextAlign = 'MiddleRight'
     $ExLinkLabel.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)

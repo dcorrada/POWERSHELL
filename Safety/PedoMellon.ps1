@@ -17,12 +17,6 @@ This script is a password generator: the strings generated should be easy to kee
 in mind but complex enough to decipher, as well
 
 Thx to Marco Motta for his sharing of precious suggestions
-
-+++ TODO +++
-* MUTATION FREQUENCIES
-  Introduce freq parameters to fine tune the occurrency of each method adopted 
-  in this script (aka define variables to set the "-Maximum" parameter for 
-  each "$DnD = Get-Random" line invoked)
 #>
 
 <# *******************************************************************************
@@ -83,6 +77,26 @@ function TerraForm {
         [string]$revo
     )
 
+    # charsets
+    for ($i = 48; $i -lt 58; $i++) {
+        $numbers += [char]$i
+    }
+    for ($i = 65; $i -lt 91; $i++) {
+        $maiusc += [char]$i
+    }
+    for ($i = 97; $i -lt 123; $i++) {
+        $letters += [char]$i
+    }
+    $specials = '!$?*_+#@^=%'
+
+    # set the frequency by which each method occurs (1/value)
+    $weight = @{
+        Capitalized     = 3
+        Transliterae    = 3
+        InsertDeleti    = 20
+        Reversi         = 3
+    }
+
     # lowerize and remove wildcard chars
     $TheSpice = $instring.ToLower()
     $TheSpice = $TheSpice -replace "[\s\\:]+",''
@@ -103,7 +117,7 @@ function TerraForm {
     if ($capitals -eq "True") {
         $splitted = $TheSpice.ToCharArray()
         for ($i = 0; $i -lt $splitted.Count; $i++) {
-            $DnD = Get-Random -Maximum 2
+            $DnD = Get-Random -Maximum $weight.Capitalized
             if (($splitted[$i] -match "[a-z]") -and ($DnD -eq 1)) {
                 $splitted[$i] = "$($splitted[$i])".ToUpper()
             }
@@ -123,7 +137,7 @@ function TerraForm {
         $splitted = $TheSpice.ToCharArray()
         for ($i = 0; $i -lt $splitted.Count; $i++) {
             $akey = "$($splitted[$i])".ToLower()
-            $DnD = Get-Random -Maximum 3
+            $DnD = Get-Random -Maximum $weight.Transliterae
             if (($dict.ContainsKey($akey)) -and ($DnD -eq 1)) {
                 $splitted[$i] = "$($dict[$akey])"
             }
@@ -131,23 +145,11 @@ function TerraForm {
         $TheSpice = -join $splitted
     }
 
-    # charsets
-    for ($i = 48; $i -lt 58; $i++) {
-        $numbers += [char]$i
-    }
-    for ($i = 65; $i -lt 91; $i++) {
-        $maiusc += [char]$i
-    }
-    for ($i = 97; $i -lt 123; $i++) {
-        $letters += [char]$i
-    }
-    $specials = '!$?*_+#@^=%'
-
     if ($indel -eq "True") {
         $splitted = $TheSpice.ToCharArray()
         $mutated = @()
         for ($i = 0; $i -lt $splitted.Count; $i++) {
-            $DnD = Get-Random -Maximum 10
+            $DnD = Get-Random -Maximum $weight.InsertDeleti
             if ($DnD -eq 1) {
                 # deletion, do nothing
             } elseif ($DnD -eq 2) {
@@ -173,7 +175,7 @@ function TerraForm {
             } else {
                 $lechunck = $TheSpice.Substring($i)
             }
-            $DnD = Get-Random -Maximum 4
+            $DnD = Get-Random -Maximum $weight.Reversi
             if ($DnD -eq 1) {
                 $reverted += $lechunck[-1..-$lechunck.Length] -join ''
             } else {
@@ -221,7 +223,6 @@ if ([string]::IsNullOrEmpty($UserString)) {
         $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
         $ExLinkLabel.Location = New-Object System.Drawing.Size(20,45)
         $ExLinkLabel.Size = New-Object System.Drawing.Size(410,65)
-        $ExLinkLabel.LinkColor = "Blue"
         $ExLinkLabel.Font = [System.Drawing.Font]::new("Arial", 10)
         $ExLinkLabel.Text = @"
 The methods adopted herein doesn't ensure cryptographically 
@@ -240,19 +241,19 @@ update it as well.
         $PwdBox.Font = [System.Drawing.Font]::new("Courier New", 11)
 
         # methods area
-        $OptsLabel = Label -form $TheDialog -x 250 -y 110 -h 20 -text "OPTIONS" 
+        $OptsLabel = Label -form $TheDialog -x 250 -y 120 -h 20 -text "OPTIONS" 
         $OptsLabel.Font = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
-        Label -form $TheDialog -x 250 -y 135 -w 120 -h 20 -text "Characters Length" | Out-Null
-        $CharLengthOpt = TxtBox -form $TheDialog -x 370 -y 132 -w 30 -text $MinimumLength
-        $ShuffleOpt = CheckBox -form $TheDialog -x 250 -y 155 -checked $ShuffleBlock -text "Block Shuffle"
-        $UpperOpt = CheckBox -form $TheDialog -x 250 -y 185 -checked $UpperCase -text "Capitalize Letters"
-        $TransOpt = CheckBox -form $TheDialog -x 250 -y 215 -checked $TransLite -text "Transliterate"
-        $IndelOpt = CheckBox -form $TheDialog -x 250 -y 245 -checked $InsDels -text "Add Indels"
-        $RevertOpt = CheckBox -form $TheDialog -x 250 -y 275 -checked $Reverso -text "Block Revert"
+        Label -form $TheDialog -x 20 -y 200 -w 110 -h 20 -text "Characters Length" | Out-Null
+        $CharLengthOpt = TxtBox -form $TheDialog -x 130 -y 195 -w 40 -text $MinimumLength
+        $ShuffleOpt = CheckBox -form $TheDialog -x 255 -y 140 -checked $ShuffleBlock -text "Block Shuffle"
+        $UpperOpt = CheckBox -form $TheDialog -x 255 -y 170 -checked $UpperCase -text "Capitalize Letters"
+        $TransOpt = CheckBox -form $TheDialog -x 255 -y 200 -checked $TransLite -text "Transliterate"
+        $IndelOpt = CheckBox -form $TheDialog -x 255 -y 230 -checked $InsDels -text "Add Indels"
+        $RevertOpt = CheckBox -form $TheDialog -x 255 -y 260 -checked $Reverso -text "Block Revert"
 
         # buttons
-        RETRYButton -form $TheDialog -x 20 -y 200 -text "Generate" | Out-Null
-        $CopyBut = RETRYButton -form $TheDialog -x 120 -y 200 -text "Copy"
+        RETRYButton -form $TheDialog -x 20 -y 230 -text "Generate" | Out-Null
+        $CopyBut = RETRYButton -form $TheDialog -x 120 -y 230 -text "Copy"
         $CopyBut.DialogResult = [System.Windows.Forms.DialogResult]::IGNORE
         OKButton -form $TheDialog -x 20 -y 270 -w 200 -text "Quit" | Out-Null
 
