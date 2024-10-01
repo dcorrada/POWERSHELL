@@ -124,6 +124,17 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+                 <#
+                    On older PC error 3010 can occur during installation: in most cases Acrobat 
+                    seems to correctly run without any expected crash or further fails.
+
+                    In the worst scenario try the following steps and see if that works for you:
+                      * Run the Acrobat cleaner tool 
+                        https://labs.adobe.com/downloads/acrobatcleaner.html
+                      * Reboot the computer
+                      * Reinstall the application using the link 
+                        https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
+                #>
             }
         } elseif ($item -eq 'Chrome') {
             <# 
@@ -281,8 +292,16 @@ if ($answ -eq "Yes") {
     if ($personal.Checked) {
         $thepasswd = $apass.Text
     } elseif ($randomic.Checked) {
-        Add-Type -AssemblyName 'System.Web'
-        $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
+        $WhereIsPedoMellon =  "$workdir\Safety\PedoMellon.ps1"
+        if (Test-Path -Path $WhereIsPedoMellon -PathType Leaf) {
+            $thepasswd =  PowerShell.exe -file $WhereIsPedoMellon `
+                -UserString $username  `
+                -MinimumLength 10
+        } else { # old method
+            Add-Type -AssemblyName 'System.Web'
+            $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
+        }
+
     }
     Write-Host "Username...: " -NoNewline
     Write-Host $username -ForegroundColor Cyan

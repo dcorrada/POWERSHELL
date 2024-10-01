@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.09.1
+Version...: 24.10.1
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -142,7 +142,7 @@ if (Test-Path $cacheFile -PathType Leaf) {
     $cachedItems += Import-Csv -Path $cacheFile
 } else {
     New-Item -ItemType File -Path $cacheFile > $null
-    "NAME,PATH,URL" | Out-File $cacheFile -Encoding utf8 -Append
+    "LABEL,NAME,PATH,URL" | Out-File $cacheFile -Encoding utf8 -Append
 }
 
 
@@ -181,7 +181,6 @@ while ($continueBrowsing) {
     $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
     $ExLinkLabel.Location = New-Object System.Drawing.Size(510,($hmin - 80))
     $ExLinkLabel.Size = New-Object System.Drawing.Size(300,30)
-    $ExLinkLabel.LinkColor = "BLUE"
     $ExLinkLabel.Text = "Get more info about my repository"
     $ExLinkLabel.TextAlign = 'MiddleRight'
     $ExLinkLabel.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)
@@ -216,6 +215,8 @@ while ($continueBrowsing) {
     $PreviewBut = RETRYButton -form $adialog -x 710 -y 230 -text "Preview"
     $AbortBut = RETRYButton -form $adialog -x 710 -y 270 -text "Quit"
     $AbortBut.DialogResult = [System.Windows.Forms.DialogResult]::ABORT
+    $CacheBut = RETRYButton -form $adialog -x 430 -y 270 -w 230 -text "Clear Cached Items"
+    $CacheBut.DialogResult = [System.Windows.Forms.DialogResult]::IGNORE
 
     # list of alternative branches
     $centar = Label -form $adialog -x 430 -y 230 -h 30 -w 70 -text "Alternative Branches"
@@ -224,10 +225,11 @@ while ($continueBrowsing) {
     $DropBranch.text = $theBranch
     
     # list of items form history file
-    Label -form $adialog -x 260 -y 280 -h 25 -text "RECENT LAUNCHES:" | Out-Null
-    $they = 300
+    $astoria = Label -form $adialog -x 260 -y 290 -h 25 -text "RECENT LAUNCHES:"
+    $astoria.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)
+    $they = 310
     foreach ($cachedItem in $cachedItems) {
-        $choices += RadioButton -form $adialog -x 270 -y $they -checked $false -text $cachedItem.NAME
+        $choices += RadioButton -form $adialog -x 270 -y $they -w 300 -checked $false -text $cachedItem.LABEL
         $they += 25
     }
 
@@ -241,7 +243,7 @@ while ($continueBrowsing) {
     }
     foreach ($currentOpt in $choices) {
         if ($currentOpt.Checked) {
-            $currentOpt.Text -match "^(\[\+\] )*(.+)$" | Out-Null
+            $currentOpt.Text -match "^(\[\+\] )*([a-zA-Z_\-\.0-9]+)( \[.+\])*$" | Out-Null
             $isChecked = "$($matches[2])"
             foreach ($anItem in $CurrentItems) {
                 if ($anItem.NAME -eq $isChecked) {
@@ -367,6 +369,11 @@ while ($continueBrowsing) {
             }
         }
     
+    # actions for clicking [Clear Cached Items] button
+    } elseif ($goahead -eq 'IGNORE') {
+        Remove-Item -Path $cacheFile -Force > $null
+        [System.Windows.MessageBox]::Show("Cache will be cleared on `nnext restart of the script",'CLEAR CACHE','Ok','Info')
+
     # actions for clicking [Quit] button
     } elseif ($goahead -eq 'ABORT') {
         Set-Location $env:USERPROFILE     
@@ -394,12 +401,21 @@ $download.Downloadfile("$($selectedItem.URL)", "$runpath\$($selectedItem.NAME)")
 Write-Host -ForegroundColor Green "DONE"
 
 Write-Host -NoNewline "Looking for dependencies... "
+
+# requiring PedoMellon password generator
+if ($selectedItem.NAME -match 'Init_PC.ps1') {
+    New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PedoMellon.ps1', "$workdir\Safety\PedoMellon.ps1")    
+}
+
+# script dedicated to MS Graph
 if ($runpath -match 'Graph') {
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Graph/AppKeyring.ps1', "$workdir\Graph\AppKeyring.ps1")
     New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PSWallet.ps1', "$workdir\Safety\PSWallet.ps1")
 }
 
+# stuff scripts adopting PSWallet keyring
 $found = Get-content -path "$runpath\$($selectedItem.NAME)" | Select-String -pattern 'Stargate.ps1' -encoding ASCII -CaseSensitive
 if ($found.Count -ge 1) {
     if (!(Test-Path "$workdir\Safety")) {
@@ -425,12 +441,13 @@ if ($selectedItem.NAME -eq 'OneShot.ps1') {
 ******************************************************************************* #>
 
 # update history (up to 5 items)
-if ($cachedItems.NAME -cnotcontains $selectedItem.NAME) {
+if ($cachedItems.URL -cnotcontains $selectedItem.URL) {
     $cachedItems = ,(New-Object -TypeName PSObject -Property @{
+        LABEL   = "$($selectedItem.NAME) [$theBranch]"
         NAME    = $selectedItem.NAME
         PATH    = $selectedItem.PATH
         URL     = $selectedItem.URL
-    } | Select NAME, PATH, URL) + $cachedItems
+    } | Select LABEL, NAME, PATH, URL) + $cachedItems
 }
 if ($cachedItems.Count -lt 6) {
     $cachedItems | Export-Csv -Path $cacheFile -NoTypeInformation
