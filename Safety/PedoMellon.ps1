@@ -1,16 +1,16 @@
 param (
     [string]$UserString,                # input string
     [int]$MinimumLength     = 10,       # minimum char length
-    [switch]$ShuffleBlock   = $true,    # split the imput string into blocks of 3 chars and shuffle them
-    [switch]$UpperCase      = $true,    # capitalize letters
-    [switch]$TransLite      = $true,    # transliterate
-    [switch]$InsDels        = $true,    # add single character insertions or deletions
-    [switch]$Reverso        = $true,    # reverts block of 3 chars
+    [switch]$ShuffleBlock   = $false,   # split the imput string into blocks of 3 chars and shuffle them
+    [switch]$UpperCase      = $false,   # capitalize letters
+    [switch]$TransLite      = $false,   # transliterate
+    [switch]$InsDels        = $false,   # add single character insertions or deletions
+    [switch]$Reverso        = $false,   # reverts block of 3 chars
                                         # frequency by which methods occur (1/value)
     [int]$Uw                = 3,        # UpperCase
     [int]$Tw                = 3,        # Translite
-    [int]$Iw                = 20,       # InsDels
-    [int]$Rw                = 5         # Reverso
+    [int]$Iw                = 25,       # InsDels
+    [int]$Rw                = 4         # Reverso
 )
 
 <#
@@ -206,6 +206,13 @@ function TerraForm {
                                     DIALOG
 ******************************************************************************* #>
 if ([string]::IsNullOrEmpty($UserString)) {
+
+    # defaults for GUI
+    $ShuffleBlock   = $true
+    $UpperCase      = $true
+    $TransLite      = $true
+    $InsDels        = $true
+    $Reverso        = $true
 
     $UserString = "Insert a username..."
     $ThePswd = "Here the password!"

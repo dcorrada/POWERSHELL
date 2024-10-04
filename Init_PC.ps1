@@ -296,7 +296,11 @@ if ($answ -eq "Yes") {
         if (Test-Path -Path $WhereIsPedoMellon -PathType Leaf) {
             $thepasswd =  PowerShell.exe -file $WhereIsPedoMellon `
                 -UserString $username  `
-                -MinimumLength 10
+                -MinimumLength 10 `
+                -Uppercase `
+                -TransLite `
+                -InsDels `
+                -Reverso
         } else { # old method
             Add-Type -AssemblyName 'System.Web'
             $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
