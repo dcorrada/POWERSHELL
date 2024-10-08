@@ -7,9 +7,9 @@ param (
     [switch]$InsDels        = $false,   # add single character insertions or deletions
     [switch]$Reverso        = $false,   # reverts block of 3 chars
                                         # frequency by which methods occur (1/value)
-    [int]$Uw                = 3,        # UpperCase
+    [int]$Uw                = 4,        # UpperCase
     [int]$Tw                = 3,        # Translite
-    [int]$Iw                = 25,       # InsDels
+    [int]$Iw                = 20,       # InsDels
     [int]$Rw                = 4         # Reverso
 )
 
@@ -208,7 +208,7 @@ function TerraForm {
 if ([string]::IsNullOrEmpty($UserString)) {
 
     # defaults for GUI
-    $ShuffleBlock   = $true
+    $ShuffleBlock   = $false
     $UpperCase      = $true
     $TransLite      = $true
     $InsDels        = $true
@@ -243,8 +243,20 @@ Otherwise, feel free to check out the source code and update it as well.
         $UsrBox = TxtBox -form $TheDialog -x 20 -y 100 -h 35 -w 200 -text $UserString
         $UsrBox.Font = [System.Drawing.Font]::new("Arial", 11)
         $PwdBox = TxtBox -form $TheDialog -x 20 -y 140 -h 35 -w 200 -text $ThePswd
+        $PwdBox.Font = [System.Drawing.Font]::new("Courier New", 11, [System.Drawing.FontStyle]::Bold)
+        $PwdBox.BackColor = "LightGray"        
         $PwdBox.ReadOnly = $true
-        $PwdBox.Font = [System.Drawing.Font]::new("Courier New", 11)
+        if (($ThePswd -cmatch "[A-Z]+") -or ($ThePswd -match "[0-9]+")) {
+            $PwdBox.ForeColor = "Black"
+            if (($ThePswd -cmatch "[A-Z]+") -and ($ThePswd -match "[0-9]+")) {
+                $PwdBox.ForeColor = "Blue"
+                if ($ThePswd -match "[!\$\?\*_\+#\@\^=%]+") {
+                    $PwdBox.ForeColor = "Green"
+                }
+            }
+        } else {
+            $PwdBox.ForeColor = "DarkRed"
+        }
 
         # methods area
         $OptsLabel = Label -form $TheDialog -x 250 -y 80 -w 70 -h 30 -text "OPTIONS" 
