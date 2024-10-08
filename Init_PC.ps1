@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.10.1
+Version...: 24.10.2
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -86,10 +86,17 @@ $info = systeminfo
 
 $download = New-Object net.webclient
 $winget_exe = $null
-if ($info[2] -match 'Windows 10') {
-    Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
-    # see also https://phoenixnap.com/kb/install-winget
-    $url = 'https://github.com/microsoft/winget-cli/releases/latest'
+if ($info[2] -match 'Windows 11') {
+    # for some reason source update succeeds with "msstore" but not with "winget" repository
+    # see also https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
+    Start-Process -Wait -FilePath 'winget.exe' -ArgumentList 'source update' -NoNewWindow
+}
+
+# see also https://phoenixnap.com/kb/install-winget
+Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
+$url = 'https://github.com/microsoft/winget-cli/releases/latest'
+$ErrorActionPreference= 'Stop'
+try {
     $request = [System.Net.WebRequest]::Create($url)
     $response = $request.GetResponse()
     $realTagUrl = $response.ResponseUri.OriginalString
@@ -99,20 +106,17 @@ if ($info[2] -match 'Windows 10') {
     Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
     [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null  
     $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
-    Write-Host -ForegroundColor Green " DONE"
-} elseif ($info[2] -match 'Windows 11') {
-    [System.Windows.MessageBox]::Show("winget not yet configured for Windows 11`nPlease proceed to manually download and installation",'WINGET','Ok','Warning') | Out-Null
-    <# 
-       There are still some trouble for installations through winget with Win11.
-       Here there is a thread I have opened on such topic:
-
-       https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
-    #>
+    Write-Host -ForegroundColor Green " DONE"    
 }
+catch {
+    Write-Host -ForegroundColor Red " FAILED"    
+    Write-Output "Error: $($error[0].ToString())"
+}
+$ErrorActionPreference= 'Inquire'
 
 if ([string]::IsNullOrEmpty($winget)) {
+    [System.Windows.MessageBox]::Show("Winget seems not configured`nProceed with manual (download and) installations",'WINGET','Ok','Warning') | Out-Null
     Write-Host -ForegroundColor Yellow "winget not configured, installations skipped"
-    Pause
 } else {
     $msstore_opts = '--source msstore --scope machine --accept-package-agreements --accept-source-agreements --silent'
     $winget_opts = '--source winget --scope machine --accept-package-agreements --accept-source-agreements --silent'
@@ -308,13 +312,21 @@ if ($answ -eq "Yes") {
     } elseif ($randomic.Checked) {
         $WhereIsPedoMellon =  "$workdir\Safety\PedoMellon.ps1"
         if (Test-Path -Path $WhereIsPedoMellon -PathType Leaf) {
-            $thepasswd =  PowerShell.exe -file $WhereIsPedoMellon `
-                -UserString $username  `
-                -MinimumLength 10 `
-                -Uppercase `
-                -TransLite `
-                -InsDels `
-                -Reverso
+            $compliant = $false
+            while (!($compliant)) {
+                $thepasswd =  PowerShell.exe -file $WhereIsPedoMellon `
+                    -UserString $username  `
+                    -MinimumLength 12 `
+                    -Uppercase `
+                    -TransLite `
+                    -InsDels `
+                    -Reverso `
+                    -Rw 3
+
+                if (($thepasswd -cmatch "[A-Z]+") -and ($thepasswd -match "[0-9]+") -and ($thepasswd -match "[!\$\?\*_\+#\@\^=%]+")) {
+                    $compliant = $true
+                }
+            }
         } else { # old method
             Add-Type -AssemblyName 'System.Web'
             $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
