@@ -1,6 +1,6 @@
 param (
     [string]$UserString,                # input string
-    [int]$MinimumLength     = 10,       # minimum char length
+    [int]$MinimumLength     = 12,       # minimum char length
     [switch]$ShuffleBlock   = $false,   # split the imput string into blocks of 3 chars and shuffle them
     [switch]$UpperCase      = $false,   # capitalize letters
     [switch]$TransLite      = $false,   # transliterate
@@ -9,7 +9,7 @@ param (
                                         # frequency by which methods occur (1/value)
     [int]$Uw                = 4,        # UpperCase
     [int]$Tw                = 3,        # Translite
-    [int]$Iw                = 20,       # InsDels
+    [int]$Iw                = 15,       # InsDels
     [int]$Rw                = 4         # Reverso
 )
 
@@ -290,7 +290,7 @@ method occurs (1/value).
             $TextString =  $SliderValue
             $TransTrackLabel.Text = $TextString
         })
-        $IndelTrack = Slider -form $TheDialog -x 380 -y 230 -min 15 -max 25 -defval $Iw
+        $IndelTrack = Slider -form $TheDialog -x 380 -y 230 -min 10 -max 20 -defval $Iw
         $IndelTrackLabel = Label -form $TheDialog -x 580 -y 240 -text $IndelTrack.Value
         $IndelTrack.add_ValueChanged({
             $SliderValue = $IndelTrack.Value
