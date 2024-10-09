@@ -123,6 +123,10 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\S
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\PedoMellon.ps1' -DestinationPath "$tmppath\Safety"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
 
+New-Item -ItemType directory -Path "$tmppath\miscellaneous" > $null
+$downbin = $tmppath + '\miscellaneous\Quotes.ps1'
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/Quotes.ps1' -OutFile $downbin -ErrorAction Stop | out-null
+
 # creo i file batch per gli step da eseguire
 New-Item -ItemType file -Path "$tmppath\STEP01.cmd" > $null
 @"
@@ -151,7 +155,8 @@ pause
 PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Updates\drvUpdate_Win10.ps1'
-timeout 10 > nul
+Pause
+PowerShell.exe "& "'$tmppath\miscellaneous\Quotes.ps1'
 rd /s /q "$tmppath"
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP03.cmd"
 "@ | Out-File "$tmppath\STEP03.cmd" -Encoding ASCII -Append
