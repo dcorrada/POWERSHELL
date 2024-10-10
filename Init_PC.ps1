@@ -110,7 +110,7 @@ if ($info[2] -match 'Windows 10') {
     #>
 }
 
-if ([string]::IsNullOrEmpty($winget)) {
+if ([string]::IsNullOrEmpty($winget_exe)) {
     Write-Host -ForegroundColor Yellow "winget not configured, installations skipped"
     Pause
 } else {
