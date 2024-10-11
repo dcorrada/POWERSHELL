@@ -122,7 +122,7 @@ $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
-    foreach ($item in ('Acrobat Reader DC', 'Chrome', 'Revo Uninstaller', 'Office 365 Desktop', 'Speccy', 'TreeSize', '7ZIP')) {
+    foreach ($item in ('Acrobat Reader DC', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
         $swlist[$item].Enabled = $false
     }
