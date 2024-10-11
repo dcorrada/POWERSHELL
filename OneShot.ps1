@@ -455,6 +455,13 @@ if ($cachedItems.Count -lt 6) {
     $cachedItems[0..4] | Export-Csv -Path $cacheFile -NoTypeInformation
 }
 
+# a quote a day
+if (!(Test-Path "$workdir\miscellaneous")) {
+    New-Item -ItemType Directory -Path "$workdir\miscellaneous" | Out-Null
+}
+$download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/Quotes.ps1', "$workdir\miscellaneous\Quotes.ps1")
+PowerShell.exe "& ""$workdir\miscellaneous\Quotes.ps1"
+
 # delete temps
 if ($selectedItem.NAME -cne 'OneShot.ps1') {
     $answ = [System.Windows.MessageBox]::Show("Your script [$($selectedItem.NAME)] is terminated: `ndo you want to locally delete it?",'CLEAN','YesNo','Info')
@@ -463,4 +470,3 @@ if ($selectedItem.NAME -cne 'OneShot.ps1') {
         Remove-Item -Path $workdir -Recurse -Force > $null
     }
 }
-
