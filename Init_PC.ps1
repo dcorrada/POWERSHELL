@@ -93,15 +93,17 @@ if ($info[2] -match 'Windows 10') {
     }
     $ErrorActionPreference= 'Inquire'
 } elseif ($info[2] -match 'Windows 11') {
-    <# 
-       There are still some trouble for installations through winget with Win11.
-       Here there is a thread I have opened on such topic:
+    # see also https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
+    $amessage = @"
+Update winget before proceed:
 
-       https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
-
-       # for some reason source update succeeds with "msstore" but not with "winget" repository
-       Start-Process -Wait -FilePath 'winget.exe' -ArgumentList 'source update' -NoNewWindow
-    #>
+1. open a PowerShell session with admin privileges;
+2. run the command "winget source update";
+3. ensure that 2winget" repo has been updated;
+4. close session windows and click on "Ok" button.
+"@
+    [System.Windows.MessageBox]::Show($amessage,'WINGET','Ok','Warning') | Out-Null
+    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
 }
 if ([string]::IsNullOrEmpty($winget_exe)) {
     [System.Windows.MessageBox]::Show("Winget not configured, some app will not available.`nProceed with manually download and installation for them.",'WINGET','Ok','Warning') | Out-Null
@@ -122,7 +124,7 @@ $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
-    foreach ($item in ('Acrobat Reader DC', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
+    foreach ($item in ('Acrobat Reader DC', 'Chrome', 'Revo Uninstaller', 'Office 365 Desktop', 'Speccy', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
         $swlist[$item].Enabled = $false
     }
@@ -132,7 +134,7 @@ $result = $form_panel.ShowDialog()
 $msstore_opts = '--source msstore --scope machine --accept-package-agreements --accept-source-agreements --silent'
 $winget_opts = '--source winget --scope machine --accept-package-agreements --accept-source-agreements --silent'
 
-[System.Windows.MessageBox]::Show("Currently winget handling exception(s) `nis focused on IT-it language",'PLEASE NOTE','Ok','Warning') | Out-Nul
+[System.Windows.MessageBox]::Show("Currently winget handling exception(s) `nis focused on IT-it language",'PLEASE NOTE','Ok','Warning') | Out-Null
 # for more deeply inspection "Start-Process" cmdlet could be run also with "-RedirectStandardError" option
 
 foreach ($item in ($swlist.Keys | Sort-Object)) {
