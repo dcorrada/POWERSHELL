@@ -99,7 +99,7 @@ Update winget before proceed:
 
 1. open a PowerShell session with admin privileges;
 2. run the command "winget source update";
-3. ensure that 2winget" repo has been updated;
+3. ensure that "winget" repo has been updated;
 4. close session windows and click on "Ok" button.
 "@
     [System.Windows.MessageBox]::Show($amessage,'WINGET','Ok','Warning') | Out-Null
