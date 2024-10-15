@@ -201,3 +201,20 @@ function ProgressBar {
 }
 Export-ModuleMember -Function ProgressBar
 
+function Slider {
+    param ($form, $x, $y, $min, $max, $defval)
+
+    $obj = New-Object System.Windows.Forms.TrackBar
+    $obj.Location = "$x,$y"
+    $obj.Width = 200
+    $obj.Orientation = "Horizontal"
+    $obj.TickStyle = "TopLeft"
+    $obj.SetRange($min,$max)
+    $obj.LargeChange = $step
+    $obj.Value = $defval
+    $form.Controls.Add($obj)
+
+    return $obj
+}
+Export-ModuleMember -Function Slider
+

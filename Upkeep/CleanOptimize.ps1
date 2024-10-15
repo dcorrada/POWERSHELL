@@ -1,6 +1,6 @@
 ﻿<#
 Name......: CleanOptimize.ps1
-Version...: 21.05.1
+Version...: 24.10.1
 Author....: Dario CORRADA
 
 This script runs a disk cleanup on volume C: and optimize it
@@ -51,6 +51,30 @@ Add-Type -AssemblyName PresentationFramework
 # Cleanup
 Start-Process -FilePath CleanMgr.exe -ArgumentList '/d c: sageset:1' -Wait
 Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1' -Wait
+
+# Outlook Logging,thx to Rudy Mens very very much
+# https://lazyadmin.nl/it/disable-outlook-logging-and-remove-etl-files/
+$answ = [System.Windows.MessageBox]::Show("Purge ETL files?",'OUTLOOK','YesNo','Info')
+if ($answ -eq "Yes") {
+    # Get all Users
+    $Users = Get-ChildItem -Path "$($ENV:SystemDrive)\Users"
+
+    # Process all the Users
+    $Users | ForEach-Object {
+        Write-Host "Processing user: $($_.Name)" -ForegroundColor Cyan
+        $path = "$($ENV:SystemDrive)\Users\$($_.Name)\AppData\Local\Temp\Outlook Logging\"
+
+        If (Test-Path $path) {
+            Write-host "Removing log files from $path" -ForegroundColor Cyan
+            Remove-Item -Path $path -Recurse
+
+            <# keep this trick disabled by now
+            Write-host "Creating dummy file to prevent log files" -ForegroundColor Cyan
+            New-Item -Path "$($ENV:SystemDrive)\Users\$($_.Name)\AppData\Local\Temp" -Name "Outlook Logging" -ItemType File
+            #>
+        }
+    }
+}
 
 # Optimize
 $answ = [System.Windows.MessageBox]::Show("Optimize Volume C:?",'OPTIMIZE','YesNo','Info')

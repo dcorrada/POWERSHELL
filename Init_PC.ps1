@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.08.2
+Version...: 24.10.3
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -9,8 +9,9 @@ This script finalize fresh OS installations:
 * set hostname according to the serial number.
 
 +++ KNOWN BUGS +++
-Teams wont be installed machinewide from winget. As temporary workaround a msix 
-installer will be manually downloaded and asked install it afterwards.
+* Teams wont be installed machinewide from winget. As temporary workaround a 
+  msix installer will be manually downloaded and asked install it afterwards
+* winget wont to upgrade on Windows 11 (bugfix in progress)
 #>
 
 <# *******************************************************************************
@@ -57,13 +58,57 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 <# *******************************************************************************
                                     BODY
 ******************************************************************************* #>
-
 # fetch and install additional softwares
 # modify download paths according to updated software versions (updated on 2021/01/18)
+
 $tmppath = "C:\TEMPSOFTWARE"
 if (!(Test-Path $tmppath)) {
     New-Item -ItemType directory -Path $tmppath | Out-Null
 }
+# get OS release
+$info = systeminfo
+
+$download = New-Object net.webclient
+$winget_exe = $null
+if ($info[2] -match 'Windows 10') {
+    # see also https://phoenixnap.com/kb/install-winget
+    Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
+    $url = 'https://github.com/microsoft/winget-cli/releases/latest'
+    $ErrorActionPreference= 'Stop'
+    try {
+        $request = [System.Net.WebRequest]::Create($url)
+        $response = $request.GetResponse()
+        $realTagUrl = $response.ResponseUri.OriginalString
+        $version = $realTagUrl.split('/')[-1]
+        $fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
+        $download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+        Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+        [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null  
+        $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+        Write-Host -ForegroundColor Green " DONE"
+    }
+    catch {
+        Write-Host -ForegroundColor Red " FAILED"    
+        Write-Output "Error: $($error[0].ToString())"
+    }
+    $ErrorActionPreference= 'Inquire'
+} elseif ($info[2] -match 'Windows 11') {
+    # see also https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
+    $amessage = @"
+Update winget before proceed:
+
+1. open a PowerShell session with admin privileges;
+2. run the command "winget source update";
+3. ensure that "winget" repo has been updated;
+4. close session windows and click on "Ok" button.
+"@
+    [System.Windows.MessageBox]::Show($amessage,'WINGET','Ok','Warning') | Out-Null
+    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+}
+if ([string]::IsNullOrEmpty($winget_exe)) {
+    [System.Windows.MessageBox]::Show("Winget not configured, some app will not available.`nProceed with manually download and installation for them.",'WINGET','Ok','Warning') | Out-Null
+}
+
 $swlist = @{}
 $form_panel = FormBase -w 350 -h 485 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
@@ -78,28 +123,13 @@ $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -te
 $swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
-$result = $form_panel.ShowDialog()
-
-# get OS release
-$info = systeminfo
-
-$download = New-Object net.webclient
-$winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
-if (($info[2] -match 'Windows 10') -and ($winget_exe -eq $null)) {
-    Write-Host -NoNewline "Installing Desktop Package Manager client (winget)..."
-    # see also https://phoenixnap.com/kb/install-winget
-    $url = 'https://github.com/microsoft/winget-cli/releases/latest'
-    $request = [System.Net.WebRequest]::Create($url)
-    $response = $request.GetResponse()
-    $realTagUrl = $response.ResponseUri.OriginalString
-    $version = $realTagUrl.split('/')[-1]
-    $fileName = 'https://github.com/microsoft/winget-cli/releases/download/' + $version + '/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
-    $download.Downloadfile("$fileName", "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
-    Start-Process -FilePath "$tmppath\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-    [System.Windows.MessageBox]::Show("Click Ok once winget will be installed...",'WAIT','Ok','Warning') > $null  
-    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+if ([string]::IsNullOrEmpty($winget_exe)) {
+    foreach ($item in ('Acrobat Reader DC', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
+        $swlist[$item].Checked = $false
+        $swlist[$item].Enabled = $false
+    }
 }
-Write-Host -ForegroundColor Green " DONE"
+$result = $form_panel.ShowDialog()
 
 $msstore_opts = '--source msstore --scope machine --accept-package-agreements --accept-source-agreements --silent'
 $winget_opts = '--source winget --scope machine --accept-package-agreements --accept-source-agreements --silent'
@@ -124,15 +154,15 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
-                 <#
+                <#
                     On older PC error 3010 can occur during installation: in most cases Acrobat 
                     seems to correctly run without any expected crash or further fails.
 
                     In the worst scenario try the following steps and see if that works for you:
-                      * Run the Acrobat cleaner tool 
+                    * Run the Acrobat cleaner tool 
                         https://labs.adobe.com/downloads/acrobatcleaner.html
-                      * Reboot the computer
-                      * Reinstall the application using the link 
+                    * Reboot the computer
+                    * Reinstall the application using the link 
                         https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
                 #>
             }
@@ -169,6 +199,13 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
         } elseif ($item -eq 'Office 365 Desktop') {
+            Write-Host -NoNewline "Download software..."
+            $download.Downloadfile("https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365BusinessRetail&platform=x64&language=it-it&version=O16GA", "$env:USERPROFILE\Downloads\OfficeSetup.exe")
+            Write-Host -ForegroundColor Green " DONE"
+            Write-Host -NoNewline "Install software..."
+            Start-Process -Wait -FilePath "$env:USERPROFILE\Downloads\OfficeSetup.exe"
+            Write-Host -ForegroundColor Green " DONE"
+            <# there is some hash installation trouble on winget...
             Write-Host -NoNewline "Installing Microsoft Office 365..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Microsoft 365 Apps for enterprise', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_o365.log"
@@ -180,6 +217,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 Write-Host -ForegroundColor Red " FAILED"
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
+            #>
         } elseif ($item -eq 'Speccy') {
             Write-Host -NoNewline "Installing Speccy..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'Speccy', $winget_opts
@@ -204,7 +242,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             Write-Host -ForegroundColor Green " DONE"
         } elseif ($item -eq 'Teams') {
             Write-Host -NoNewline "Downloading standalone installer..."                
-            $download.Downloadfile("https://statics.teams.cdn.office.net/production-windows-x64/enterprise/webview2/lkg/MSTeams-x64.msix", "C:\Users\Public\Desktop\MSTeams-x64.msix")
+            $download.Downloadfile("https://statics.teams.cdn.office.net/production-windows-x64/enterprise/webview2/lkg/MSTeams-x64.msix", "$env:PUBLIC\Desktop\MSTeams-x64.msix")
             Write-Host -ForegroundColor Green " DONE"
             [System.Windows.MessageBox]::Show("Please run the installer file [MSTeams-x64.msix] `nonce the target account has been logged in",'INFO','Ok','Info') | Out-Null
             <#
@@ -294,9 +332,21 @@ if ($answ -eq "Yes") {
     } elseif ($randomic.Checked) {
         $WhereIsPedoMellon =  "$workdir\Safety\PedoMellon.ps1"
         if (Test-Path -Path $WhereIsPedoMellon -PathType Leaf) {
-            $thepasswd =  PowerShell.exe -file $WhereIsPedoMellon `
-                -UserString $username  `
-                -MinimumLength 10
+            $compliant = $false
+            while (!($compliant)) {
+                $thepasswd =  PowerShell.exe -file $WhereIsPedoMellon `
+                    -UserString $username  `
+                    -MinimumLength 12 `
+                    -Uppercase `
+                    -TransLite `
+                    -InsDels `
+                    -Reverso `
+                    -Rw 3
+
+                if (($thepasswd -cmatch "[A-Z]+") -and ($thepasswd -match "[0-9]+") -and ($thepasswd -match "[!\$\?\*_\+#\@\^=%]+")) {
+                    $compliant = $true
+                }
+            }
         } else { # old method
             Add-Type -AssemblyName 'System.Web'
             $thepasswd = [System.Web.Security.Membership]::GeneratePassword(10, 0)
