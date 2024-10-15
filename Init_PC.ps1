@@ -93,13 +93,19 @@ if ($info[2] -match 'Windows 10') {
     }
     $ErrorActionPreference= 'Inquire'
 } elseif ($info[2] -match 'Windows 11') {
-    # see also https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
+    <# 
+        Here below you can find the thread I opened on such topic
+        https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
+
+        Here below another thread in those cases winget wont update itself ("winget" source), still to be verified and tested
+        https://github.com/microsoft/winget-cli/issues/4446
+    #>
     $amessage = @"
 Update winget before proceed:
 
 1. open a PowerShell session with admin privileges;
 2. run the command "winget source update";
-3. ensure that 2winget" repo has been updated;
+3. ensure that "winget" repo has been updated;
 4. close session windows and click on "Ok" button.
 "@
     [System.Windows.MessageBox]::Show($amessage,'WINGET','Ok','Warning') | Out-Null
