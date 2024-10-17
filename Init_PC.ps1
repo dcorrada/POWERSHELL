@@ -165,7 +165,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Acrobat.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Adobe Acrobat.lnk" -PathType Leaf) {
                     Remove-Item -Path "$env:PUBLIC\Desktop\Adobe Acrobat.lnk" -Force
                 }
@@ -196,7 +196,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Chrome.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
@@ -208,7 +208,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Revo.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Revo Uninstaller.lnk" -PathType Leaf) {
                     Remove-Item -Path "$env:PUBLIC\Desktop\Revo Uninstaller.lnk" -Force
                 }
@@ -243,7 +243,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Speccy.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Speccy.lnk" -PathType Leaf) {
                     Remove-Item -Path "$env:PUBLIC\Desktop\Speccy.lnk" -Force
                 }
@@ -289,7 +289,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Treesize.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
@@ -301,7 +301,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_7zip.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
@@ -318,7 +318,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         }
     }
 }
-<# COMMENTED OUT FOR TESTING
+
 # removing temp files
 Remove-Item $tmppath -Recurse -Force
 $answ = [System.Windows.MessageBox]::Show("Remove log files of installations?",'TEMPORARY','YesNo','Info')
@@ -420,4 +420,3 @@ $answ = [System.Windows.MessageBox]::Show("Reboot computer?",'REBOOT','YesNo','I
 if ($answ -eq "Yes") {    
     Restart-Computer
 }
-#>
