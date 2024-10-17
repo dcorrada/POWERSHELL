@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.10.3
+Version...: 24.10.4
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -93,23 +93,36 @@ if ($info[2] -match 'Windows 10') {
     }
     $ErrorActionPreference= 'Inquire'
 } elseif ($info[2] -match 'Windows 11') {
-    <# 
-        Here below you can find the thread I opened on such topic
-        https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
+    # Here below you can find the thread I opened on such topic
+    # https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
 
-        Here below another thread in those cases winget wont update itself ("winget" source), still to be verified and tested
+    $stdout_winget = winget.exe source update
+    $source = ('null', 'null')
+    foreach ($newline in $stdout_winget) {
+        if ($newline -match "^Aggiornamento origine") {
+            $newline -match ": ([A-Za-z0-9]+)(\.{0,3})$" | Out-Null
+            $source[0] = $matches[1]
+        } elseif ($newline -eq "Fatto") {
+            $source[1] = 'Ok'
+        } elseif ($newline -eq "Annullato") {
+            $source[1] = 'Ko'
+        }
+    }
+
+    if ($source[1] -eq 'Ko') {
+        Write-Host -ForegroundColor Red "Failed to update [$($source[0])] source"
+        <# 
+        You can try to manually install cache file as suggested in
         https://github.com/microsoft/winget-cli/issues/4446
-    #>
-    $amessage = @"
-Update winget before proceed:
 
-1. open a PowerShell session with admin privileges;
-2. run the command "winget source update";
-3. ensure that "winget" repo has been updated;
-4. close session windows and click on "Ok" button.
-"@
-    [System.Windows.MessageBox]::Show($amessage,'WINGET','Ok','Warning') | Out-Null
-    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+        Invoke-WebRequest -Uri https://cdn.winget.microsoft.com/cache/source.msix -OutFile $env:TEMP\source.msix
+        Add-AppxPackage $env:TEMP\source.msix
+
+        Currently such patch doesn't work on some Win11 installation, no clues about
+        #>
+    } else {
+        $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+    }
 }
 if ([string]::IsNullOrEmpty($winget_exe)) {
     [System.Windows.MessageBox]::Show("Winget not configured, some app will not available.`nProceed with manually download and installation for them.",'WINGET','Ok','Warning') | Out-Null
@@ -305,7 +318,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
         }
     }
 }
-
+<# COMMENTED OUT FOR TESTING
 # removing temp files
 Remove-Item $tmppath -Recurse -Force
 $answ = [System.Windows.MessageBox]::Show("Remove log files of installations?",'TEMPORARY','YesNo','Info')
@@ -407,3 +420,4 @@ $answ = [System.Windows.MessageBox]::Show("Reboot computer?",'REBOOT','YesNo','I
 if ($answ -eq "Yes") {    
     Restart-Computer
 }
+#>
