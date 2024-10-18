@@ -214,8 +214,8 @@ Write-Host -ForegroundColor Yellow "`nExcel reference file is [$xlsx_file]`n"
 # [Licenses_Pool]
 if ($UseRefFile -eq "Yes") {
     $timeline = Import-Excel -Path $xlsx_file -WorksheetName 'Licenses_Pool' | Select UPTIME | Get-Unique -AsString
-    $adialog = FormBase -w 250 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
-    Label -form $adialog -x 20 -y 20 -w 200 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
+    $adialog = FormBase -w 300 -h (($timeline.Count * 30) + 150) -text "TIMELINE"
+    Label -form $adialog -x 20 -y 20 -w 250 -h 25 -text "[Licenses_Pool] records to keep:" | Out-Null
     $they = 40
     $choices = @()
     foreach ($adate in $timeline) {
