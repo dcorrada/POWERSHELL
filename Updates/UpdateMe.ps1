@@ -1,6 +1,6 @@
 <#
 Name......: UpdateMe.ps1
-Version...: 24.05.2
+Version...: 24.10.1
 Author....: Dario CORRADA
 
 This script looks for installed Powershell modules and try to update them
@@ -51,9 +51,31 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 <# *******************************************************************************
                                     BODY
 ******************************************************************************* #>
+$repo = 'PSGallery'
+
+# Package Management preliminar check
+# https://stackoverflow.com/questions/66305351/powershell-unable-to-update-powershellget-error-the-version-1-4-7-of-modul
+$vinstalled = Get-InstalledModule -Name PowershellGet
+$vonline = Find-Module -Name PowershellGet -Repository $repo
+
+if ($vinstalled.Version -ne $vonline.Version) {
+    Write-Host -NoNewline "Updating Package Management required..."
+    $ErrorActionPreference= 'Stop'
+    try {
+        Update-Module -Name PowerShellGet -Force
+        Write-Host -ForegroundColor Green 'OK'
+        [System.Windows.MessageBox]::Show("Package Management updated, please restart it`nClick Ok to close the script",'RESTART','Ok','warning') | Out-Null
+        exit
+    }
+    catch {
+        Write-Host -ForegroundColor Red 'KO'
+        Write-Output "Error: $($error[0].ToString())`n"
+        Pause
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 # searching updates
-$repo = 'PSGallery'
 Write-Host -NoNewline "Looking for updates at [$repo]..."
 $halloffame = Get-InstalledModule | Foreach-Object{
     Write-Host -NoNewline '.' 
