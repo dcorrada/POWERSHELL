@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.10.3
+Version...: 24.10.5
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -11,7 +11,6 @@ This script finalize fresh OS installations:
 +++ KNOWN BUGS +++
 * Teams wont be installed machinewide from winget. As temporary workaround a 
   msix installer will be manually downloaded and asked install it afterwards
-* winget wont to upgrade on Windows 11 (bugfix in progress)
 #>
 
 <# *******************************************************************************
@@ -93,38 +92,58 @@ if ($info[2] -match 'Windows 10') {
     }
     $ErrorActionPreference= 'Inquire'
 } elseif ($info[2] -match 'Windows 11') {
-    # see also https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
-    $amessage = @"
-Update winget before proceed:
+    # Here below you can find the thread I opened on such topic
+    # https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11
 
-1. open a PowerShell session with admin privileges;
-2. run the command "winget source update";
-3. ensure that "winget" repo has been updated;
-4. close session windows and click on "Ok" button.
-"@
-    [System.Windows.MessageBox]::Show($amessage,'WINGET','Ok','Warning') | Out-Null
-    $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+    $stdout_winget = winget.exe source update
+    $source = ('null', 'null')
+    foreach ($newline in $stdout_winget) {
+        if ($newline -match "^Aggiornamento origine") {
+            $newline -match ": ([A-Za-z0-9]+)(\.{0,3})$" | Out-Null
+            $source[0] = $matches[1]
+        } elseif ($newline -eq "Fatto") {
+            $source[1] = 'Ok'
+        } elseif ($newline -eq "Annullato") {
+            $source[1] = 'Ko'
+        }
+    }
+
+    if ($source[1] -eq 'Ko') {
+        Write-Host -ForegroundColor Red "Failed to update [$($source[0])] source"
+        <# 
+        You can try to manually install cache file as suggested in
+        https://github.com/microsoft/winget-cli/issues/4446
+
+        Invoke-WebRequest -Uri https://cdn.winget.microsoft.com/cache/source.msix -OutFile $env:TEMP\source.msix
+        Add-AppxPackage $env:TEMP\source.msix
+
+        Currently such patch doesn't work on some Win11 installation, no clues about
+        #>
+    } else {
+        $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
+    }
 }
 if ([string]::IsNullOrEmpty($winget_exe)) {
     [System.Windows.MessageBox]::Show("Winget not configured, some app will not available.`nProceed with manually download and installation for them.",'WINGET','Ok','Warning') | Out-Null
 }
 
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 485 -text "SOFTWARES"
+$form_panel = FormBase -w 350 -h 515 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
-$swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Open Hardware Monitor"
-$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Revo Uninstaller"
-$swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Office 365 Desktop"
-$swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
-$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
-$swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
-$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
-$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
+$swlist['BatteryMon'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "BatteryMon"
+$swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Open Hardware Monitor"
+$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Revo Uninstaller"
+$swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "Office 365 Desktop"
+$swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Speccy"
+$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Supremo"
+$swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "TreeSize"
+$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 320 -text "WatchGuard VPN"
+$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 350 -text "7ZIP"
+OKButton -form $form_panel -x 100 -y 400 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
-    foreach ($item in ('Acrobat Reader DC', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
+    foreach ($item in ('Acrobat Reader DC', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
         $swlist[$item].Enabled = $false
     }
@@ -146,7 +165,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Acrobat.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Adobe Acrobat.lnk" -PathType Leaf) {
                     Remove-Item -Path "$env:PUBLIC\Desktop\Adobe Acrobat.lnk" -Force
                 }
@@ -166,6 +185,21 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                         https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
                 #>
             }
+        } elseif ($item -eq 'BatteryMon') {
+            Write-Host -NoNewline "Installing BatteryMon..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'BatteryMon', $winget_opts
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_BatteryMon.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
+                if (Test-Path -Path "$env:PUBLIC\Desktop\BatteryMon.lnk" -PathType Leaf) {
+                    Remove-Item -Path "$env:PUBLIC\Desktop\BatteryMon.lnk" -Force
+                }
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+            }
         } elseif ($item -eq 'Chrome') {
             <# 
             There are several packages relayed to various Chrome flavours. 
@@ -177,7 +211,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Chrome.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
@@ -189,7 +223,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Revo.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Revo Uninstaller.lnk" -PathType Leaf) {
                     Remove-Item -Path "$env:PUBLIC\Desktop\Revo Uninstaller.lnk" -Force
                 }
@@ -224,7 +258,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Speccy.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 if (Test-Path -Path "$env:PUBLIC\Desktop\Speccy.lnk" -PathType Leaf) {
                     Remove-Item -Path "$env:PUBLIC\Desktop\Speccy.lnk" -Force
                 }
@@ -270,7 +304,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Treesize.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
@@ -282,7 +316,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_7zip.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
-            if ($stdout -match "Installazione riuscita") {
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
