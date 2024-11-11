@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.10.4
+Version...: 24.11.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -139,7 +139,7 @@ $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
-$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "WatchGuard VPN"
+$swlist['VPN'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "VPN Client"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
@@ -277,10 +277,10 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
             #>
-        } elseif ($item -eq 'WatchGuard') {
+        } elseif ($item -eq 'VPN') {
             Write-Host -NoNewline "Download software..."
-            #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
-            $download.Downloadfile("https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe", "C:\Users\Public\Desktop\WatchGuard.exe")
+            #Invoke-WebRequest -Uri 'https://links.fortinet.com/forticlient/win/vpnagent' -OutFile "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe"
+            $download.Downloadfile('https://links.fortinet.com/forticlient/win/vpnagent', "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe")
             Write-Host -ForegroundColor Green " DONE"
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
