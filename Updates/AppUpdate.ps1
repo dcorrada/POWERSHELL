@@ -62,7 +62,12 @@ foreach ($newline in (Get-Content $stdout_file -Encoding UTF8)) {
     # collecting items
     if ($upgradable -and $newline -notmatch "^\-+$") {
         $newline -match "^(.{$colName})(.{$colId})" | Out-Null
-        $AppList[$matches[2].Trim()] = $matches[1].Trim()
+        if (([string]::IsNullOrEmpty($matches[1])) -or ([string]::IsNullOrEmpty($matches[2]))) {
+            Write-Host -ForegroundColor Yellow "WARNING: something doesn't work with the following string:"">>$newline<<`n"
+            Pause
+        } else {
+            $AppList[$matches[2].Trim()] = $matches[1].Trim()
+        }
     }
     # looking for the header of the table
     if ($newline | Select-String -Pattern ('Nome   ', 'Name   ')) {
@@ -97,3 +102,4 @@ foreach ($currentId in $selmods.Keys) {
         Start-Process -Wait -FilePath "winget.exe" -ArgumentList $currentArg -NoNewWindow
     }
 }
+[System.Windows.MessageBox]::Show("All selected apps have been processed","THAT'S ALL FOLKS!",'Ok','Info')
