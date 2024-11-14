@@ -64,8 +64,10 @@ foreach ($newline in (Get-Content $stdout_file -Encoding UTF8)) {
     if (($upgradable -eq $true) -and !($newline | Select-String -Pattern ("^Nome   ", "^Name   ", "^\-+$", "^[0-9]+ "))) {
         $newline -match "^(.{$colName})(.{$colId})(.{$colVer})(.+)$" | Out-Null
         if (([string]::IsNullOrEmpty($matches[1])) -or ([string]::IsNullOrEmpty($matches[2]))) {
-            Write-Host -ForegroundColor Yellow "WARNING: something doesn't work with the following string:"">>$newline<<`n"
-            Pause
+            if (!([string]::IsNullOrEmpty($newline))) {
+                Write-Host -ForegroundColor Yellow "WARNING: something doesn't work with the following string:"">>$newline<<`n"
+                Pause
+            }
         } else {
             $AppList[$matches[2].Trim()] = @{
                 NAME    = $matches[1].Trim()
