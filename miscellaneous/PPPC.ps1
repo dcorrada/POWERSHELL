@@ -1,9 +1,14 @@
 <#
 Name......: PPPC.ps1
-Version...: 24.08.1
+Version...: 24.11.1
 Author....: Dario CORRADA
 
 Pipeline per la preparazione di nuovi PC
+
+[241114] commentato il download dei seguenti script, rimossi dalla sequenza di lancio:
+    * 3rd_Parties\Wazuh.ps1
+    * AD\JoinUser.ps1
+    * AzureAD\CreateMSAccount.ps1
 #>
 
 # check execution policy
@@ -105,17 +110,17 @@ if (Test-Path $tmppath) {
 }
 New-Item -ItemType directory -Path $tmppath > $null
 New-Item -ItemType directory -Path "$tmppath\Modules" > $null
-New-Item -ItemType directory -Path "$tmppath\3rd_Parties" > $null
+#New-Item -ItemType directory -Path "$tmppath\3rd_Parties" > $null
 New-Item -ItemType directory -Path "$tmppath\AD" > $null
-New-Item -ItemType directory -Path "$tmppath\AzureAD" > $null
+#New-Item -ItemType directory -Path "$tmppath\AzureAD" > $null
 New-Item -ItemType directory -Path "$tmppath\Updates" > $null
 New-Item -ItemType directory -Path "$tmppath\Upkeep" > $null
 New-Item -ItemType directory -Path "$tmppath\Safety" > $null
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Modules' -DestinationPath "$tmppath\Modules"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Wazuh.ps1' -DestinationPath "$tmppath\3rd_Parties"
+#DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path '3rd_Parties\Wazuh.ps1' -DestinationPath "$tmppath\3rd_Parties"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD\Join2Domain.ps1' -DestinationPath "$tmppath\AD"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD\JoinUser.ps1' -DestinationPath "$tmppath\AD"
-DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD\CreateMSAccount.ps1' -DestinationPath "$tmppath\AzureAD"
+#DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AD\JoinUser.ps1' -DestinationPath "$tmppath\AD"
+#DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'AzureAD\CreateMSAccount.ps1' -DestinationPath "$tmppath\AzureAD"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\drvUpdate_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\Update_Win10.ps1' -DestinationPath "$tmppath\Updates"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Upkeep\Powerize.ps1' -DestinationPath "$tmppath\Upkeep"
@@ -142,17 +147,9 @@ PowerShell.exe "& "'$tmppath\AD\Join2Domain.ps1'
 del "C:\Users\$env:username\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\STEP02.cmd"
 "@ | Out-File "$tmppath\STEP02.cmd" -Encoding ASCII -Append
 
-<# [231018] Rimuovo dal templato il lancio di questi script, in attesa di aggiornamenti interni
-PowerShell.exe "& "'$tmppath\AD\JoinUser.ps1'
-pause
-PowerShell.exe "& "'$tmppath\AzureAD\CreateMSAccount.ps1'
-pause
-#>
 New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
 @"
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
-pause
-PowerShell.exe "& "'$tmppath\3rd_Parties\Wazuh.ps1'
 pause
 PowerShell.exe "& "'$tmppath\Updates\drvUpdate_Win10.ps1'
 Pause
