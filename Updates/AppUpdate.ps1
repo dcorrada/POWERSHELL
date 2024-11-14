@@ -1,6 +1,6 @@
 <#
 Name......: AppUpdate.ps1
-Version...: 24.11.1
+Version...: 24.11.2
 Author....: Dario CORRADA
 
 This script looks for installed apps and try to update them
@@ -59,36 +59,43 @@ $upgradable = $false
 $AppList = @{}
 foreach ($newline in (Get-Content $stdout_file -Encoding UTF8)) {
     $matches = @()
+    
     # collecting items
-    if ($upgradable -and $newline -notmatch "^\-+$") {
-        $newline -match "^(.{$colName})(.{$colId})" | Out-Null
+    if (($upgradable -eq $true) -and !($newline | Select-String -Pattern ("^Nome   ", "^Name   ", "^\-+$", "^[0-9]+ "))) {
+        $newline -match "^(.{$colName})(.{$colId})(.{$colVer})(.+)$" | Out-Null
         if (([string]::IsNullOrEmpty($matches[1])) -or ([string]::IsNullOrEmpty($matches[2]))) {
             Write-Host -ForegroundColor Yellow "WARNING: something doesn't work with the following string:"">>$newline<<`n"
             Pause
         } else {
-            $AppList[$matches[2].Trim()] = $matches[1].Trim()
+            $AppList[$matches[2].Trim()] = @{
+                NAME    = $matches[1].Trim()
+                VERSION = $matches[3].Trim()
+                AVAIL   = $matches[4].Trim()
+            }
         }
     }
+    
     # looking for the header of the table
     if ($newline | Select-String -Pattern ('Nome   ', 'Name   ')) {
         $upgradable = $true
-        $newline -match "^([A-Za-z]+)( +)([A-Za-z]+)( +)" | Out-Null
+        $newline -match "^([A-Za-z]+)( +)([A-Za-z]+)( +)([A-Za-z]+)( +)" | Out-Null
         $colName = $matches[1].Length + $matches[2].Length
         $colId = $matches[3].Length + $matches[4].Length
+        $colVer = $matches[5].Length + $matches[6].Length
     }
 }
 
 # show dialog
-if ($upgradable) {
-    $adialog = FormBase -w 425 -h ((($AppList.Count-1) * 30) + 175) -text "UPGRADABLE APPS"
-    $they = 20
+if ($upgradable -eq $true) {
+    $adialog = FormBase -w 550 -h ((($AppList.Count-1) * 30) + 130) -text "UPGRADABLE APPS"
+    $they = 10
     $selmods = @{}
     foreach ($item in ($AppList.Keys | Sort-Object)) {
-        $desc = $AppList[$item]
-        $selmods[$item] = CheckBox -form $adialog -checked $true -x 20 -y $they -w 350 -text $desc
-        $they += 25
+        $desc = "$($AppList[$item].NAME)  $($AppList[$item].VERSION) >>> $($AppList[$item].AVAIL)"
+        $selmods[$item] = CheckBox -form $adialog -checked $true -x 20 -y $they -w 520 -text $desc
+        $they += 30
     }
-    OKButton -form $adialog -x 150 -y ($they + 20) -text "Ok" | Out-Null
+    OKButton -form $adialog -x 200 -y ($they + 10) -text "Ok" | Out-Null
     $result = $adialog.ShowDialog()
 } else {
     [System.Windows.MessageBox]::Show("$newline","THAT'S ALL FOLKS!",'Ok','Info')
