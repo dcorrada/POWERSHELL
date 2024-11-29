@@ -89,7 +89,7 @@ foreach ($newline in (Get-Content $stdout_file -Encoding UTF8)) {
 
 # show dialog
 if ($upgradable -eq $true) {
-    $adialog = FormBase -w 550 -h ((($AppList.Count-1) * 30) + 130) -text "UPGRADABLE APPS"
+    $adialog = FormBase -w 550 -h ((($AppList.Count-1) * 30) + 140) -text "UPGRADABLE APPS"
     $they = 10
     $selmods = @{}
     foreach ($item in ($AppList.Keys | Sort-Object)) {
@@ -108,7 +108,8 @@ if ($upgradable -eq $true) {
 foreach ($currentId in $selmods.Keys) {
     if ($selmods[$currentId].Checked) {
         $currentArg = "upgrade --id $currentId"
+        Write-Host -ForegroundColor Yellow "`n*** Upgrading $($selmods[$currentId].Text) ***"
         Start-Process -Wait -FilePath "winget.exe" -ArgumentList $currentArg -NoNewWindow
     }
 }
-[System.Windows.MessageBox]::Show("All selected apps have been processed","THAT'S ALL FOLKS!",'Ok','Info')
+[System.Windows.MessageBox]::Show("All selected apps have been processed","THAT'S ALL FOLKS!",'Ok','Info') | Out-Null
