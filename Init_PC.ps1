@@ -129,22 +129,23 @@ if ([string]::IsNullOrEmpty($winget_exe)) {
 }
 
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 510 -text "SOFTWARES"
+$form_panel = FormBase -w 350 -h 540 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
-$swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Open Hardware Monitor"
-$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Revo Uninstaller"
-$swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Office 365 Desktop"
-$swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Speccy"
-$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
-$swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
-$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "VPN WatchGuard"
-$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 320 -text "VPN Fortinet"
-$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 350 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 400 -text "Ok"  | Out-Null
+$swlist['BatteryMon'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "BatteryMon"
+$swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Open Hardware Monitor"
+$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Revo Uninstaller"
+$swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "Office 365 Desktop"
+$swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Speccy"
+$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Supremo"
+$swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "TreeSize"
+$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -x 20 -y 320 -text "VPN WatchGuard"
+$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 350 -text "VPN Fortinet"
+$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 380 -text "7ZIP"
+OKButton -form $form_panel -x 100 -y 430 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
-    foreach ($item in ('Acrobat Reader DC', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
+    foreach ($item in ('Acrobat Reader DC', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
         $swlist[$item].Enabled = $false
     }
@@ -185,6 +186,21 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                     * Reinstall the application using the link 
                         https://helpx.adobe.com/in/download-install/kb/acrobat-downloads.html
                 #>
+            }
+        } elseif ($item -eq 'BatteryMon') {
+            Write-Host -NoNewline "Installing BatteryMon..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'BatteryMon', $winget_opts
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_BatteryMon.log"
+            Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
+            $stdout = Get-Content -Raw $winget_stdout_file
+            if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
+                if (Test-Path -Path "$env:PUBLIC\Desktop\BatteryMon.lnk" -PathType Leaf) {
+                    Remove-Item -Path "$env:PUBLIC\Desktop\BatteryMon.lnk" -Force
+                }
+                Write-Host -ForegroundColor Green " DONE"
+            } else {
+                Write-Host -ForegroundColor Red " FAILED"
+                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
         } elseif ($item -eq 'Chrome') {
             <# 
