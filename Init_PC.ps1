@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.10.5
+Version...: 24.11.2
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -128,7 +128,7 @@ if ([string]::IsNullOrEmpty($winget_exe)) {
 }
 
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 515 -text "SOFTWARES"
+$form_panel = FormBase -w 350 -h 540 -text "SOFTWARES"
 $swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['BatteryMon'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "BatteryMon"
@@ -139,9 +139,10 @@ $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "TreeSize"
-$swlist['WatchGuard'] = CheckBox -form $form_panel -checked $false -x 20 -y 320 -text "WatchGuard VPN"
-$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 350 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 400 -text "Ok"  | Out-Null
+$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -x 20 -y 320 -text "VPN WatchGuard"
+$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 350 -text "VPN Fortinet"
+$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 380 -text "7ZIP"
+OKButton -form $form_panel -x 100 -y 430 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
     foreach ($item in ('Acrobat Reader DC', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
@@ -292,10 +293,16 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
             #>
-        } elseif ($item -eq 'WatchGuard') {
+        } elseif ($item -eq 'VPNold') {
             Write-Host -NoNewline "Download software..."
             #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
             $download.Downloadfile("https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe", "C:\Users\Public\Desktop\WatchGuard.exe")
+            Write-Host -ForegroundColor Green " DONE"
+            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
+        } elseif ($item -eq 'VPNnew') {
+            Write-Host -NoNewline "Download software..."
+            #Invoke-WebRequest -Uri 'https://links.fortinet.com/forticlient/win/vpnagent' -OutFile "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe"
+            $download.Downloadfile('https://links.fortinet.com/forticlient/win/vpnagent', "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe")
             Write-Host -ForegroundColor Green " DONE"
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
