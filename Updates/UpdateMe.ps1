@@ -1,6 +1,6 @@
 <#
 Name......: UpdateMe.ps1
-Version...: 24.10.1
+Version...: 24.11.1
 Author....: Dario CORRADA
 
 This script looks for installed Powershell modules and try to update them
@@ -53,9 +53,18 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 ******************************************************************************* #>
 $repo = 'PSGallery'
 
+# PowershellGet, on Windows11, seems stuck on version 1.0.0.1 and doesn't work
+$ErrorActionPreference= 'Stop'
+try {
+    $vinstalled = Get-InstalledModule -Name PowershellGet
+}
+catch {
+    Install-Module PowershellGet -Force
+}
+$ErrorActionPreference= 'Inquire'
+
 # Package Management preliminar check
 # https://stackoverflow.com/questions/66305351/powershell-unable-to-update-powershellget-error-the-version-1-4-7-of-modul
-$vinstalled = Get-InstalledModule -Name PowershellGet
 $vonline = Find-Module -Name PowershellGet -Repository $repo
 
 if ($vinstalled.Version -ne $vonline.Version) {
