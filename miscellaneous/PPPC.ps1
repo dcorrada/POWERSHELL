@@ -103,6 +103,12 @@ if ($foundit -ne 'NuGet') {
     $ErrorActionPreference= 'Inquire'
 }
 
+# verifico se winget funziona
+$info = systeminfo
+if ($info[2] -match 'Windows 11') {
+    winget.exe source update
+}
+
 # creo una cartella temporanea e scarico gli script
 $tmppath = 'C:\PPPCtemp'
 if (Test-Path $tmppath) {
