@@ -139,8 +139,8 @@ $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "TreeSize"
-$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -x 20 -y 320 -text "VPN WatchGuard"
-$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 350 -text "VPN Fortinet"
+$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 320 -text "VPN WatchGuard"
+$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 350 -text "VPN Fortinet"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 380 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 430 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
