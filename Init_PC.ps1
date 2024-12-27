@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.11.2
+Version...: 24.12.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -301,10 +301,16 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'VPNnew') {
             Write-Host -NoNewline "Download software..."
+            # download dependencies (see https://community.fortinet.com/t5/Support-Forum/FortiClientVPN-client-doesn-t-work-with-Windows-11-24H2/m-p/366570#M259815)
+            $answ = [System.Windows.MessageBox]::Show("Visual C++ Redistributable for Visual Studio 2015-2022`nis already installed?",'DEPENDENCIES','YesNo','Warning')
+            if ($answ -eq "No") {
+                $download.Downloadfile('https://aka.ms/vs/17/release/vc_redist.x64.exe', "C:\Users\Public\Desktop\vc_redist.x64.exe")
+                $answ = [System.Windows.MessageBox]::Show("Keep in mind to install Visual C++ libraries`nBEFORE Fortinet client installation.`n`nPlease run setup once the target account has been logged in",'INFO','Ok','Info')
+            }
             #Invoke-WebRequest -Uri 'https://links.fortinet.com/forticlient/win/vpnagent' -OutFile "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe"
             $download.Downloadfile('https://links.fortinet.com/forticlient/win/vpnagent', "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe")
             Write-Host -ForegroundColor Green " DONE"
-            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
+            $answ = [System.Windows.MessageBox]::Show("Fortinet client installer downloaded.`n`nPlease run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
