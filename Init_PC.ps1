@@ -129,7 +129,7 @@ if ([string]::IsNullOrEmpty($winget_exe)) {
 
 $swlist = @{}
 $form_panel = FormBase -w 350 -h 540 -text "SOFTWARES"
-$swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
+$swlist['Acrobat Reader'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['BatteryMon'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "BatteryMon"
 $swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Open Hardware Monitor"
@@ -144,7 +144,7 @@ $swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 350 -tex
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 380 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 430 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
-    foreach ($item in ('Acrobat Reader DC', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
+    foreach ($item in ('Acrobat Reader', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
         $swlist[$item].Enabled = $false
     }
@@ -160,9 +160,9 @@ $winget_opts = '--source winget --scope machine --accept-package-agreements --ac
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
-        if ($item -eq 'Acrobat Reader DC') {
-            Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC (64-bit)', $winget_opts
+        if ($item -eq 'Acrobat Reader') {
+            Write-Host -NoNewline "Installing Acrobat Reader..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader (64-bit)', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Acrobat.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
