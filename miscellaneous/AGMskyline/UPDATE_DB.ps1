@@ -76,7 +76,7 @@ if ($answ -eq "Yes") {
         [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
         exit
     }
-    $ahost = '192.168.2.182'
+    $ahost = '192.168.20.205'
 
     # eseguo il dump
     $ErrorActionPreference= 'Stop'
