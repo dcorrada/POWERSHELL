@@ -122,7 +122,7 @@ $ErrorActionPreference= 'Inquire'
 Write-Host -NoNewline "Connecting to AGMskyline... "
 $ErrorActionPreference= 'Stop'
 try {
-    Open-MySqlConnection -Server '192.168.2.182' -Database 'AGMskyline' -Credential $MySQLlogin
+    Open-MySqlConnection -Server $ahost -Database 'AGMskyline' -Credential $MySQLlogin
     Write-Host -ForegroundColor Green 'DONE'
 } catch {
     Write-Host -ForegroundColor Red 'FAILED'
