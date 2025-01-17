@@ -69,65 +69,69 @@ foreach ($status in $target_paths.Keys) {
     foreach ($item in $filelist) {
         $afile = $target_paths[$status] + '\' + $item
         # Write-Host "Processing [$afile]... "
-        $rawdata = Import-Excel -Path $afile -NoHeader
-        $nextstart = $false
-        foreach ($slot in $rawdata) {
-            if ($nextstart -eq $true) {
-                $ErrorActionPreference= 'Stop'
-                try {
-                    $started = $slot.P1  | Get-Date -format "yyyy-MM-dd"
-                } catch {
-                    $started = 'NULL'
-                }
-                $ErrorActionPreference= 'Inquire'
-                $nextstart = $false
+        if ($afile -match "Excel per IT\.xlsx$") {
+            # SKIP - templato usato da HR
+        } else {            
+            $rawdata = Import-Excel -Path $afile -NoHeader
+            $nextstart = $false
+            foreach ($slot in $rawdata) {
+                if ($nextstart -eq $true) {
+                    $ErrorActionPreference= 'Stop'
+                    try {
+                        $started = $slot.P1  | Get-Date -format "yyyy-MM-dd"
+                    } catch {
+                        $started = 'NULL'
+                    }
+                    $ErrorActionPreference= 'Inquire'
+                    $nextstart = $false
+                } else {
+                    if ($slot.P1 -eq 'NOME') {
+                        $nome = $slot.P2
+                    } elseif ($slot.P1 -eq 'COGNOME') {
+                        $cognome = $slot.P2
+                    } elseif ($slot.P1 -eq 'EMAIL AZIENDALE') {
+                        $email = $slot.P2
+                    } elseif ($slot.P1 -eq 'AREA DI LAVORO') {
+                        $role = $slot.P2
+                    } elseif ($slot.P1 -eq 'UTENTE INTERNO / ESTERNO') {
+                        $scope = $slot.P2
+                    } elseif ($slot.P1 -eq 'SEDE AGM DI RIFERIMENTO') {
+                        $location = $slot.P2
+                    } elseif ($slot.P1 -eq 'DATA INIZIO') {
+                        $nextstart = $true
+                    }  elseif (($slot.P1 -eq 'UTENTE') -and !($slot.P2 -match '@agmsolutions.net')) {
+                        $usernamed = $slot.P2
+                    }
+                }            
+            }
+            $TextInfo = (Get-Culture).TextInfo
+            $fullname = $TextInfo.ToTitleCase("{0} {1}" -f ($nome.ToLower(),$cognome.ToLower()))
+
+            $string = ("AGM{0:d5};{1};{2};{3};{4};{5};{6};{7};{8}" -f ($i,$fullname,$email,$usernamed,$role,$scope,$status,$location.ToUpper(),$started))
+            $string = $string -replace ';\s*;', ';NULL;'
+            $string = $string -replace ';+\s*$', ';NULL'
+            $string = $string -replace ';', '";"'
+            $string = '"' + $string + '"'
+            $string = $string -replace '"NULL"', 'NULL'
+            $string | Out-File $outfile -Encoding utf8 -Append
+            $i++
+
+            # progress
+            $bari++
+            $percent = ($bari / $tot)*100
+            if ($percent -gt 100) {
+                $percent = 100
+            }
+            $formattato = '{0:0.0}' -f $percent
+            [int32]$progress = $percent   
+            $parsebar[2].Text = ("Record {0} out of {1} parsed [{2}%]" -f ($bari, $tot, $formattato))
+            if ($progress -ge 100) {
+                $parsebar[1].Value = 100
             } else {
-                if ($slot.P1 -eq 'NOME') {
-                    $nome = $slot.P2
-                } elseif ($slot.P1 -eq 'COGNOME') {
-                    $cognome = $slot.P2
-                } elseif ($slot.P1 -eq 'EMAIL AZIENDALE') {
-                    $email = $slot.P2
-                } elseif ($slot.P1 -eq 'AREA DI LAVORO') {
-                    $role = $slot.P2
-                } elseif ($slot.P1 -eq 'UTENTE INTERNO / ESTERNO') {
-                    $scope = $slot.P2
-                } elseif ($slot.P1 -eq 'SEDE AGM DI RIFERIMENTO') {
-                    $location = $slot.P2
-                } elseif ($slot.P1 -eq 'DATA INIZIO') {
-                    $nextstart = $true
-                }  elseif (($slot.P1 -eq 'UTENTE') -and !($slot.P2 -match '@agmsolutions.net')) {
-                    $usernamed = $slot.P2
-                }
-            }            
+                $parsebar[1].Value = $progress
+            }
+            [System.Windows.Forms.Application]::DoEvents()
         }
-        $TextInfo = (Get-Culture).TextInfo
-        $fullname = $TextInfo.ToTitleCase("{0} {1}" -f ($nome.ToLower(),$cognome.ToLower()))
-
-        $string = ("AGM{0:d5};{1};{2};{3};{4};{5};{6};{7};{8}" -f ($i,$fullname,$email,$usernamed,$role,$scope,$status,$location.ToUpper(),$started))
-        $string = $string -replace ';\s*;', ';NULL;'
-        $string = $string -replace ';+\s*$', ';NULL'
-        $string = $string -replace ';', '";"'
-        $string = '"' + $string + '"'
-        $string = $string -replace '"NULL"', 'NULL'
-        $string | Out-File $outfile -Encoding utf8 -Append
-        $i++
-
-        # progress
-        $bari++
-        $percent = ($bari / $tot)*100
-        if ($percent -gt 100) {
-            $percent = 100
-        }
-        $formattato = '{0:0.0}' -f $percent
-        [int32]$progress = $percent   
-        $parsebar[2].Text = ("Record {0} out of {1} parsed [{2}%]" -f ($bari, $tot, $formattato))
-        if ($progress -ge 100) {
-            $parsebar[1].Value = 100
-        } else {
-            $parsebar[1].Value = $progress
-        }
-        [System.Windows.Forms.Application]::DoEvents()
     }
     $parsebar[0].Close()
 }
