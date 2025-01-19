@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.11.2
+Version...: 24.12.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -129,7 +129,7 @@ if ([string]::IsNullOrEmpty($winget_exe)) {
 
 $swlist = @{}
 $form_panel = FormBase -w 350 -h 540 -text "SOFTWARES"
-$swlist['Acrobat Reader DC'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader DC"
+$swlist['Acrobat Reader'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader"
 $swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
 $swlist['BatteryMon'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "BatteryMon"
 $swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Open Hardware Monitor"
@@ -139,12 +139,12 @@ $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Supremo"
 $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "TreeSize"
-$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -x 20 -y 320 -text "VPN WatchGuard"
-$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 350 -text "VPN Fortinet"
+$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 320 -text "VPN WatchGuard"
+$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 350 -text "VPN Fortinet"
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 380 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 430 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
-    foreach ($item in ('Acrobat Reader DC', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
+    foreach ($item in ('Acrobat Reader', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
         $swlist[$item].Enabled = $false
     }
@@ -160,9 +160,9 @@ $winget_opts = '--source winget --scope machine --accept-package-agreements --ac
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
-        if ($item -eq 'Acrobat Reader DC') {
-            Write-Host -NoNewline "Installing Acrobat Reader DC..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader DC (64-bit)', $winget_opts
+        if ($item -eq 'Acrobat Reader') {
+            Write-Host -NoNewline "Installing Acrobat Reader..."
+            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader (64-bit)', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Acrobat.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
@@ -301,10 +301,16 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'VPNnew') {
             Write-Host -NoNewline "Download software..."
+            # download dependencies (see https://community.fortinet.com/t5/Support-Forum/FortiClientVPN-client-doesn-t-work-with-Windows-11-24H2/m-p/366570#M259815)
+            $answ = [System.Windows.MessageBox]::Show("Visual C++ Redistributable for Visual Studio 2015-2022`nis already installed?",'DEPENDENCIES','YesNo','Warning')
+            if ($answ -eq "No") {
+                $download.Downloadfile('https://aka.ms/vs/17/release/vc_redist.x64.exe', "C:\Users\Public\Desktop\vc_redist.x64.exe")
+                $answ = [System.Windows.MessageBox]::Show("Keep in mind to install Visual C++ libraries`nBEFORE Fortinet client installation.`n`nPlease run setup once the target account has been logged in",'INFO','Ok','Info')
+            }
             #Invoke-WebRequest -Uri 'https://links.fortinet.com/forticlient/win/vpnagent' -OutFile "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe"
             $download.Downloadfile('https://links.fortinet.com/forticlient/win/vpnagent', "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe")
             Write-Host -ForegroundColor Green " DONE"
-            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
+            $answ = [System.Windows.MessageBox]::Show("Fortinet client installer downloaded.`n`nPlease run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
             $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
