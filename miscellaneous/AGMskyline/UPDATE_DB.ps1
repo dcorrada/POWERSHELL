@@ -41,6 +41,9 @@ if (!(Test-Path -Path $cercaWally -PathType Leaf)) {
     $cercaWally = 'C:\Users\korda\Desktop\POWERSHELL\Safety\Stargate.ps1'
 }
 
+# local IP address of the MySQL server
+$ahost = '192.168.20.205'
+
 # MySQL login dialog
 [System.Windows.MessageBox]::Show("Insert credentials for MySQL connection",'MYSQL','Ok','Info') | Out-Null
 $pswout = PowerShell.exe -file "$cercaWally" -ascript 'AGMskyline'
@@ -76,7 +79,6 @@ if ($answ -eq "Yes") {
         [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
         exit
     }
-    $ahost = '192.168.20.205'
 
     # eseguo il dump
     $ErrorActionPreference= 'Stop'
