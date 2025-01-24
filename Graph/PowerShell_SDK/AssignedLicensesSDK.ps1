@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 24.07.2
+Version...: 25.01.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -537,6 +537,45 @@ if ($UseRefFile -eq 'No') {
     -PivotTableStyle 'Dark3' -PivotTotals 'Rows'
 }
 
+# MONTHLY FILTER
+# looking for those users whom licenses have been assigned and dismissed in the same month
+$monthlyList = @{}
+if (($orphanedrecords.Count) -ge 2) {
+    foreach ($currentOrphan in $orphanedrecords) {
+        $currentUser = $currentOrphan[0]
+        $currentTimestamp = [DateTime]$currentOrphan[7]
+        $currentNotes = $currentOrphan[8]
+        $astring = ''
+        if ($currentNotes -eq 'assigned license(s) to this user') {
+            $astring = 'assigned'
+        } elseif ($currentNotes -eq 'license dismissed for this user') {
+            $astring = 'dismissed'
+        }        
+        $currentKey = "$currentUser on $($currentTimestamp.month)/$($currentTimestamp.year)"
+        if ($monthlyList.ContainsKey("$currentKey")) {
+            $prevstring = $monthlyList["$currentKey"]
+            $monthlyList["$currentKey"] = "$prevstring $astring"
+        } else {
+            $monthlyList["$currentKey"] = $astring
+        }
+    }
+}
+Write-Host -NoNewline -ForegroundColor Yellow "`nMonthly filter check... "
+$anybody = 0
+foreach ($candidate in ($monthlyList.Keys | Sort-Object)) {
+    if (($monthlyList[$candidate] -match 'assigned') -and ($monthlyList[$candidate] -match 'dismissed')) {
+        Write-Host -NoNewline -ForegroundColor Blue "`n$candidate"
+        $anybody++
+    }
+}
+if ($anybody -ge 1) {
+    Write-Host -ForegroundColor Red "`n`nThe above records may need further inspection"
+    Pause
+} else {
+    Write-Host -ForegroundColor Green "Passed"
+}
+
+
 # show the final result and/or keep temporary backup
 $ErrorActionPreference= 'Stop'
 try {
@@ -552,7 +591,8 @@ if ($UseRefFile -eq 'Yes') {
     }
 }
 
-# remove renmants
+# REMOVE RENMANTS
+# for those cases in which the xlsx file is mapped onto OneDrive synced paths
 $twodots = Split-Path -Parent $xlsx_file | Split-Path -Parent
 $filename = Split-Path -Leaf $xlsx_file
 if (Test-Path "$twodots/$filename" -PathType Leaf) {
