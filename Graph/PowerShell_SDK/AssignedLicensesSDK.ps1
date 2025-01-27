@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 25.01.1
+Version...: 25.01.2
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -8,6 +8,24 @@ license(s) are assigned to each user, then create/edit an excel report file.
 
 Thx to Ali TAJRAN for the useful notes about Get-MgUser on:
 https://www.alitajran.com/get-mguser/ 
+
+*** PLEASE NOTE - monthly filter workaround ***
+In a case study, this script was used to monitor the monthly license assignment 
+variation. The "Assigned_Licenses" and "Orphaned" worksheets were adopted for 
+such investigation. Variation was calculated as the difference between the data 
+of the two worksheets.
+
+The per license calculated values ​​should be equal to values reported ​​in the 
+"Licenses_Pool" worksheet (reference data: ehe values collected in such way are 
+obtained by directly querying the administrative tenant).
+
+It was observed that the calculated values ​​deviate from the reference ones 
+whenever a change in license assignment occurs for a specific user within the 
+monthly interval.
+
+It has been implemented a filter check that lists all the users in which this 
+event happens. The aim of such check is to advise the user of such possible 
+discrepancy, in order to accurately evaluate the otuput Excel file produced.
 #>
 
 
@@ -538,34 +556,42 @@ if ($UseRefFile -eq 'No') {
 }
 
 # MONTHLY FILTER
-# looking for those users whom licenses have been assigned and dismissed in the same month
 $monthlyList = @{}
 if (($orphanedrecords.Count) -ge 2) {
     foreach ($currentOrphan in $orphanedrecords) {
         $currentUser = $currentOrphan[0]
+        $currentLicense = $currentOrphan[6]
         $currentTimestamp = [DateTime]$currentOrphan[7]
         $currentNotes = $currentOrphan[8]
-        $astring = ''
-        if ($currentNotes -eq 'assigned license(s) to this user') {
-            $astring = 'assigned'
-        } elseif ($currentNotes -eq 'license dismissed for this user') {
-            $astring = 'dismissed'
-        }        
+
         $currentKey = "$currentUser on $($currentTimestamp.month)/$($currentTimestamp.year)"
-        if ($monthlyList.ContainsKey("$currentKey")) {
-            $prevstring = $monthlyList["$currentKey"]
-            $monthlyList["$currentKey"] = "$prevstring $astring"
-        } else {
-            $monthlyList["$currentKey"] = $astring
+        if (!($monthlyList.ContainsKey("$currentKey"))) {
+            $monthlyList["$currentKey"] = @{}
+        }
+
+        if ($currentNotes -eq 'assigned license(s) to this user') {
+            $monthlyList["$currentKey"].ASSIGNED = $currentTimestamp
+        } elseif ($currentNotes -eq 'license dismissed for this user') {
+            $monthlyList["$currentKey"].DISMISSED = $currentTimestamp
+        } elseif (($currentNotes -eq 'user no longer exists on tenant') -and !($currentLicense -eq 'NONE')) {
+            $monthlyList["$currentKey"].NOLONGER = $currentTimestamp
         }
     }
 }
-Write-Host -NoNewline -ForegroundColor Yellow "`nMonthly filter check... "
+Clear-Host
+Write-Host -ForegroundColor Yellow "`n*** MONTHLY FILTER ***`n"
 $anybody = 0
 foreach ($candidate in ($monthlyList.Keys | Sort-Object)) {
-    if (($monthlyList[$candidate] -match 'assigned') -and ($monthlyList[$candidate] -match 'dismissed')) {
-        Write-Host -NoNewline -ForegroundColor Blue "`n$candidate"
-        $anybody++
+    if (($monthlyList[$candidate].ContainsKey('ASSIGNED')) -and ($monthlyList[$candidate].ContainsKey('DISMISSED'))) {
+        if ($MonthlyList[$candidate].ASSIGNED -le $MonthlyList[$candidate].DISMISSED) {
+            Write-Host -NoNewline -ForegroundColor Blue "[DISMISSED] $candidate"
+            $anybody++
+        }
+    } elseif (($monthlyList[$candidate].ContainsKey('ASSIGNED')) -and ($monthlyList[$candidate].ContainsKey('NOLONGER'))) {
+        if ($MonthlyList[$candidate].ASSIGNED -le $MonthlyList[$candidate].NOLONGER) {
+            Write-Host -NoNewline -ForegroundColor Blue "[NOLONGER] $candidate"
+            $anybody++
+        }
     }
 }
 if ($anybody -ge 1) {
@@ -574,7 +600,6 @@ if ($anybody -ge 1) {
 } else {
     Write-Host -ForegroundColor Green "Passed"
 }
-
 
 # show the final result and/or keep temporary backup
 $ErrorActionPreference= 'Stop'
