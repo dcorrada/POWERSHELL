@@ -81,7 +81,7 @@ $ErrorActionPreference= 'Inquire'
 Write-Host -NoNewline "Connecting to ExchangeOnLine... "
 try {
     Connect-ExchangeOnline -ShowBanner:$false
-    Write-Host -ForegroundColor Green "Ok"   
+    Write-Host -ForegroundColor Green "Ok"
 }
 catch {
     Write-Host -ForegroundColor Red "Ko"
@@ -103,7 +103,7 @@ $EXOlist = Get-EXOMailbox -RecipientTypeDetails UserMailbox,SharedMailbox -Resul
 }
 Write-Host -ForegroundColor Green " Done"
 
-Write-Host -NoNewline "Searching orphaned..."
+Write-Host "Searching orphaned..."
 $orphaned = Get-EXOMailbox -InactiveMailboxOnly -RecipientTypeDetails UserMailbox,SharedMailbox -ResultSize unlimited | ForEach-Object {
     Write-Host -NoNewline '.'        
     New-Object -TypeName PSObject -Property @{
@@ -111,16 +111,15 @@ $orphaned = Get-EXOMailbox -InactiveMailboxOnly -RecipientTypeDetails UserMailbo
         UPN         = "$($_.UserPrincipalName)"
     } | Select OBJ_ID, UPN
 }
-Write-Host -ForegroundColor Green " Done"
 if ($orphaned.Count -gt 0) {
-    Clear-Host
-    Write-Host -ForegroundColor Red "The following mailboxes result inactive"
-    Pause
     Write-Host "`n"
     foreach ($item in $orphaned) {
         Write-Host -ForegroundColor Blue "[$($item.OBJ_ID)] $($item.UPN)"
     }
+    Write-Host -ForegroundColor Red "`nThe mailboxes listed above result inactive"
     Pause
+} else {
+    Write-Host -ForegroundColor Green "No inactive mailbox found"
 }
 
 Write-Host -NoNewline "Gathering mailbox details..."
@@ -131,8 +130,21 @@ $parsebar = ProgressBar
 foreach ($entity in $EXOlist) {
     $counterKeys ++
     Write-Host -NoNewline '.'
-    $EXOdetailed["$entity.OBJ_ID"] = @{}
+    $EXOdetailed["$($entity.OBJ_ID)"] = @{
+        UPN             = "$($entity.UPN)"
+        DISPLAYNAME     = "$($entity.DISPLAY)"
+        TYPE            = "$($entity.TYPE)"
+        FULLACCESS      = @()
+        SENDAS          = @()
+        SENDONBEHALF    = @()
+    }
 
+    $SenderList = Get-EXOrecipientPermission -id $entity.OBJ_ID
+    foreach ($sandman in (Get-EXOrecipientPermission -id $entity.OBJ_ID)) {
+        if ((($sandman.AccessRights -join ',') -cmatch 'SendAs') -and ($sandman.Trustee -cne 'NT AUTHORITY\SELF')) {
+            Write-Host "[$($entity.OBJ_ID)] $($sandman.Trustee)"
+        }
+    }
 
     # progressbar
     $percent = ($counterKeys / $totKeys)*100
@@ -153,22 +165,39 @@ Write-Host -ForegroundColor Green " Done"
 $parsebar[0].Close()
 
 
+<# 
+*** NOMECLATURA OBJECT ID
+
+Un Object ID (meglio definito "ExternalDirectoryObjectId") è un ID che mappa 
+univocamente un oggetto su AzureAD; è composto da caratteri alfanumerici 
+separati da trattini, con uno schema schema 8-4-4-4-12
+
+Esempi:
+5c9bc377-137d-4b04-83d4-248b1ee6c705
+f18vf7f2-cbcb-4bc9-9aec-4468ebf16c90
 
 
 
 
+*** GESTIONE DELLE DELEGHE "PER CONTO DI" 
+La lista dei delegati si può ottenere, per la singoal mailbox, come:
+
+  Get-Mailbox -Identity "dario.corrada@contoso.net" | Format-List GrantSendOnBehalfTo
+
+Si possono filtrare direttamente tutte le mailbox con una pipe del genere:
+  
+  Get-Mailbox -Filter {GrantSendOnBehalfTo -ne $Null} | Select ExternalDirectoryObjectId, @{Name='GrantSendOnBehalfTo';Expression={[string]::join(";", ($_.GrantSendOnBehalfTo))}}
+
+In questo modo ottengo una lista di mailbox (identificata per ObjectId) aventi 
+questo tipo di delega.
+
+Sia sul comando singolo, che su quello massivo ottengo un oggetto che però non 
+riesco ad espandere (provare a cercare informazioni su "Format-List" o su 
+"Expand Property")
+#>
 
 
 
-
-
-
-
-
-
-Write-Host -NoNewline "Check sending perms..."
-Get-EXORecipientPermission -ResultSize unlimited
-Write-Host -ForegroundColor Green " Done"
 
 
 Write-Host -NoNewline "Check ownership perms..."
