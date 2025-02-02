@@ -10,6 +10,11 @@ https://learn.microsoft.com/it-it/powershell/module/exchange/?view=exchange-ps#p
 
 Una volta pronto per la distribuzione, sui branch unstable o master, inserirlo 
 in una cartella "ExchangeOnLine" (da creare).
+
+TODO:
+Inserire la richiesta per una exclude list, di modo da non essere costretti a 
+processare centinaia di mailbox ogni volta (soprattutto se la maggior parte 
+sono mail nominali)
 #>
 
 <# *******************************************************************************
@@ -139,10 +144,35 @@ foreach ($entity in $EXOlist) {
         SENDONBEHALF    = @()
     }
 
-    $SenderList = Get-EXOrecipientPermission -id $entity.OBJ_ID
     foreach ($sandman in (Get-EXOrecipientPermission -id $entity.OBJ_ID)) {
         if ((($sandman.AccessRights -join ',') -cmatch 'SendAs') -and ($sandman.Trustee -cne 'NT AUTHORITY\SELF')) {
-            Write-Host "[$($entity.OBJ_ID)] $($sandman.Trustee)"
+            if ($sandman.Trustee -notmatch '@') {
+                Write-Host -ForegroundColor Yellow "`nFIX Value [SendAs]'$($sandman.Trustee)'`n"
+            } else {
+                $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$($sandman.Trustee)"
+            }
+        }
+    }
+
+    foreach ($fuller in (Get-EXOMailboxPermission -id $entity.OBJ_ID)) {
+        if (($fuller.AccessRights -join ',') -cmatch 'FullAccess') {
+            if ($fuller.User -ceq 'NT AUTHORITY\SELF') {
+                $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
+            } else {
+                if ($fuller.User -notmatch '@') {
+                    Write-Host -ForegroundColor Yellow "`nFIX Value [FullAccess]'$($fuller.User)'`n"
+                } else {
+                    $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "$($fuller.User)"
+                }
+            }
+        }
+    }
+
+    foreach ($Beowulf in (Get-Mailbox -Identity $entity.OBJ_ID).GrantSendOnBehalfTo) {
+        if ($Beowulf -notmatch '@') {
+            Write-Host -ForegroundColor Yellow "`nFIX Value [SendOnBehalf]'$Beowulf'`n"
+        } else {
+            $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += $Beowulf
         }
     }
 
@@ -166,70 +196,15 @@ $parsebar[0].Close()
 
 
 <# 
-*** NOMECLATURA OBJECT ID
+*** Esempi di tipologie di ID
 
-Un Object ID (meglio definito "ExternalDirectoryObjectId") è un ID che mappa 
-univocamente un oggetto su AzureAD; è composto da caratteri alfanumerici 
-separati da trattini, con uno schema schema 8-4-4-4-12
+Object ID           : 5c9bc377-137d-4b04-83d4-248b1ee6c705
+Security ID         : S-1-5-21-2262606477-833299019-2854854355-8406544
+User Principal Name : nome.cognome@dominio.net
+Legacy User Name    : nome.cognome
 
-Esempi:
-5c9bc377-137d-4b04-83d4-248b1ee6c705
-f18vf7f2-cbcb-4bc9-9aec-4468ebf16c90
-
-
-
-
-*** GESTIONE DELLE DELEGHE "PER CONTO DI" 
-La lista dei delegati si può ottenere, per la singoal mailbox, come:
-
-  Get-Mailbox -Identity "dario.corrada@contoso.net" | Format-List GrantSendOnBehalfTo
-
-Si possono filtrare direttamente tutte le mailbox con una pipe del genere:
-  
-  Get-Mailbox -Filter {GrantSendOnBehalfTo -ne $Null} | Select ExternalDirectoryObjectId, @{Name='GrantSendOnBehalfTo';Expression={[string]::join(";", ($_.GrantSendOnBehalfTo))}}
-
-In questo modo ottengo una lista di mailbox (identificata per ObjectId) aventi 
-questo tipo di delega.
-
-Sia sul comando singolo, che su quello massivo ottengo un oggetto che però non 
-riesco ad espandere (provare a cercare informazioni su "Format-List" o su 
-"Expand Property")
-#>
-
-
-
-
-
-Write-Host -NoNewline "Check ownership perms..."
-$EXOroles = @{}
-foreach ($Identity in $EXOlist.UPN) {
-    Write-Host -NoNewline '.'
-    $PermissionList = Get-EXOMailboxPermission -Identity $Identity
-    if ($PermissionList.Count -gt 0) {
-        <# Action to perform if the condition is true #>
-    } else {
-        $EXOroles["$Identity"] = @{ SELF = 'FullAccess' }
-    }
-}
-Write-Host -ForegroundColor Green " Done"
-
-
-<#
-Get-EXOMailboxPermission -Identity it.fo@contoso.net
-
-Identity        : It-Fornitori
-User            : NT AUTHORITY\SELF
-AccessRights    : {FullAccess, ExternalAccount, ReadPermission}
-IsInherited     : False
-Deny            : False
-InheritanceType : Descendents
-
-Identity        : It-Fornitori
-User            : dario.corrada@contoso.net
-AccessRights    : {FullAccess}
-IsInherited     : False
-Deny            : False
-InheritanceType : All
+Check per convertire i SID (e verificare se si tratta di account dismessi)
+https://community.spiceworks.com/t/how-to-find-user-or-group-from-sid/594303
 #>
 
 Disconnect-ExchangeOnline -Confirm:$false
