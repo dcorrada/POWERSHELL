@@ -1,20 +1,14 @@
 <#
 Name......: ZombieMailbox.ps1
-Version...: 25.2.1
+Version...: 25.2.3
 Author....: Dario CORRADA
 
-[inserire qui la descrizione]
+This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
+it seek for any [SeandAs|SendOnBehalfTo|FullAccess] permission for each one. 
+The aim is to find any account delegated revealed as dismissed (aka zombie).
 
-Link di riferimento di ExOv3:
-https://learn.microsoft.com/it-it/powershell/module/exchange/?view=exchange-ps#powershell-v3-module
-
-Una volta pronto per la distribuzione, sui branch unstable o master, inserirlo 
-in una cartella "ExchangeOnLine" (da creare).
-
-TODO:
-Inserire la richiesta per una exclude list, di modo da non essere costretti a 
-processare centinaia di mailbox ogni volta (soprattutto se la maggior parte 
-sono mail nominali)
+More details about ExOv3 module cmdlets are available at:
+https://learn.microsoft.com/en-us/powershell/module/exchange/?view=exchange-ps#powershell-v3-module
 #>
 
 <# *******************************************************************************
@@ -79,7 +73,6 @@ do {
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
-
 <# *******************************************************************************
                                     QUERYING
 ******************************************************************************* #>
@@ -96,6 +89,14 @@ catch {
 }
 
 Write-Host -NoNewline "Fetching mailbox list..."
+<#
+The Id (Identity) attribute obtained from Get-EXOMailbox cmdlet may store 
+different kind of id types. The most adopted ones are:
+* Object ID           ie: 5c9bc377-137d-4b04-83d4-248b1ee6c705
+* Security ID         ie: S-1-5-21-2262606477-833299019-2854854355-8406544
+* User Principal Name ie: username@domain
+* Legacy User Name    ie: username
+#>
 $EXOlist = Get-EXOMailbox -RecipientTypeDetails UserMailbox,SharedMailbox -ResultSize unlimited | ForEach-Object {
     Write-Host -NoNewline '.'        
     New-Object -TypeName PSObject -Property @{
@@ -127,14 +128,34 @@ if ($orphaned.Count -gt 0) {
     Write-Host -ForegroundColor Green "No inactive mailbox found"
 }
 
-Write-Host -NoNewline "Gathering mailbox details..."
+<# *******************************************************************************
+                                FILTERING
+******************************************************************************* #>
+$answ = [System.Windows.MessageBox]::Show("Load exclude list text file?",'INFILE','YesNo','Info')
+$ExcludeList = @{ 
+    NONE = 'True'
+}
+if ($answ -eq 'yes') {
+    [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+    $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $OpenFileDialog.Title = "Open File"
+    $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+    $OpenFileDialog.filter = 'Text file (*.txt)| *.txt'
+    $OpenFileDialog.ShowDialog() | Out-Null
+    $ExcludeFile = $OpenFileDialog.filename
+
+    foreach ($aUPN in (Get-Content -Path $ExcludeFile)) {
+        $ExcludeList["$aUPN"] = 'True'
+    }
+}
+
+Write-Host "Gathering mailbox details..."
 $EXOdetailed = @{}
 $totKeys = $EXOlist.Count
 $counterKeys = 0
 $parsebar = ProgressBar
 foreach ($entity in $EXOlist) {
     $counterKeys ++
-    Write-Host -NoNewline '.'
     $EXOdetailed["$($entity.OBJ_ID)"] = @{
         UPN             = "$($entity.UPN)"
         DISPLAYNAME     = "$($entity.DISPLAY)"
@@ -142,37 +163,78 @@ foreach ($entity in $EXOlist) {
         FULLACCESS      = @()
         SENDAS          = @()
         SENDONBEHALF    = @()
+        NOMINAL         = 'False'
     }
 
-    foreach ($sandman in (Get-EXOrecipientPermission -id $entity.OBJ_ID)) {
-        if ((($sandman.AccessRights -join ',') -cmatch 'SendAs') -and ($sandman.Trustee -cne 'NT AUTHORITY\SELF')) {
-            if ($sandman.Trustee -notmatch '@') {
-                Write-Host -ForegroundColor Yellow "`nFIX Value [SendAs]'$($sandman.Trustee)'`n"
-            } else {
-                $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$($sandman.Trustee)"
-            }
-        }
-    }
+    if ($ExcludeList.ContainsKey($entity.UPN)) {
+        Write-Host -ForegroundColor Black "$($entity.UPN)"
+        $EXOdetailed["$($entity.OBJ_ID)"].NOMINAL = 'True'
+    } else {
+        Write-Host -ForegroundColor Cyan "$($entity.UPN)"
 
-    foreach ($fuller in (Get-EXOMailboxPermission -id $entity.OBJ_ID)) {
-        if (($fuller.AccessRights -join ',') -cmatch 'FullAccess') {
-            if ($fuller.User -ceq 'NT AUTHORITY\SELF') {
-                $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
-            } else {
-                if ($fuller.User -notmatch '@') {
-                    Write-Host -ForegroundColor Yellow "`nFIX Value [FullAccess]'$($fuller.User)'`n"
+        foreach ($sandman in (Get-EXOrecipientPermission -id $entity.OBJ_ID)) {
+            if ((($sandman.AccessRights -join ',') -cmatch 'SendAs') -and ($sandman.Trustee -cne 'NT AUTHORITY\SELF')) {
+                if ($sandman.Trustee -notmatch '@') {
+                    if ($sandman.Trustee -notmatch "^S\-1\-") {
+                        $ErrorActionPreference= 'Stop'
+                        try {
+                            $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$((Get-EXOMailbox -Identity $sandman.Trustee).UserPrincipalName)"
+                        }
+                        catch {
+                            [System.Windows.MessageBox]::Show("There is something nasty with grant [SendAs] `nassigned to [$($sandman.Trustee)]","MAILBOX $($entity.UPN)",'Ok','Warning') | Out-Null
+                        }
+                        $ErrorActionPreference= 'Inquire'
+                    } else {
+                        Write-Host -ForegroundColor Yellow "  Value [SendAs]'$($sandman.Trustee)' needs to be fixed"
+                    }
                 } else {
-                    $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "$($fuller.User)"
+                    $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$($sandman.Trustee)"
                 }
             }
         }
-    }
 
-    foreach ($Beowulf in (Get-Mailbox -Identity $entity.OBJ_ID).GrantSendOnBehalfTo) {
-        if ($Beowulf -notmatch '@') {
-            Write-Host -ForegroundColor Yellow "`nFIX Value [SendOnBehalf]'$Beowulf'`n"
-        } else {
-            $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += $Beowulf
+        foreach ($fuller in (Get-EXOMailboxPermission -id $entity.OBJ_ID)) {
+            if (($fuller.AccessRights -join ',') -cmatch 'FullAccess') {
+                if ($fuller.User -ceq 'NT AUTHORITY\SELF') {
+                    $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
+                } else {
+                    if ($fuller.User -notmatch '@') {
+                        if ($fuller.User -notmatch "^S\-1\-") {
+                            $ErrorActionPreference= 'Stop'
+                            try {
+                                $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "$((Get-EXOMailbox -Identity $fuller.User).UserPrincipalName)"
+                            }
+                            catch {
+                                [System.Windows.MessageBox]::Show("There is something nasty with grant [FullAccess] `nassigned to [$($fuller.User)]","MAILBOX $($entity.UPN)",'Ok','Warning') | Out-Null
+                            }
+                            $ErrorActionPreference= 'Inquire'
+                        } else {
+                            Write-Host -ForegroundColor Yellow "  Value [FullAccess]'$($fuller.User)' needs to be fixed"
+                        }
+                    } else {
+                        $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "$($fuller.User)"
+                    }
+                }
+            }
+        }
+
+        foreach ($Beowulf in (Get-Mailbox -Identity $entity.OBJ_ID).GrantSendOnBehalfTo) {
+            if ($Beowulf -notmatch '@') {
+                if ($Beowulf -notmatch "^S\-1\-") {
+                    $ErrorActionPreference= 'Stop'
+                    try {
+                        $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += "$((Get-EXOMailbox -Identity $Beowulf).UserPrincipalName)"
+                    }
+                    catch {
+                        [System.Windows.MessageBox]::Show("There is something nasty with grant [SendOnBehalf] `nassigned to [$Beowulf]","MAILBOX $($entity.UPN)",'Ok','Warning') | Out-Null
+                    }
+                    $ErrorActionPreference= 'Inquire'
+                } else {
+                    Write-Host -ForegroundColor Yellow "  Value [SendOnBehalf]'$($Beowulf)' needs to be fixed"
+                }
+            } else {
+                $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += $Beowulf
+            }
         }
     }
 
@@ -191,20 +253,16 @@ foreach ($entity in $EXOlist) {
     }
     [System.Windows.Forms.Application]::DoEvents()
 }
-Write-Host -ForegroundColor Green " Done"
+Write-Host -ForegroundColor Green "Done"
 $parsebar[0].Close()
 
-
-<# 
-*** Esempi di tipologie di ID
-
-Object ID           : 5c9bc377-137d-4b04-83d4-248b1ee6c705
-Security ID         : S-1-5-21-2262606477-833299019-2854854355-8406544
-User Principal Name : nome.cognome@dominio.net
-Legacy User Name    : nome.cognome
-
-Check per convertire i SID (e verificare se si tratta di account dismessi)
-https://community.spiceworks.com/t/how-to-find-user-or-group-from-sid/594303
-#>
-
 Disconnect-ExchangeOnline -Confirm:$false
+
+<# *******************************************************************************
+                                GET OUTPUT
+******************************************************************************* #>
+
+<#
+Una volta pronto per la distribuzione, sui branch unstable o master, inserirlo 
+in una cartella "ExchangeOnLine" (da creare).
+#>
