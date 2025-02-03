@@ -58,10 +58,16 @@ do {
     try {
         Import-Module -Name "$workdir\Modules\Forms.psm1"
         Import-Module ExchangeOnlineManagement
+        Import-Module ImportExcel
+        $ThirdParty = 'Ok'
     } catch {
         if (!(((Get-InstalledModule).Name) -contains 'ExchangeOnlineManagement')) {
             Install-Module ExchangeOnlineManagement -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [ExchangeOnlineManagement] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
+            $ThirdParty = 'Ko'
+        } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
+            Install-Module ImportExcel -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } else {
             [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error') > $null
@@ -97,6 +103,7 @@ different kind of id types. The most adopted ones are:
 * User Principal Name ie: username@domain
 * Legacy User Name    ie: username
 #>
+
 $EXOlist = Get-EXOMailbox -RecipientTypeDetails UserMailbox,SharedMailbox -ResultSize unlimited | ForEach-Object {
     Write-Host -NoNewline '.'        
     New-Object -TypeName PSObject -Property @{
@@ -164,11 +171,16 @@ foreach ($entity in $EXOlist) {
         SENDAS          = @()
         SENDONBEHALF    = @()
         NOMINAL         = 'False'
+        LASTLOGON       = 'na'
     }
+
+    $mbs = Get-MailboxStatistics -Identity $entity.UPN | Select LastLogonTime
+    $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = "$(($mbs.LastLogonTime | Get-Date -format 'yyyy-MM-dd HH:mm:ss').ToString())"
 
     if ($ExcludeList.ContainsKey($entity.UPN)) {
         Write-Host -ForegroundColor Black "$($entity.UPN)"
         $EXOdetailed["$($entity.OBJ_ID)"].NOMINAL = 'True'
+        $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
     } else {
         Write-Host -ForegroundColor Cyan "$($entity.UPN)"
 
@@ -186,6 +198,8 @@ foreach ($entity in $EXOlist) {
                         $ErrorActionPreference= 'Inquire'
                     } else {
                         Write-Host -ForegroundColor Yellow "  Value [SendAs]'$($sandman.Trustee)' needs to be fixed"
+                        # temporary fill of a value that needs to be fixed
+                        $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$($sandman.Trustee)"
                     }
                 } else {
                     $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$($sandman.Trustee)"
@@ -210,6 +224,8 @@ foreach ($entity in $EXOlist) {
                             $ErrorActionPreference= 'Inquire'
                         } else {
                             Write-Host -ForegroundColor Yellow "  Value [FullAccess]'$($fuller.User)' needs to be fixed"
+                            # temporary fill of a value that needs to be fixed
+                            $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$($fuller.User)"
                         }
                     } else {
                         $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "$($fuller.User)"
@@ -231,6 +247,8 @@ foreach ($entity in $EXOlist) {
                     $ErrorActionPreference= 'Inquire'
                 } else {
                     Write-Host -ForegroundColor Yellow "  Value [SendOnBehalf]'$($Beowulf)' needs to be fixed"
+                    # temporary fill of a value that needs to be fixed
+                    $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$Beowulf"
                 }
             } else {
                 $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += $Beowulf
@@ -261,8 +279,44 @@ Disconnect-ExchangeOnline -Confirm:$false
 <# *******************************************************************************
                                 GET OUTPUT
 ******************************************************************************* #>
+$xlsx_file = "C:$env:HOMEPATH\Downloads\ZombieMailbox-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
+$XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 
-<#
-Una volta pronto per la distribuzione, sui branch unstable o master, inserirlo 
-in una cartella "ExchangeOnLine" (da creare).
-#>
+$ErrorActionPreference= 'Stop'
+try {  
+    $label = 'MailBox'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $GrantTags = @('FULLACCESS', 'SENDAS', 'SENDONBEHALF')
+    $inData = $EXOdetailed.Keys | Foreach-Object {
+        Write-Host -NoNewline '.'
+        $granted = $EXOdetailed[$_]
+        foreach ($GrantType in $GrantTags) {
+            Write-Host "$($granted[$grantType].Count)"
+            # to do...
+        }
+    }
+    <# modificare sulla base di questa traccia
+    $now = Get-Date -Format  "yyyy/MM/dd"
+    $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            TIMESTAMP   = [DateTime]$now
+            ID          = "$_"
+            SKU         = "$($SkuCatalog_rawdata[$_].SKUID)"
+            DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
+        } | Select TIMESTAMP, ID, SKU, DESCRIPTION
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
+    #>
+    Write-Host -ForegroundColor Green ' DONE'
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+Close-ExcelPackage -ExcelPackage $XlsPkg
+
+[System.Windows.MessageBox]::Show("File [$xlsx_file] has been created",'OUTPUT','Ok','Info') | Out-Null
