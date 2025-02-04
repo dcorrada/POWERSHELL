@@ -8,6 +8,12 @@ license(s) are assigned to each user, then create/edit an excel report file.
 
 Thx to Ali TAJRAN for the useful notes about Get-MgUser on:
 https://www.alitajran.com/get-mguser/ 
+
++++ TO DO +++
+* Integrate a feature which produce summary aomunt report of individual licenses 
+  assigned vs. that ones recovered (aka available to be assigned again), based 
+  on a specific time interval (ie monthly). See also the "MonthlyFilter.ps1" 
+  proof of concept on tempus branch.
 #>
 
 
@@ -552,7 +558,8 @@ if ($UseRefFile -eq 'Yes') {
     }
 }
 
-# remove renmants
+# REMOVE RENMANTS
+# for those cases in which the xlsx file is mapped onto OneDrive synced paths
 $twodots = Split-Path -Parent $xlsx_file | Split-Path -Parent
 $filename = Split-Path -Leaf $xlsx_file
 if (Test-Path "$twodots/$filename" -PathType Leaf) {
