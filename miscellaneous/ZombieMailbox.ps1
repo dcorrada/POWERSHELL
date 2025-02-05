@@ -282,32 +282,58 @@ Disconnect-ExchangeOnline -Confirm:$false
 $xlsx_file = "C:$env:HOMEPATH\Downloads\ZombieMailbox-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
 $XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 
+# fare 3 worksheet? (nominali, non nominali, shared)
+
 $ErrorActionPreference= 'Stop'
 try {  
     $label = 'MailBox'
     Write-Host -NoNewline "Writing worksheet [$label]..."
-    $GrantTags = @('FULLACCESS', 'SENDAS', 'SENDONBEHALF')
     $inData = $EXOdetailed.Keys | Foreach-Object {
         Write-Host -NoNewline '.'
         $granted = $EXOdetailed[$_]
-        foreach ($GrantType in $GrantTags) {
-            Write-Host "$($granted[$grantType].Count)"
-            # to do...
+        foreach ($aGrant in $granted.FULLACCESS) {
+            New-Object -TypeName PSObject -Property @{
+                OBJECTID        = "$_"
+                UPN             = "$($granted.UPN)"
+                DISPLAYNAME     = "$($granted.DISPLAYNAME)"
+                TYPE            = "$($granted.TYPE)"
+                NOMINAL         = "$($granted.NOMINAL)"
+                LASTLOGON       = [DateTime]$granted.LASTLOGON
+                FULLACCESS      = "$aGrant"
+                SENDAS          = ""
+                SENDONBEHALF    = ""
+            } | Select OBJECTID, UPN, DISPLAYNAME, TYPE, NOMINAL, LASTLOGON, FULLACCESS, SENDAS, SENDONBEHALF
+        }
+
+        foreach ($aGrant in $granted.SENDAS) {
+            New-Object -TypeName PSObject -Property @{
+                OBJECTID        = "$_"
+                UPN             = "$($granted.UPN)"
+                DISPLAYNAME     = "$($granted.DISPLAYNAME)"
+                TYPE            = "$($granted.TYPE)"
+                NOMINAL         = "$($granted.NOMINAL)"
+                LASTLOGON       = [DateTime]$granted.LASTLOGON
+                FULLACCESS      = ""
+                SENDAS          = "$aGrant"
+                SENDONBEHALF    = ""
+            } | Select OBJECTID, UPN, DISPLAYNAME, TYPE, NOMINAL, LASTLOGON, FULLACCESS, SENDAS, SENDONBEHALF
+        }
+
+        foreach ($aGrant in $granted.SENDONBEHALF) {
+            New-Object -TypeName PSObject -Property @{
+                OBJECTID        = "$_"
+                UPN             = "$($granted.UPN)"
+                DISPLAYNAME     = "$($granted.DISPLAYNAME)"
+                TYPE            = "$($granted.TYPE)"
+                NOMINAL         = "$($granted.NOMINAL)"
+                LASTLOGON       = [DateTime]$granted.LASTLOGON
+                FULLACCESS      = ""
+                SENDAS          = ""
+                SENDONBEHALF    = "$aGrant"
+            } | Select OBJECTID, UPN, DISPLAYNAME, TYPE, NOMINAL, LASTLOGON, FULLACCESS, SENDAS, SENDONBEHALF
         }
     }
-    <# modificare sulla base di questa traccia
-    $now = Get-Date -Format  "yyyy/MM/dd"
-    $inData = $SkuCatalog_rawdata.Keys | Foreach-Object{
-        Write-Host -NoNewline '.'        
-        New-Object -TypeName PSObject -Property @{
-            TIMESTAMP   = [DateTime]$now
-            ID          = "$_"
-            SKU         = "$($SkuCatalog_rawdata[$_].SKUID)"
-            DESCRIPTION = "$($SkuCatalog_rawdata[$_].DESC)"
-        } | Select TIMESTAMP, ID, SKU, DESCRIPTION
-    }
-    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
-    #>
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
     Write-Host -ForegroundColor Green ' DONE'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
