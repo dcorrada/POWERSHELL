@@ -11,7 +11,12 @@ More details about ExOv3 module cmdlets are available at:
 https://learn.microsoft.com/en-us/powershell/module/exchange/?view=exchange-ps#powershell-v3-module
 
 +++ TO DO +++
-* check if RSAT is installed before enabling SID filter
+* check if RSAT is installed before enabling SID filter:
+  if ((Get-Module -Name ActiveDirectory -ListAvailable) -ne $null) {
+    # check if host is joined to domain
+  } else {
+    # get instructions to install RSAT
+  }
 #>
 
 <# *******************************************************************************
