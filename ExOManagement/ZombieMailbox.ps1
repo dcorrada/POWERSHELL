@@ -10,15 +10,6 @@ The aim is to find any account delegated revealed as dismissed (aka zombie).
 More details about ExOv3 module cmdlets are available at:
 https://learn.microsoft.com/en-us/powershell/module/exchange/?view=exchange-ps#powershell-v3-module
 
-+++ TO DO +++
-* check if RSAT is installed before enabling SID filter:
-  if ((Get-Module -Name ActiveDirectory -ListAvailable) -ne $null) {
-    # check if host is joined to domain
-  } else {
-    # get instructions to install RSAT
-  }
-#>
-
 <# *******************************************************************************
                                     HEADER
 ******************************************************************************* #>
@@ -86,6 +77,29 @@ do {
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
+# available only for local domain joined hosts and AD module installed
+Write-Host -NoNewline "SID filter..."
+if ((Get-CimInstance win32_computersystem).PartOfDomain) { 
+    if ((Get-Module -Name ActiveDirectory -ListAvailable) -ne $null) {
+        Write-Host -ForegroundColor Green " enabled"
+        $SIDfilter = $true
+    } else {
+        $ErrorActionPreference= 'Stop'
+        try {
+            Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability –Online
+        }
+        catch {
+            [System.Windows.MessageBox]::Show("Unable to install RSAT",'WARNING','Ok','Warning') | Out-Null
+            Write-Host -ForegroundColor Red " disabled"
+            $SIDfilter = $false
+        }
+        $ErrorActionPreference= 'Inquire'
+    }
+} Else { 	
+    Write-Host -ForegroundColor Red " disabled"
+    $SIDfilter = $false
+}
+
 <# *******************************************************************************
                                     QUERYING
 ******************************************************************************* #>
@@ -145,16 +159,6 @@ if ($orphaned.Count -gt 0) {
 <# *******************************************************************************
                                 FILTERING
 ******************************************************************************* #>
-# available only for local domain joined hosts
-Write-Host -NoNewline "SID filter..."
-if ((Get-CimInstance win32_computersystem).PartOfDomain) { 	
-    Write-Host -ForegroundColor Green " enabled"
-    $SIDfilter = $true
-} Else { 	
-    Write-Host -ForegroundColor Red " disabled"
-    $SIDfilter = $false
-}
-
 # exclude list file is a simply list of UPNs
 $answ = [System.Windows.MessageBox]::Show("Load exclude list text file?",'INFILE','YesNo','Info')
 $ExcludeList = @{ 
@@ -395,7 +399,7 @@ try {
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize -PassThru
     Write-Host -ForegroundColor Green ' DONE'
 } catch {
-    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error')
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error') | Out-Null
     Write-Host -ForegroundColor Red ' FAIL'
     Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
     exit
