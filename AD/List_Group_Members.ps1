@@ -12,8 +12,19 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
-# import Active Directory module
-if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
+# check Active Directory module
+if ((Get-Module -Name ActiveDirectory -ListAvailable) -eq $null) {
+    $ErrorActionPreference= 'Stop'
+    try {
+        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability –Online
+    }
+    catch {
+        Write-Host -ForegroundColor Red "Unable to install RSAT"
+        Pause
+        Exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 # retrieve AD groups list
 $ADgroups = Get-ADGroup -Filter *

@@ -16,11 +16,22 @@ $workdir -match "([a-zA-Z_\-\.\\\s0-9:]+)\\AD$" > $null
 $repopath = $matches[1]
 Import-Module -Name "$repopath\Modules\Forms.psm1"
 
+# check Active Directory module
+if ((Get-Module -Name ActiveDirectory -ListAvailable) -eq $null) {
+    $ErrorActionPreference= 'Stop'
+    try {
+        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability –Online
+    }
+    catch {
+        Write-Host -ForegroundColor Red "Unable to install RSAT"
+        Pause
+        Exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
+
 # get AD credentials
 $AD_login = LoginWindow
-
-# Import Active Directory module
-if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
 
 $locked_accounts = Search-ADAccount -LockedOut
 

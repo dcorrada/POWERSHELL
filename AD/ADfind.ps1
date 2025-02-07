@@ -6,16 +6,19 @@ Author....: Dario CORRADA
 Loooking for a PC at Active Directory
 #>
 
-
-# import Active Directory module
-$ErrorActionPreference= 'Stop'
-try {
-    Import-Module ActiveDirectory
-} catch {
-    Add-WindowsCapability -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 -Online
-    Import-Module ActiveDirectory
+# check Active Directory module
+if ((Get-Module -Name ActiveDirectory -ListAvailable) -eq $null) {
+    $ErrorActionPreference= 'Stop'
+    try {
+        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability –Online
+    }
+    catch {
+        Write-Host -ForegroundColor Red "Unable to install RSAT"
+        Pause
+        Exit
+    }
+    $ErrorActionPreference= 'Inquire'
 }
-$ErrorActionPreference= 'Inquire'
 
 $computer_name = Read-Host "Hostname"
 

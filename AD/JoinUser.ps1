@@ -47,6 +47,19 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
+# check Active Directory module
+if ((Get-Module -Name ActiveDirectory -ListAvailable) -eq $null) {
+    $ErrorActionPreference= 'Stop'
+    try {
+        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability –Online
+    }
+    catch {
+        Write-Host -ForegroundColor Red "Unable to install RSAT"
+        Pause
+        Exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 <# *******************************************************************************
                                     BODY
