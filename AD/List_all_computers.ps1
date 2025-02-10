@@ -13,7 +13,7 @@ $WarningPreference = 'SilentlyContinue'
 if ((Get-Module -Name ActiveDirectory -ListAvailable) -eq $null) {
     $ErrorActionPreference= 'Stop'
     try {
-        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability –Online
+        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online
     }
     catch {
         Write-Host -ForegroundColor Red "Unable to install RSAT"
