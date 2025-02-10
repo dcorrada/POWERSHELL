@@ -9,8 +9,19 @@ This script retrieve a list of all computers belonging to a domain and save it i
 # header 
 $WarningPreference = 'SilentlyContinue'
 
-# import Active Directory module
-if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory }
+# check Active Directory module
+if ((Get-Module -Name ActiveDirectory -ListAvailable) -eq $null) {
+    $ErrorActionPreference= 'Stop'
+    try {
+        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online
+    }
+    catch {
+        Write-Host -ForegroundColor Red "Unable to install RSAT"
+        Pause
+        Exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 # retrieve computer list
 Write-Host "Retrieve computer list..."

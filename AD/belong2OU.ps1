@@ -6,8 +6,19 @@ Author....: Dario CORRADA
 This script get computer list belonging to a specific OU
 #>
 
-# import Active Directory module
-if (! (get-Module ActiveDirectory)) { Import-Module ActiveDirectory } 
+# check Active Directory module
+if ((Get-Module -Name ActiveDirectory -ListAvailable) -eq $null) {
+    $ErrorActionPreference= 'Stop'
+    try {
+        Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online
+    }
+    catch {
+        Write-Host -ForegroundColor Red "Unable to install RSAT"
+        Pause
+        Exit
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 $ou2find = Read-Host "OU to search"
 
