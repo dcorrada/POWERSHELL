@@ -79,6 +79,7 @@ $ErrorActionPreference= 'Inquire'
 
 # available only for local domain joined hosts and AD module installed
 Write-Host -NoNewline "SID filter..."
+$SIDfilter = $false
 if ((Get-CimInstance win32_computersystem).PartOfDomain) { 
     if ((Get-Module -Name ActiveDirectory -ListAvailable) -ne $null) {
         Write-Host -ForegroundColor Green " enabled"
@@ -86,18 +87,25 @@ if ((Get-CimInstance win32_computersystem).PartOfDomain) {
     } else {
         $ErrorActionPreference= 'Stop'
         try {
-            Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability –Online
-        }
-        catch {
+            Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online
+            Write-Host -ForegroundColor Green " enabled"
+            $SIDfilter = $true
+        } catch {
             [System.Windows.MessageBox]::Show("Unable to install RSAT",'WARNING','Ok','Warning') | Out-Null
             Write-Host -ForegroundColor Red " disabled"
-            $SIDfilter = $false
         }
         $ErrorActionPreference= 'Inquire'
     }
-} Else { 	
+} else { 	
     Write-Host -ForegroundColor Red " disabled"
-    $SIDfilter = $false
+}
+
+if ($SIDfilter) {
+    # retrieve a list of disabled users
+    $DisabledUsers = @{}
+    foreach ($DisabledItem in (Search-ADAccount -AccountDisabled -UsersOnly -ResultSetSize $null | Select-Object SID, UserPrincipalName)) {
+        $DisabledUsers["$($DisabledItem.SID)"] = "$($DisabledItem.UserPrincipalName)"
+    }
 }
 
 <# *******************************************************************************
@@ -196,11 +204,18 @@ foreach ($entity in $EXOlist) {
         LASTLOGON       = 'na'
     }
 
-    $mbs = Get-MailboxStatistics -Identity $entity.UPN | Select LastLogonTime
-    $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = "$(($mbs.LastLogonTime | Get-Date -format 'yyyy-MM-dd HH:mm:ss').ToString())"
+    $ErrorActionPreference= 'Stop'
+    try {
+        $mbs = Get-MailboxStatistics -Identity $entity.UPN | Select LastLogonTime
+        $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = "$(($mbs.LastLogonTime | Get-Date -format 'yyyy-MM-dd HH:mm:ss').ToString())"
+    }
+    catch {
+        $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = '1980-02-07 12:00:00'
+    }
+    $ErrorActionPreference= 'Inquire'
 
     if ($ExcludeList.ContainsKey($entity.UPN)) {
-        Write-Host -ForegroundColor Black "$($entity.UPN)"
+        Write-Host -ForegroundColor DarkGray "$($entity.UPN)"
         $EXOdetailed["$($entity.OBJ_ID)"].EXCLUDED = 'Yes'
         $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
     } else {
@@ -216,7 +231,7 @@ foreach ($entity in $EXOlist) {
                         }
                         catch {
                             [System.Windows.MessageBox]::Show("There is something nasty with grant [SendAs] `nassigned to [$($sandman.Trustee)]","MAILBOX $($entity.UPN)",'Ok','Warning') | Out-Null
-                            $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "!!!>$($sandman.Trustee)<!!!"
+                            $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "'$($sandman.Trustee)',"
                         }
                         $ErrorActionPreference= 'Inquire'
                     } else {
@@ -224,9 +239,11 @@ foreach ($entity in $EXOlist) {
                             $UPNfound = Get-ADUser -Filter * | Select-Object -Property SID,UserPrincipalName | Where-Object -Property SID -like "$($sandman.Trustee)"
                             if ($UPNfound -ne $null) {
                                 $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "$($UPNfound.UserPrincipalName)"
+                            } elseif ($DisabledUsers.ContainsKey("$($sandman.Trustee)")) {
+                                $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "'$($DisabledUsers["$($sandman.Trustee)"])',"
                             } else {
                                 Write-Host -ForegroundColor Red "  granted '$($sandman.Trustee)' not found"
-                                $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "!!!>$($sandman.Trustee)<!!!"
+                                $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "'$($sandman.Trustee)',"
                             }
                         } else {
                             Write-Host -ForegroundColor Yellow "  granted '$($sandman.Trustee)' needs to be fixed"
@@ -252,7 +269,7 @@ foreach ($entity in $EXOlist) {
                             }
                             catch {
                                 [System.Windows.MessageBox]::Show("There is something nasty with grant [FullAccess] `nassigned to [$($fuller.User)]","MAILBOX $($entity.UPN)",'Ok','Warning') | Out-Null
-                                $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "!!!>$($fuller.User)<!!!"
+                                $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "'$($fuller.User)',"
                                 
                             }
                             $ErrorActionPreference= 'Inquire'
@@ -261,9 +278,11 @@ foreach ($entity in $EXOlist) {
                                 $UPNfound = Get-ADUser -Filter * | Select-Object -Property SID,UserPrincipalName | Where-Object -Property SID -like "$($fuller.User)"
                                 if ($UPNfound -ne $null) {
                                     $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "$($UPNfound.UserPrincipalName)"
+                                } elseif ($DisabledUsers.ContainsKey("$($fuller.User)")) {
+                                     $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "'$($DisabledUsers["$($fuller.User)"])',"
                                 } else {
                                     Write-Host -ForegroundColor Red "  granted '$($fuller.User)' not found"
-                                    $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "!!!>$($fuller.User)<!!!"
+                                    $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += "'$($fuller.User)',"
                                 }
                             } else {
                                 Write-Host -ForegroundColor Yellow "  granted '$($fuller.User)' needs to be fixed"
@@ -286,7 +305,7 @@ foreach ($entity in $EXOlist) {
                     }
                     catch {
                         [System.Windows.MessageBox]::Show("There is something nasty with grant [SendOnBehalf] `nassigned to [$Beowulf]","MAILBOX $($entity.UPN)",'Ok','Warning') | Out-Null
-                        $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += "!!!>$Beowulf<!!!"
+                        $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += "'$Beowulf',"
                     }
                     $ErrorActionPreference= 'Inquire'
                 } else {
@@ -294,9 +313,11 @@ foreach ($entity in $EXOlist) {
                         $UPNfound = Get-ADUser -Filter * | Select-Object -Property SID,UserPrincipalName | Where-Object -Property SID -like "$Beowulf"
                         if ($UPNfound -ne $null) {
                             $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += "$Beowulf"
+                        } elseif ($DisabledUsers.ContainsKey("$Beowulf")) {
+                            $EXOdetailed["$($entity.OBJ_ID)"].SENDAS += "'$($DisabledUsers["$Beowulf"])',"
                         } else {
                             Write-Host -ForegroundColor Red "  granted '$Beowulf' not found"
-                            $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += "!!!>$Beowulf<!!!"
+                            $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += "'$Beowulf',"
                         }
                     } else {
                         Write-Host -ForegroundColor Yellow "  granted '$Beowulf' needs to be fixed"
@@ -409,4 +430,3 @@ $ErrorActionPreference= 'Inquire'
 Close-ExcelPackage -ExcelPackage $XlsPkg
 
 [System.Windows.MessageBox]::Show("File [$xlsx_file] has been created",'OUTPUT','Ok','Info') | Out-Null
-
