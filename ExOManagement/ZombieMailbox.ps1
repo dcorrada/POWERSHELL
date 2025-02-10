@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailbox.ps1
-Version...: 25.2.4
+Version...: 25.2.5
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
