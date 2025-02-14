@@ -40,6 +40,9 @@ $cercaWally = 'C:\Users\dario.corrada\Desktop\SCRIPT MIEI\Safety\Stargate.ps1'
 if (!(Test-Path -Path $cercaWally -PathType Leaf)) {
     $cercaWally = 'C:\Users\korda\Desktop\POWERSHELL\Safety\Stargate.ps1'
 }
+if (!(Test-Path -Path $cercaWally -PathType Leaf)) {
+    $cercaWally = 'C:\Users\dario.corrada\Desktop\POWERSHELL\Safety\Stargate.ps1'
+}
 
 # local IP address of the MySQL server
 $ahost = '192.168.20.205'
