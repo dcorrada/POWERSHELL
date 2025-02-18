@@ -12,8 +12,8 @@ https://www.alitajran.com/get-mguser/
 +++ TO DO +++
 * Integrate a feature which produce summary aomunt report of individual licenses 
   assigned vs. that ones recovered (aka available to be assigned again), based 
-  on a specific time interval (ie monthly). See also the "MonthlyFilter.ps1" 
-  proof of concept on tempus branch.
+  on a specific time interval (ie monthly). See also the "MOTA.ps1" proof of 
+  concept on tempus branch.
 #>
 
 
