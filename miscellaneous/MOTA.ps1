@@ -3,23 +3,15 @@ Name......: MOTA.ps1
 Version...: 25.02.1
 Author....: Dario CORRADA
 
-Questo script e' un proof of concept per ottenere una reportistica mensile del 
-bilancio di licenze Microsoft 365 assegnate su recuperate. Lo script leggera' 
-dal file Excel prodotto con lo script AssignedLicensesSDK.ps1. 
+This script would be an add on for all of the AssignedLicenses*.ps1 flavours. 
+It reads, as input, the Excel reference file outputted from the last ones, then 
+produce summary aomunt report of individual licenses assigned vs. that ones 
+recovered (aka available to be assigned again).
 
-Comincera' leggendo il worksheet "Assigned_Licenses" per ottenere una lista 
-preliminare di licenze assegnate in uno specifico mese.
 
-Successivamente andra' a parsare le voci presenti nel worksheet "Orphaned": 
-* cerchera' le voci annotate come "user no longer exists on tenant", o come
-  "license dismissed for this user", per valutare se sia stata 
-  effettivamente recuperata una licenza;
-* cerchera' le voci annotate come "assigned license(s) to this user": in 
-  questo caso occorrera' valutare sia stata assegnata una licenza, nel 
-  periodo temporale di riferimento, e se poi sia stata successivamente 
-  recuperata a causa di uno switch (ie passaggio da Basic a Standard) 
-  oppure se l'utente sia cessato nello stesso periodo
-
+    Everyday, well it's the same
+    That bong that's on the table starts to call my name
+                                                                [The Offspring]
 #>
 
 <# *******************************************************************************
@@ -82,8 +74,6 @@ do {
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
-[System.Windows.MessageBox]::Show("Everyday, well it's the same`nThat bong that's on the table starts to call my name`n`n[The Offspring]",'MOTA!','Ok','info') > $null
-
 
 <# *******************************************************************************
                                FETCHING RAW DATA
@@ -108,6 +98,8 @@ if ($Worksheet_list.Name -contains 'Assigned_Licenses') {
         $aDATE      = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
         $aLICENSE   = $history.LICENSE
         $aNOTE      = 'null'
+
+        # looking for those users whom any license has been currently assigned
         if ($aLICENSE -cne 'NONE') {
             if (!($RawData.ContainsKey($aUSER))) {
                 $RawData["$aUSER"] = @{}
@@ -115,8 +107,7 @@ if ($Worksheet_list.Name -contains 'Assigned_Licenses') {
             if (!($RawData["$aUSER"].ContainsKey($aDATE))) {
                 ($RawData["$aUSER"])["$aDATE"] = @()
             }
-            # $RawData["$aUSER"])["$aDATE"] sarà un array contenente stringhe in cui combino
-            # licenza + note (ad es. "licenza>>note")
+            ($RawData["$aUSER"])["$aDATE"] += "$aLICENSE>>$aNOTE"
         }
     }
     Write-Host -ForegroundColor Green ' DONE'
@@ -129,9 +120,31 @@ if ($Worksheet_list.Name -contains 'Orphaned') {
     Write-Host -NoNewline "Importing [Orphaned] worksheet..."
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Orphaned')) {
         Write-Host -NoNewline '.'
-        $aUser = $history.USRNAME
+        $aUser      = $history.USRNAME
+        $aDATE      = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
+        $aLICENSE   = $history.LICENSE
+        $aNOTE      = $history.NOTES
+
+        # gathering dismissed license data
+        if (!($RawData.ContainsKey($aUSER))) {
+            $RawData["$aUSER"] = @{}
+        }
+        if (!($RawData["$aUSER"].ContainsKey($aDATE))) {
+            ($RawData["$aUSER"])["$aDATE"] = @()
+        }
+        ($RawData["$aUSER"])["$aDATE"] += "$aLICENSE>>$aNOTE"
     }
     Write-Host -ForegroundColor Green ' DONE'
 } else {
     [System.Windows.MessageBox]::Show("Worksheet 'Orphaned not found in the Excel file`n`n[$xlsx_file]",'WARNING','Ok','Warning') > $null
 }
+
+<# *******************************************************************************
+                                PARSING
+******************************************************************************* #>
+<#
+Filtrare, da $RawData, quelle chiavi che contengono almeno una sottochiave di 
+data associata a più valori (si tratterà di utenze con più licenze e/o che 
+hanno subito switch e/o dismissioni). Osservarne il contenuto, per decidere come 
+manipolarlo nella struttura dati di output.
+#>
