@@ -141,10 +141,36 @@ if ($Worksheet_list.Name -contains 'Orphaned') {
 
 <# *******************************************************************************
                                 PARSING
-******************************************************************************* #>
-<#
+******************************************************************************* 
 Filtrare, da $RawData, quelle chiavi che contengono almeno una sottochiave di 
 data associata a più valori (si tratterà di utenze con più licenze e/o che 
 hanno subito switch e/o dismissioni). Osservarne il contenuto, per decidere come 
 manipolarlo nella struttura dati di output.
 #>
+
+# looking for accounts to be parsed
+$ToBeParsed = @()
+foreach ($currentUser in $RawData.Keys) {
+    if (($RawData["$currentUser"].Keys).Count -gt 1) {
+        $ToBeParsed += "$currentUser"
+    } else {
+        foreach ($currentDate in $RawData["$currentUser"].Keys) {
+            if (($RawData["$currentUser"])[$currentDate].Count -gt 1) {
+                $ToBeParsed += "$currentUser"
+            }
+        }
+    }
+}
+
+$ParsedData = @()
+foreach ($currentUser in $RawData.Keys) {
+    if ($ToBeParsed -contains $currentUser) {
+        <# Action to perform if the condition is true #>
+    } else {
+        foreach ($currentDate in $RawData["$currentUser"].Keys) {
+            "$(($RawData["$currentUser"])["$currentDate"])" -match "^(.+)>>" | Out-Null
+            $currentLicense = $matches[1]
+            $ParsedData += "$currentDate;$currentUser;$currentLicense;ASSIGNED"
+        }
+    }
+}
