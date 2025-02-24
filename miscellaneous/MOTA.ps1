@@ -170,7 +170,23 @@ foreach ($currentUser in $RawData.Keys) {
         foreach ($currentDate in $RawData["$currentUser"].Keys) {
             "$(($RawData["$currentUser"])["$currentDate"])" -match "^(.+)>>" | Out-Null
             $currentLicense = $matches[1]
-            $ParsedData += "$currentDate;$currentUser;$currentLicense;ASSIGNED"
+            $ParsedData += [pscustomobject]@{
+                TIMESTAMP   = "$currentDate"
+                ACCOUNT     = $currentUser
+                LICENSE     = $currentLicense
+                STATUS      = 'ASSIGNED'
+            }
         }
     }
 }
+
+
+<# *******************************************************************************
+                                OUTPUT
+******************************************************************************* #>
+$OutFile = "C:$env:HOMEPATH\Downloads\mota.csv"
+if (Test-Path $OutFile -PathType Leaf) {
+    Remove-Item -Path $OutFile -Force | Out-Null
+}
+
+$ParsedData | Export-Csv -Path $OutFile -NoTypeInformation
