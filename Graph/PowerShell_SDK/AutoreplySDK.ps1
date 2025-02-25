@@ -69,6 +69,22 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
+
+
+[System.Windows.MessageBox]::Show("BugFix needed - See the notes in the related source code comment",'ABORTING','Ok','error') | Out-Null
+Exit
+<#
++++ BUGFIX NEEDED +++
+Maybe, on the latest Graph module update, the syntax of the Update-MgUserMailboxSetting cmdlet 
+and/or the hashtable formatting option (related to the autoreply configurations) has been changed. 
+Try to look for any clue on:
+
+https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.users/update-mgusermailboxsetting?view=graph-powershell-1.0#notes
+#>
+
+
+
+
 $splash = Connect-MgGraph -Scopes 'MailboxSettings.ReadWrite'
 $UPN = (Get-MgContext).Account
 
