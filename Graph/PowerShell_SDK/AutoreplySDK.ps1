@@ -1,6 +1,6 @@
 <#
 Name......: AutoReplySDK.ps1
-Version...: 24.06.3
+Version...: 25.02.alfa
 Author....: Dario CORRADA
 
 This script sets an autoreply message from Outlook 365.
@@ -8,6 +8,66 @@ This script sets an autoreply message from Outlook 365.
 *** Please Note ***
 It requires the Application/Delegated Permission (MailboxSettings.ReadWrite)
 Check it out on Graph Explorer "Modify permissions" tab.
+
+
++++ BUGFIX NEEDED +++
+
+    After parsing a value an unexpected character was encountered: f. Path 
+    'automaticRepliesSetting.extealReplyMessage', line 3, position 128.
+
+This bug arised once upgraded Microsoft.Graph module from 2.25 to 2.26 version.
+
+From Microsoft Learn I haven't found any clue about putative syntax changes, 
+regarding the synopsis of the cmdlet Update-MgUserMailboxSetting.
+
+Reverse engineering approach for debugging: I could try to get and check key 
+and values of the related hash table after manually autoreply setting from the 
+OWA web interface. This below is the hash table obtained (edited with ****) and 
+it doesn't work when setted for the script:
+
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('****')/mailboxSettings",
+    "archiveFolder": "****",
+    "timeZone": "W. Europe Standard Time",
+    "delegateMeetingMessageDeliveryOptions": "sendToDelegateOnly",
+    "dateFormat": "dd/MM/yyyy",
+    "timeFormat": "HH:mm",
+    "userPurpose": "user",
+    "automaticRepliesSetting": {
+        "status": "disabled",
+        "externalAudience": "none",
+        "internalReplyMessage": "<html>\n<body>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Hi there,</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">currently I am out of office.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">I will be available from monday to friday, 09:00-16:00. Preferably, I will reply to your email in such period.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Please note: my MS Teams is in sleep mode. I may not read your messages.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">For any support request you should send an email to\n<a href=\"mailto:dario.corrada@gmail.com\" style=\"margin-top:0px; margin-bottom:0px\">\ndario.corrada@gmail.com</a></span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Kind regards</span></p>\n</body>\n</html>\n",
+        "externalReplyMessage": "<html>\n<body>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Hi there,</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">currently I am out of office.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">I will be available from monday to friday, 09:00-16:00. Preferably, I will reply to your email in such period.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Please note: my MS Teams is in sleep mode. I may not read your messages.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">For any support request you should send an email to\n<a href=\"mailto:dario.corrada@gmail.com\" style=\"margin-top:0px; margin-bottom:0px\">\ndario.corrada@gmail.com</a></span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Kind regards</span></p>\n</body>\n</html>\n",
+        "scheduledStartDateTime": {
+            "dateTime": "2025-02-27T15:00:00.0000000",
+            "timeZone": "UTC"
+        },
+        "scheduledEndDateTime": {
+            "dateTime": "2025-02-28T15:00:00.0000000",
+            "timeZone": "UTC"
+        }
+    },
+    "language": {
+        "locale": "it-IT",
+        "displayName": "Italian (Italy)"
+    },
+    "workingHours": {
+        "daysOfWeek": [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday"
+        ],
+        "startTime": "08:00:00.0000000",
+        "endTime": "17:00:00.0000000",
+        "timeZone": {
+            "name": "W. Europe Standard Time"
+        }
+    }
+}
+
+[opened an issue at: https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/3194]
 #>
 
 <# *******************************************************************************
@@ -68,22 +128,6 @@ try {
     }
 }
 $ErrorActionPreference= 'Inquire'
-
-
-
-[System.Windows.MessageBox]::Show("BugFix needed - See the notes in the related source code comment",'ABORTING','Ok','error') | Out-Null
-Exit
-<#
-+++ BUGFIX NEEDED +++
-Maybe, on the latest Graph module update, the syntax of the Update-MgUserMailboxSetting cmdlet 
-and/or the hashtable formatting option (related to the autoreply configurations) has been changed. 
-Try to look for any clue on:
-
-https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.users/update-mgusermailboxsetting?view=graph-powershell-1.0#notes
-#>
-
-
-
 
 $splash = Connect-MgGraph -Scopes 'MailboxSettings.ReadWrite'
 $UPN = (Get-MgContext).Account
@@ -157,7 +201,6 @@ To set specific time zone you can list those locally stored in the registry as f
 
     $TimeZone = Get-ChildItem "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Time zones" | foreach {Get-ItemProperty $_.PSPath} 
     $TimeZone | sort Display | Format-Table -Auto PSChildname,Display
-
 
 To check out the values for the setted parameters and/or add new ones, launch such an instance on Graph Explorer:
 
