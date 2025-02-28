@@ -69,21 +69,25 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
-
-
-[System.Windows.MessageBox]::Show("BugFix needed - See the notes in the related source code comment",'ABORTING','Ok','error') | Out-Null
+# +++ BUGFIX NEEDED +++
+$TheDialog = FormBase -w 580 -h 120 -text "ABORTING"
+$Disclaimer = Label -form $TheDialog -x 25 -y 15 -w 150 -h 45 -text 'BUGFIX NEEDED'
+$Disclaimer.Font = [System.Drawing.Font]::new("Arial", 12, [System.Drawing.FontStyle]::Bold)
+$Disclaimer.TextAlign = 'MiddleCenter'
+$Disclaimer.BackColor = 'Red'
+$Disclaimer.ForeColor = 'Yellow'
+$ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
+$ExLinkLabel.Location = New-Object System.Drawing.Size(185,25)
+$ExLinkLabel.Size = New-Object System.Drawing.Size(450,65)
+$ExLinkLabel.Font = [System.Drawing.Font]::new("Arial", 10)
+$ExLinkLabel.Text = @"
+2025/02/27 - Unexpected exception arised working with 
+Microsoft Graph module. See more detail by click here.
+"@
+$ExLinkLabel.add_Click({[system.Diagnostics.Process]::start("https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/3194")})
+$TheDialog.Controls.Add($ExLinkLabel)
+$TheDialog.ShowDialog() | Out-Null
 Exit
-<#
-+++ BUGFIX NEEDED +++
-Maybe, on the latest Graph module update, the syntax of the Update-MgUserMailboxSetting cmdlet 
-and/or the hashtable formatting option (related to the autoreply configurations) has been changed. 
-Try to look for any clue on:
-
-https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.users/update-mgusermailboxsetting?view=graph-powershell-1.0#notes
-#>
-
-
-
 
 $splash = Connect-MgGraph -Scopes 'MailboxSettings.ReadWrite'
 $UPN = (Get-MgContext).Account
