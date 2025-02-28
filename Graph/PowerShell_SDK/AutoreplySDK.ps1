@@ -1,6 +1,6 @@
 <#
 Name......: AutoReplySDK.ps1
-Version...: 24.06.3
+Version...: 25.02.1
 Author....: Dario CORRADA
 
 This script sets an autoreply message from Outlook 365.
@@ -44,7 +44,6 @@ $ErrorActionPreference= 'Inquire'
 # just pipe more than single "Split-Path" if the script maps to nested subfolders
 $workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent | Split-Path -Parent
 
-
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -69,21 +68,32 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
+# check for known bug
+Write-Host -NoNewline "Checking Microsoft Graph installed version... "
+if ((Get-InstalledModule -Name 'Microsoft.Graph').Version -eq '2.26.0') {
+    Write-Host -ForegroundColor Red 'Ko'
 
-
-[System.Windows.MessageBox]::Show("BugFix needed - See the notes in the related source code comment",'ABORTING','Ok','error') | Out-Null
-Exit
-<#
-+++ BUGFIX NEEDED +++
-Maybe, on the latest Graph module update, the syntax of the Update-MgUserMailboxSetting cmdlet 
-and/or the hashtable formatting option (related to the autoreply configurations) has been changed. 
-Try to look for any clue on:
-
-https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.users/update-mgusermailboxsetting?view=graph-powershell-1.0#notes
-#>
-
-
-
+    # +++ BUGFIX NEEDED +++
+    $TheDialog = FormBase -w 580 -h 120 -text "ABORTING"
+    $Disclaimer = Label -form $TheDialog -x 25 -y 15 -w 150 -h 45 -text 'BUGFIX NEEDED'
+    $Disclaimer.Font = [System.Drawing.Font]::new("Arial", 12, [System.Drawing.FontStyle]::Bold)
+    $Disclaimer.TextAlign = 'MiddleCenter'
+    $Disclaimer.BackColor = 'Red'
+    $Disclaimer.ForeColor = 'Yellow'
+    $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
+    $ExLinkLabel.Location = New-Object System.Drawing.Size(185,25)
+    $ExLinkLabel.Size = New-Object System.Drawing.Size(450,65)
+    $ExLinkLabel.Font = [System.Drawing.Font]::new("Arial", 10)
+    $ExLinkLabel.Text = @"
+A known bug have been found with the installed version of
+Microsoft Graph module. See more detail by click here.
+"@
+    $ExLinkLabel.add_Click({[system.Diagnostics.Process]::start("https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/3194")})
+    $TheDialog.Controls.Add($ExLinkLabel)
+    $TheDialog.ShowDialog() | Out-Null
+    Exit
+}
+Write-Host -ForegroundColor Green 'Ok'
 
 $splash = Connect-MgGraph -Scopes 'MailboxSettings.ReadWrite'
 $UPN = (Get-MgContext).Account
@@ -157,7 +167,6 @@ To set specific time zone you can list those locally stored in the registry as f
 
     $TimeZone = Get-ChildItem "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Time zones" | foreach {Get-ItemProperty $_.PSPath} 
     $TimeZone | sort Display | Format-Table -Auto PSChildname,Display
-
 
 To check out the values for the setted parameters and/or add new ones, launch such an instance on Graph Explorer:
 
