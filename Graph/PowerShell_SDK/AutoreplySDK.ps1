@@ -1,6 +1,6 @@
 <#
 Name......: AutoReplySDK.ps1
-Version...: 25.02.alfa
+Version...: 25.02.1
 Author....: Dario CORRADA
 
 This script sets an autoreply message from Outlook 365.
@@ -8,66 +8,6 @@ This script sets an autoreply message from Outlook 365.
 *** Please Note ***
 It requires the Application/Delegated Permission (MailboxSettings.ReadWrite)
 Check it out on Graph Explorer "Modify permissions" tab.
-
-
-+++ BUGFIX NEEDED +++
-
-    After parsing a value an unexpected character was encountered: f. Path 
-    'automaticRepliesSetting.extealReplyMessage', line 3, position 128.
-
-This bug arised once upgraded Microsoft.Graph module from 2.25 to 2.26 version.
-
-From Microsoft Learn I haven't found any clue about putative syntax changes, 
-regarding the synopsis of the cmdlet Update-MgUserMailboxSetting.
-
-Reverse engineering approach for debugging: I could try to get and check key 
-and values of the related hash table after manually autoreply setting from the 
-OWA web interface. This below is the hash table obtained (edited with ****) and 
-it doesn't work when setted for the script:
-
-{
-    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('****')/mailboxSettings",
-    "archiveFolder": "****",
-    "timeZone": "W. Europe Standard Time",
-    "delegateMeetingMessageDeliveryOptions": "sendToDelegateOnly",
-    "dateFormat": "dd/MM/yyyy",
-    "timeFormat": "HH:mm",
-    "userPurpose": "user",
-    "automaticRepliesSetting": {
-        "status": "disabled",
-        "externalAudience": "none",
-        "internalReplyMessage": "<html>\n<body>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Hi there,</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">currently I am out of office.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">I will be available from monday to friday, 09:00-16:00. Preferably, I will reply to your email in such period.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Please note: my MS Teams is in sleep mode. I may not read your messages.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">For any support request you should send an email to\n<a href=\"mailto:dario.corrada@gmail.com\" style=\"margin-top:0px; margin-bottom:0px\">\ndario.corrada@gmail.com</a></span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Kind regards</span></p>\n</body>\n</html>\n",
-        "externalReplyMessage": "<html>\n<body>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Hi there,</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">currently I am out of office.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">I will be available from monday to friday, 09:00-16:00. Preferably, I will reply to your email in such period.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Please note: my MS Teams is in sleep mode. I may not read your messages.</span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">For any support request you should send an email to\n<a href=\"mailto:dario.corrada@gmail.com\" style=\"margin-top:0px; margin-bottom:0px\">\ndario.corrada@gmail.com</a></span></p>\n<p><span style=\"font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt\">Kind regards</span></p>\n</body>\n</html>\n",
-        "scheduledStartDateTime": {
-            "dateTime": "2025-02-27T15:00:00.0000000",
-            "timeZone": "UTC"
-        },
-        "scheduledEndDateTime": {
-            "dateTime": "2025-02-28T15:00:00.0000000",
-            "timeZone": "UTC"
-        }
-    },
-    "language": {
-        "locale": "it-IT",
-        "displayName": "Italian (Italy)"
-    },
-    "workingHours": {
-        "daysOfWeek": [
-            "monday",
-            "tuesday",
-            "wednesday",
-            "thursday",
-            "friday"
-        ],
-        "startTime": "08:00:00.0000000",
-        "endTime": "17:00:00.0000000",
-        "timeZone": {
-            "name": "W. Europe Standard Time"
-        }
-    }
-}
-
-[opened an issue at: https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/3194]
 #>
 
 <# *******************************************************************************
@@ -104,7 +44,6 @@ $ErrorActionPreference= 'Inquire'
 # just pipe more than single "Split-Path" if the script maps to nested subfolders
 $workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent | Split-Path -Parent
 
-
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -128,6 +67,33 @@ try {
     }
 }
 $ErrorActionPreference= 'Inquire'
+
+# check for known bug
+Write-Host -NoNewline "Checking Microsoft Graph installed version... "
+if ((Get-InstalledModule -Name 'Microsoft.Graph').Version -eq '2.26.0') {
+    Write-Host -ForegroundColor Red 'Ko'
+
+    # +++ BUGFIX NEEDED +++
+    $TheDialog = FormBase -w 580 -h 120 -text "ABORTING"
+    $Disclaimer = Label -form $TheDialog -x 25 -y 15 -w 150 -h 45 -text 'BUGFIX NEEDED'
+    $Disclaimer.Font = [System.Drawing.Font]::new("Arial", 12, [System.Drawing.FontStyle]::Bold)
+    $Disclaimer.TextAlign = 'MiddleCenter'
+    $Disclaimer.BackColor = 'Red'
+    $Disclaimer.ForeColor = 'Yellow'
+    $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
+    $ExLinkLabel.Location = New-Object System.Drawing.Size(185,25)
+    $ExLinkLabel.Size = New-Object System.Drawing.Size(450,65)
+    $ExLinkLabel.Font = [System.Drawing.Font]::new("Arial", 10)
+    $ExLinkLabel.Text = @"
+A known bug have been found with the installed version of
+Microsoft Graph module. See more detail by click here.
+"@
+    $ExLinkLabel.add_Click({[system.Diagnostics.Process]::start("https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/3194")})
+    $TheDialog.Controls.Add($ExLinkLabel)
+    $TheDialog.ShowDialog() | Out-Null
+    Exit
+}
+Write-Host -ForegroundColor Green 'Ok'
 
 $splash = Connect-MgGraph -Scopes 'MailboxSettings.ReadWrite'
 $UPN = (Get-MgContext).Account
