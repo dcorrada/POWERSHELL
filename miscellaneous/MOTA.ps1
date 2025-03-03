@@ -123,7 +123,7 @@ if ($Worksheet_list.Name -contains 'Orphaned') {
         $aUser      = $history.USRNAME
         $aDATE      = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
         $aLICENSE   = $history.LICENSE
-        $aNOTE      = $history.NOTES
+        $aNOTE      = "$($history.NOTES) since>>$($history.CREATED | Get-Date -format "yyyy/MM/dd")"
 
         # gathering dismissed license data
         if (!($RawData.ContainsKey($aUSER))) {
@@ -141,21 +141,15 @@ if ($Worksheet_list.Name -contains 'Orphaned') {
 
 <# *******************************************************************************
                                 PARSING
-******************************************************************************* 
-Filtrare, da $RawData, quelle chiavi che contengono almeno una sottochiave di 
-data associata a più valori (si tratterà di utenze con più licenze e/o che 
-hanno subito switch e/o dismissioni). Osservarne il contenuto, per decidere come 
-manipolarlo nella struttura dati di output.
-#>
-
-# looking for accounts to be parsed
+******************************************************************************* #>
+# looking for those accounts that need to be further investigated
 $ToBeParsed = @()
 foreach ($currentUser in $RawData.Keys) {
-    if (($RawData["$currentUser"].Keys).Count -gt 1) {
-        $ToBeParsed += "$currentUser"
-    } else {
-        foreach ($currentDate in $RawData["$currentUser"].Keys) {
-            if (($RawData["$currentUser"])[$currentDate].Count -gt 1) {
+    foreach ($currentDate in $RawData["$currentUser"].Keys) {
+        foreach ($currentEvent in ($RawData["$currentUser"])["$currentDate"]) {
+            if ($currentEvent -match ">>null") {
+                # data which came from AssignedLicenses worksheet
+            } else {
                 $ToBeParsed += "$currentUser"
             }
         }
@@ -165,16 +159,53 @@ foreach ($currentUser in $RawData.Keys) {
 $ParsedData = @()
 foreach ($currentUser in $RawData.Keys) {
     if ($ToBeParsed -contains $currentUser) {
-        <# Action to perform if the condition is true #>
+        foreach ($currentDate in $RawData["$currentUser"].Keys) {
+            foreach ($event in ($RawData["$currentUser"])["$currentDate"]) {
+                if ($event -match ">>null") {
+                    # data which came from AssignedLicenses worksheet but
+                    # this account was previously involved (also found in Orphaned worksheet)
+                    
+                    # !!!TODO!!! Togliere il Write-Host e aggiungere il record formattato a $ParsedData
+                    Write-Host "$currentUser --> $event"
+                }
+                 <# !!!TODO!!! Revisionare tutto il blocco
+
+                 if ($event -match "user no longer exists on tenant") {
+                    $event -match "^(.+)>>user no longer exists on tenant since>>(.+)$" | Out-Null
+                    $currentLicense = $matches[1]
+                    $birthday = $matches[2]
+                    if ($currentLicense -cne 'NONE') {
+                        # dismissed account
+                        $ParsedData += [pscustomobject]@{
+                            TIMESTAMP   = "$currentDate"
+                            ACCOUNT     = $currentUser
+                            LICENSE     = $currentLicense
+                            STATUS      = 'RECOVERED'
+                        }
+                        # previous hypotetic assignement (based on account creation date)
+                        $ParsedData += [pscustomobject]@{
+                            TIMESTAMP   = "$birthday"
+                            ACCOUNT     = $currentUser
+                            LICENSE     = $currentLicense
+                            STATUS      = 'ASSIGNED'
+                        }
+                    } else {
+                        # dismissed account in which license have been recovered before (nothing to do)
+                    }
+                } #>
+            }            
+        } 
     } else {
         foreach ($currentDate in $RawData["$currentUser"].Keys) {
-            "$(($RawData["$currentUser"])["$currentDate"])" -match "^(.+)>>" | Out-Null
-            $currentLicense = $matches[1]
-            $ParsedData += [pscustomobject]@{
-                TIMESTAMP   = "$currentDate"
-                ACCOUNT     = $currentUser
-                LICENSE     = $currentLicense
-                STATUS      = 'ASSIGNED'
+            foreach ($assignement in ($RawData["$currentUser"])["$currentDate"]) {
+                $assignement -match "^(.+)>>" | Out-Null
+                $currentLicense = $matches[1]
+                $ParsedData += [pscustomobject]@{
+                    TIMESTAMP   = "$currentDate"
+                    ACCOUNT     = $currentUser
+                    LICENSE     = $currentLicense
+                    STATUS      = 'ASSIGNED'
+                }
             }
         }
     }
