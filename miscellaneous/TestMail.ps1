@@ -3,7 +3,6 @@
 # NOTE: for Gmail sending, enter in the security options of your Google account and
 # turn off two-factor authentication and allow access to insecure apps
 
-
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
