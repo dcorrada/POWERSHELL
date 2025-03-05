@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 24.12.1
+Version...: 25.03.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -10,7 +10,9 @@ This script finalize fresh OS installations:
 
 +++ KNOWN BUGS +++
 * Teams wont be installed machinewide from winget. As temporary workaround a 
-  msix installer will be manually downloaded and asked install it afterwards
+  msix installer will be manually downloaded and asked install it afterwards.
+  Such bug doesn't affect Windows 11 installation, since Teams app is already 
+  onboard.
 #>
 
 <# *******************************************************************************
@@ -137,7 +139,11 @@ $swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y
 $swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "Office 365 Desktop"
 $swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Speccy"
 $swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Supremo"
-$swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
+if ($info[2] -match 'Windows 11') {
+    $swlist['Teams'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 260 -text "Teams"
+} else {
+    $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
+}
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "TreeSize"
 $swlist['VPNold'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 320 -text "VPN WatchGuard"
 $swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 350 -text "VPN Fortinet"
