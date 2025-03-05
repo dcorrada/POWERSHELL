@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 24.07.2
+Version...: 25.03.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -9,11 +9,6 @@ license(s) are assigned to each user, then create/edit an excel report file.
 Thx to Ali TAJRAN for the useful notes about Get-MgUser on:
 https://www.alitajran.com/get-mguser/ 
 
-+++ TO DO +++
-* Integrate a feature which produce summary aomunt report of individual licenses 
-  assigned vs. that ones recovered (aka available to be assigned again), based 
-  on a specific time interval (ie monthly). See also the "MOTA.ps1" proof of 
-  concept on tempus branch.
 #>
 
 
@@ -543,19 +538,70 @@ if ($UseRefFile -eq 'No') {
     -PivotTableStyle 'Dark3' -PivotTotals 'Rows'
 }
 
-# show the final result and/or keep temporary backup
-$ErrorActionPreference= 'Stop'
-try {
+
+<# *******************************************************************************
+                                HAPPY ENDING
+******************************************************************************* #>
+$HappyEnding = @{}
+$form_panel = FormBase -w 300 -h 220 -text "HAPPY ENDING"
+$HappyEnding['MOTA']        = CheckBox -form $form_panel -checked $true -x 50 -y 20 -text "Integrate MOTA worksheet"
+$HappyEnding['PREVIEW']     = CheckBox -form $form_panel -checked $false -x 50 -y 50 -text "Open Excel formatted file"
+$HappyEnding['CLEANSWEEP']  = CheckBox -form $form_panel -checked $false -x 50 -y 80 -text "Remove temporary backup"
+OKButton -form $form_panel -x 80 -y 130 -text "Ok"  | Out-Null
+$result = $form_panel.ShowDialog()
+
+if ($HappyEnding['MOTA'].Checked -eq $true) {
+<#
+Add a worksheet which produce summary amount report of individual licenses 
+assigned vs. that ones recovered (aka available to be assigned again).
+See also the "/AzureAD/MOTA.ps1" add on script for more details.
+#>
+    Close-ExcelPackage -ExcelPackage $XlsPkg
+
+    # remove older worksheet
+    if ($Worksheet_list.Name -contains 'MOTA') {
+        Remove-Worksheet -Path $xlsx_file -WorksheetName 'MOTA'
+        Write-Host -NoNewline "Updating worksheet [MOTA]..."
+    } else {
+        Write-Host -NoNewline "Adding worksheet [MOTA]..."
+    }
+
+    # launch MOTA and import related csv file
+    PowerShell.exe -file "$workdir\AzureAD\MOTA.ps1" -InFile $xlsx_file
+    $MOTAcsvfile = "C:$($env:HOMEPATH)\Downloads\mota.csv"
+    $inData = Import-Csv $MOTAcsvfile | ForEach-Object {
+        Write-Host -NoNewline '.'        
+        New-Object -TypeName PSObject -Property @{
+            TIMESTAMP   = [DateTime]$_.TIMESTAMP
+            ACCOUNT     = $_.ACCOUNT
+            LICENSE     = $_.LICENSE
+            STATUS      = $_.STATUS
+        } | Select TIMESTAMP, ACCOUNT, LICENSE, STATUS
+    }
+    $XlsPkg = Open-ExcelPackage -Path $xlsx_file
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'MOTA' -TableName 'MOTA' -TableStyle 'Medium4' -AutoSize -PassThru
+    Write-Host -ForegroundColor Green ' DONE'
+
+    # resorting worksheets
+    $XlsPkg.Workbook.Worksheets.MoveToStart('SkuCatalog')
+    $XlsPkg.Workbook.Worksheets.MoveAfter('Licenses_Pool', 'Skucatalog')
+    $XlsPkg.Workbook.Worksheets.MoveAfter('Assigned_Licenses', 'Licenses_Pool')
+    if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
+        $XlsPkg.Workbook.Worksheets.MoveAfter('Orphaned', 'Assigned_Licenses')
+        $XlsPkg.Workbook.Worksheets.MoveAfter('MOTA', 'Orphaned')
+    } else {
+        $XlsPkg.Workbook.Worksheets.MoveAfter('MOTA', 'Assigned_Licenses')
+    }    
+}
+
+if ($HappyEnding['PREVIEW'].Checked -eq $true) {
     Close-ExcelPackage -ExcelPackage $XlsPkg -Show
-} catch {
+} else {
     Close-ExcelPackage -ExcelPackage $XlsPkg
 }
-$ErrorActionPreference= 'Inquire'
-if ($UseRefFile -eq 'Yes') {
-    $answ = [System.Windows.MessageBox]::Show("Remove temporary backup?",'DELETE','YesNo','Warning')
-    if ($answ -eq "Yes") {    
-        Remove-Item -Path $bkp_file -Force
-    }
+
+if (($HappyEnding['CLEANSWEEP'].Checked -eq $true) -and ($UseRefFile -eq 'Yes'))  {
+    Remove-Item -Path $bkp_file -Force
 }
 
 # REMOVE RENMANTS

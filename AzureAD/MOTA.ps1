@@ -1,6 +1,8 @@
+Param([string]$InFile='NULL')
+
 <#
 Name......: MOTA.ps1
-Version...: 25.02.1
+Version...: 25.03.1
 Author....: Dario CORRADA
 
 This script would be an add on for all of the AssignedLicenses*.ps1 flavours. 
@@ -78,14 +80,18 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                                FETCHING RAW DATA
 ******************************************************************************* #>
-# looking for Excel reference file
-[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-$OpenFileDialog.Title = "Open File"
-$OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
-$OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
-$OpenFileDialog.ShowDialog() | Out-Null
-$xlsx_file = $OpenFileDialog.filename
+if ($InFile -ceq 'NULL') {
+    # looking for Excel reference file
+    [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+    $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $OpenFileDialog.Title = "Open File"
+    $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+    $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+    $OpenFileDialog.ShowDialog() | Out-Null
+    $xlsx_file = $OpenFileDialog.filename
+} else {
+    $xlsx_file = $InFile
+}
 
 $Worksheet_list = Get-ExcelSheetInfo -Path $xlsx_file
 $RawData = @{}
