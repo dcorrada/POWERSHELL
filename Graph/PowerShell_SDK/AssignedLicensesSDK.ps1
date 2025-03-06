@@ -9,6 +9,13 @@ license(s) are assigned to each user, then create/edit an excel report file.
 Thx to Ali TAJRAN for the useful notes about Get-MgUser on:
 https://www.alitajran.com/get-mguser/ 
 
+TODO LIST:
+
+    * move MOTA feature into the main workflow (instead as happy ending option, 
+      current implementation)
+
+    * integrate MOTA feature into runs without Excel reference file (issue with 
+      default pivot formatting had arisen)
 #>
 
 
@@ -544,9 +551,13 @@ if ($UseRefFile -eq 'No') {
 ******************************************************************************* #>
 $HappyEnding = @{}
 $form_panel = FormBase -w 300 -h 220 -text "HAPPY ENDING"
-$HappyEnding['MOTA']        = CheckBox -form $form_panel -checked $true -x 50 -y 20 -text "Integrate MOTA worksheet"
-$HappyEnding['PREVIEW']     = CheckBox -form $form_panel -checked $false -x 50 -y 50 -text "Open Excel formatted file"
-$HappyEnding['CLEANSWEEP']  = CheckBox -form $form_panel -checked $false -x 50 -y 80 -text "Remove temporary backup"
+if ($UseRefFile -eq 'Yes') {
+    $HappyEnding['MOTA'] = CheckBox -form $form_panel -checked $true -x 50 -y 20 -text "Integrate MOTA worksheet"
+} else {
+    $HappyEnding['MOTA'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Integrate MOTA worksheet"
+}
+$HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $false -x 50 -y 50 -text "Open Excel formatted file"
+$HappyEnding['CLEANSWEEP'] = CheckBox -form $form_panel -checked $false -x 50 -y 80 -text "Remove temporary backup"
 OKButton -form $form_panel -x 80 -y 130 -text "Ok"  | Out-Null
 $result = $form_panel.ShowDialog()
 
@@ -567,8 +578,9 @@ See also the "/AzureAD/MOTA.ps1" add on script for more details.
     }
 
     # launch MOTA and import related csv file
-    PowerShell.exe -file "$workdir\AzureAD\MOTA.ps1" -InFile $xlsx_file
-    $MOTAcsvfile = "C:$($env:HOMEPATH)\Downloads\mota.csv"
+    $MOTAcsvfile = PowerShell.exe -file "$workdir\AzureAD\MOTA.ps1" -InFile $xlsx_file
+    # by default $MOTAcsvfile should be "C:$($env:HOMEPATH)\Downloads\mota.csv"
+
     $inData = Import-Csv $MOTAcsvfile | ForEach-Object {
         Write-Host -NoNewline '.'        
         New-Object -TypeName PSObject -Property @{

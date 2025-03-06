@@ -2,7 +2,7 @@ Param([string]$InFile='NULL')
 
 <#
 Name......: MOTA.ps1
-Version...: 25.03.1
+Version...: 25.03.2
 Author....: Dario CORRADA
 
 This script would be an add on for all of the AssignedLicenses*.ps1 flavours. 
@@ -97,9 +97,13 @@ $Worksheet_list = Get-ExcelSheetInfo -Path $xlsx_file
 $RawData = @{}
 
 if ($Worksheet_list.Name -contains 'Assigned_Licenses') {
-    Write-Host -NoNewline "Importing [Assigned_Licenses] worksheet..."
+    if ($InFile -ceq 'NULL') {
+        Write-Host -NoNewline "Importing [Assigned_Licenses] worksheet..."
+    }
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Assigned_Licenses')) {
-        Write-Host -NoNewline '.'
+        if ($InFile -ceq 'NULL') {
+            Write-Host -NoNewline '.'
+        }
         $aUSER      = $history.USRNAME
         $aDATE      = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
         $aLICENSE   = $history.LICENSE
@@ -116,16 +120,22 @@ if ($Worksheet_list.Name -contains 'Assigned_Licenses') {
             ($RawData["$aUSER"])["$aDATE"] += "$aLICENSE>>$aNOTE"
         }
     }
-    Write-Host -ForegroundColor Green ' DONE'
+    if ($InFile -ceq 'NULL') {
+        Write-Host -ForegroundColor Green ' DONE'
+    }
 } else {
     [System.Windows.MessageBox]::Show("The Excel file does not contain necessary data`n`n[$xlsx_file]",'ABORTING','Ok','Error') > $null
     Exit
 }
 
 if ($Worksheet_list.Name -contains 'Orphaned') {
-    Write-Host -NoNewline "Importing [Orphaned] worksheet..."
+    if ($InFile -ceq 'NULL') {
+        Write-Host -NoNewline "Importing [Orphaned] worksheet..."
+    }
     foreach ($history in (Import-Excel -Path $xlsx_file -WorksheetName 'Orphaned')) {
-        Write-Host -NoNewline '.'
+        if ($InFile -ceq 'NULL') {
+            Write-Host -NoNewline '.'
+        }
         $aUser      = $history.USRNAME
         $aDATE      = $history.TIMESTAMP | Get-Date -format "yyyy/MM/dd"
         $aLICENSE   = $history.LICENSE
@@ -140,7 +150,9 @@ if ($Worksheet_list.Name -contains 'Orphaned') {
         }
         ($RawData["$aUSER"])["$aDATE"] += "$aLICENSE>>$aNOTE"
     }
-    Write-Host -ForegroundColor Green ' DONE'
+    if ($InFile -ceq 'NULL') {
+        Write-Host -ForegroundColor Green ' DONE'
+    }
 } else {
     [System.Windows.MessageBox]::Show("Worksheet 'Orphaned not found in the Excel file`n`n[$xlsx_file]",'WARNING','Ok','Warning') > $null
 }
@@ -219,6 +231,7 @@ foreach ($currentUser in $RawData.Keys) {
                     if ($currentLicense -cne 'NONE') {
                         # just handle any exception due to old releases of AssignedLicenses*.ps1 script
                         Write-Host -ForegroundColor Yellow @"
+
 Uhmmmm... Something screwy is going on!
 Maybe you are using an old version of AssignedLicenses*.ps1 script?
 
@@ -227,6 +240,7 @@ Here there are the info extracted from Orphaned worksheet:
     TIMESTAMP   = $currentDate
     ACCOUNT     = $currentUser
     LICENSE     = $currentLicense
+
 "@
                         Pause
                     }
@@ -259,3 +273,7 @@ if (Test-Path $OutFile -PathType Leaf) {
 }
 
 $ParsedData | Export-Csv -Path $OutFile -NoTypeInformation
+
+if ($InFile -cne 'NULL') {
+    Write-Host $OutFile
+}
