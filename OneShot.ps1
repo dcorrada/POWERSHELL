@@ -415,6 +415,12 @@ if ($runpath -match 'Graph') {
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PSWallet.ps1', "$workdir\Safety\PSWallet.ps1")
 }
 
+# MOTA integration
+if ($selectedItem.NAME -match 'AssignedLicenses') {
+    New-Item -ItemType Directory -Path "$workdir\AzureAD" | Out-Null
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/unstable/AzureAD/MOTA.ps1', "$workdir\AzureAD\MOTA.ps1")
+}
+
 # stuff scripts adopting PSWallet keyring
 $found = Get-content -path "$runpath\$($selectedItem.NAME)" | Select-String -pattern 'Stargate.ps1' -encoding ASCII -CaseSensitive
 if ($found.Count -ge 1) {
