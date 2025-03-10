@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 25.03.1
+Version...: 25.03.2
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -10,12 +10,8 @@ Thx to Ali TAJRAN for the useful notes about Get-MgUser on:
 https://www.alitajran.com/get-mguser/ 
 
 TODO LIST:
-
-    * move MOTA feature into the main workflow (instead as happy ending option, 
-      current implementation)
-
-    * integrate MOTA feature into runs without Excel reference file (issue with 
-      default pivot formatting had arisen)
+* to build new pivot template 
+  (happy ending option reserved for initial Excel reference files)
 #>
 
 
@@ -519,18 +515,68 @@ try {
 }
 $ErrorActionPreference= 'Inquire'
 
+<# MOTA add-on
+Add a worksheet which produce summary amount report of individual licenses 
+assigned vs. that ones recovered (aka available to be assigned again).
+See also the "/AzureAD/MOTA.ps1" script for more details.
+#>
+Close-ExcelPackage -ExcelPackage $XlsPkg
+
+# remove older worksheet
+if ($Worksheet_list.Name -contains 'MOTA') {
+    Remove-Worksheet -Path $xlsx_file -WorksheetName 'MOTA'
+    Write-Host -NoNewline "Updating worksheet [MOTA]..."
+} else {
+    Write-Host -NoNewline "Adding worksheet [MOTA]..."
+}
+
+# launch MOTA and import related csv file
+$MOTAcsvfile = PowerShell.exe -file "$workdir\AzureAD\MOTA.ps1" -InFile $xlsx_file
+# by default $MOTAcsvfile should be "C:$($env:HOMEPATH)\Downloads\mota.csv"
+
+$inData = Import-Csv $MOTAcsvfile | ForEach-Object {
+    Write-Host -NoNewline '.'        
+    New-Object -TypeName PSObject -Property @{
+        TIMESTAMP   = [DateTime]$_.TIMESTAMP
+        ACCOUNT     = $_.ACCOUNT
+        LICENSE     = $_.LICENSE
+        STATUS      = $_.STATUS
+    } | Select TIMESTAMP, ACCOUNT, LICENSE, STATUS
+}
+$XlsPkg = Open-ExcelPackage -Path $xlsx_file
+$XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'MOTA' -TableName 'MOTA' -TableStyle 'Medium4' -AutoSize -PassThru
+Write-Host -ForegroundColor Green ' DONE'
+
 # resorting worksheets
 $XlsPkg.Workbook.Worksheets.MoveToStart('SkuCatalog')
 $XlsPkg.Workbook.Worksheets.MoveAfter('Licenses_Pool', 'Skucatalog')
 $XlsPkg.Workbook.Worksheets.MoveAfter('Assigned_Licenses', 'Licenses_Pool')
 if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
     $XlsPkg.Workbook.Worksheets.MoveAfter('Orphaned', 'Assigned_Licenses')
+    $XlsPkg.Workbook.Worksheets.MoveAfter('MOTA', 'Orphaned')
+} else {
+    $XlsPkg.Workbook.Worksheets.MoveAfter('MOTA', 'Assigned_Licenses')
 }
 
-# brand new pivot example for freshly new excel files
-if ($UseRefFile -eq 'No') { 
+<# *******************************************************************************
+                                HAPPY ENDING
+******************************************************************************* #>
+$HappyEnding = @{}
+$form_panel = FormBase -w 300 -h 220 -text "HAPPY ENDING"
+if ($UseRefFile -eq 'No') {
+    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $true -x 50 -y 20 -text "Add summary pivot template"
+} else {
+    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Integrate MOTA worksheet"
+}
+$HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $false -x 50 -y 50 -text "Open Excel formatted file"
+$HappyEnding['CLEANSWEEP'] = CheckBox -form $form_panel -checked $false -x 50 -y 80 -text "Remove temporary backup"
+OKButton -form $form_panel -x 80 -y 130 -text "Ok"  | Out-Null
+$result = $form_panel.ShowDialog()
+
+if ($HappyEnding['PIVOT'].Checked -eq $true) {
+<# review needed
     Add-Worksheet -ExcelPackage $XlsPkg -WorksheetName 'SUMMARY' > $null
-    
+
     Add-PivotTable -ExcelPackage $XlsPkg `
     -PivotTableName 'POOL' -Address $XlsPkg.SUMMARY.cells["B3"] `
     -SourceWorksheet 'Licenses_Pool' `
@@ -543,67 +589,7 @@ if ($UseRefFile -eq 'No') {
     -SourceWorksheet 'Assigned_Licenses' `
     -PivotRows ('LICENSE', 'DESC') -PivotColumns 'TIMESTAMP' -PivotData 'LICENSE' `
     -PivotTableStyle 'Dark3' -PivotTotals 'Rows'
-}
-
-
-<# *******************************************************************************
-                                HAPPY ENDING
-******************************************************************************* #>
-$HappyEnding = @{}
-$form_panel = FormBase -w 300 -h 220 -text "HAPPY ENDING"
-if ($UseRefFile -eq 'Yes') {
-    $HappyEnding['MOTA'] = CheckBox -form $form_panel -checked $true -x 50 -y 20 -text "Integrate MOTA worksheet"
-} else {
-    $HappyEnding['MOTA'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Integrate MOTA worksheet"
-}
-$HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $false -x 50 -y 50 -text "Open Excel formatted file"
-$HappyEnding['CLEANSWEEP'] = CheckBox -form $form_panel -checked $false -x 50 -y 80 -text "Remove temporary backup"
-OKButton -form $form_panel -x 80 -y 130 -text "Ok"  | Out-Null
-$result = $form_panel.ShowDialog()
-
-if ($HappyEnding['MOTA'].Checked -eq $true) {
-<#
-Add a worksheet which produce summary amount report of individual licenses 
-assigned vs. that ones recovered (aka available to be assigned again).
-See also the "/AzureAD/MOTA.ps1" add on script for more details.
-#>
-    Close-ExcelPackage -ExcelPackage $XlsPkg
-
-    # remove older worksheet
-    if ($Worksheet_list.Name -contains 'MOTA') {
-        Remove-Worksheet -Path $xlsx_file -WorksheetName 'MOTA'
-        Write-Host -NoNewline "Updating worksheet [MOTA]..."
-    } else {
-        Write-Host -NoNewline "Adding worksheet [MOTA]..."
-    }
-
-    # launch MOTA and import related csv file
-    $MOTAcsvfile = PowerShell.exe -file "$workdir\AzureAD\MOTA.ps1" -InFile $xlsx_file
-    # by default $MOTAcsvfile should be "C:$($env:HOMEPATH)\Downloads\mota.csv"
-
-    $inData = Import-Csv $MOTAcsvfile | ForEach-Object {
-        Write-Host -NoNewline '.'        
-        New-Object -TypeName PSObject -Property @{
-            TIMESTAMP   = [DateTime]$_.TIMESTAMP
-            ACCOUNT     = $_.ACCOUNT
-            LICENSE     = $_.LICENSE
-            STATUS      = $_.STATUS
-        } | Select TIMESTAMP, ACCOUNT, LICENSE, STATUS
-    }
-    $XlsPkg = Open-ExcelPackage -Path $xlsx_file
-    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'MOTA' -TableName 'MOTA' -TableStyle 'Medium4' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' DONE'
-
-    # resorting worksheets
-    $XlsPkg.Workbook.Worksheets.MoveToStart('SkuCatalog')
-    $XlsPkg.Workbook.Worksheets.MoveAfter('Licenses_Pool', 'Skucatalog')
-    $XlsPkg.Workbook.Worksheets.MoveAfter('Assigned_Licenses', 'Licenses_Pool')
-    if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
-        $XlsPkg.Workbook.Worksheets.MoveAfter('Orphaned', 'Assigned_Licenses')
-        $XlsPkg.Workbook.Worksheets.MoveAfter('MOTA', 'Orphaned')
-    } else {
-        $XlsPkg.Workbook.Worksheets.MoveAfter('MOTA', 'Assigned_Licenses')
-    }    
+#> 
 }
 
 if ($HappyEnding['PREVIEW'].Checked -eq $true) {

@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.10.1
+Version...: 25.03.1
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
