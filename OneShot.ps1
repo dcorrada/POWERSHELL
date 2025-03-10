@@ -95,11 +95,17 @@ foreach ($newline in (Get-Content $RemoteFile)) {
     }
 }
 if ($RemoteVersion -gt $LocalVersion) {
-    Remove-Item -Path $LocalFile -Force > $null
-    Move-Item -Path $RemoteFile -Destination $LocalFile > $null
-    Write-Host -ForegroundColor Green 'updated'
-    [System.Windows.MessageBox]::Show("OneShot has been updated.`nPlease relaunch the script.",'UPDATES','Ok','Info') > $null
-    Exit
+    $answ = [System.Windows.MessageBox]::Show("Newer version is available.`nWould you update to it?",'UPDATES','YesNo','Info')
+    if ($answ -eq "Yes") {    
+        Remove-Item -Path $LocalFile -Force > $null
+        Move-Item -Path $RemoteFile -Destination $LocalFile > $null
+        Write-Host -ForegroundColor Green 'updated'
+        [System.Windows.MessageBox]::Show("OneShot has been updated.`nPlease relaunch the script.",'UPDATES','Ok','Info') > $null
+        Exit
+    } else {
+        Write-Host -ForegroundColor Yellow 'skipped'
+        Remove-Item -Path $RemoteFile -Force > $null
+    }
 } else {
     Write-Host -ForegroundColor Cyan 'already up to date'
     Remove-Item -Path $RemoteFile -Force > $null
