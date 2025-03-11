@@ -564,11 +564,12 @@ if ($XlsPkg.Workbook.Worksheets.Name -contains 'Orphaned') {
 $HappyEnding = @{}
 $form_panel = FormBase -w 300 -h 220 -text "HAPPY ENDING"
 if ($UseRefFile -eq 'No') {
-    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $true -x 50 -y 20 -text "Add summary pivot template"
+    # enable this feature once implemented the new release
+    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Add summary pivot template"
 } else {
-    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Integrate MOTA worksheet"
+    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Add summary pivot template"
 }
-$HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $false -x 50 -y 50 -text "Open Excel formatted file"
+$HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $true -x 50 -y 50 -text "Open Excel formatted file"
 $HappyEnding['CLEANSWEEP'] = CheckBox -form $form_panel -checked $false -x 50 -y 80 -text "Remove temporary backup"
 OKButton -form $form_panel -x 80 -y 130 -text "Ok"  | Out-Null
 $result = $form_panel.ShowDialog()

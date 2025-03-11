@@ -455,7 +455,7 @@ if ($runpath -match 'Graph') {
 # MOTA integration
 if ($selectedItem.NAME -match 'AssignedLicenses') {
     New-Item -ItemType Directory -Path "$workdir\AzureAD" | Out-Null
-    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/unstable/AzureAD/MOTA.ps1', "$workdir\AzureAD\MOTA.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/AzureAD/MOTA.ps1', "$workdir\AzureAD\MOTA.ps1")
 }
 
 # stuff scripts adopting PSWallet keyring
