@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 24.10.1
+Version...: 25.03.2
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -76,6 +76,44 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
+# check for updated release
+Write-Host -NoNewline 'Check for updated version... '
+$LocalFile = $myinvocation.MyCommand.Definition
+foreach ($newline in (Get-Content $LocalFile)) {
+    $found = $newline -match "^Version...: ([0-9\.]+)$"
+    if ($found) {
+        $LocalVersion = $matches[1] -replace "\.",''
+    }
+}
+$RemoteFile = "C:$($env:HOMEPATH)\Downloads\OneShot.ps1"
+$download = New-Object net.webclient
+$download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/OneShot.ps1', "$RemoteFile")
+foreach ($newline in (Get-Content $RemoteFile)) {
+    $found = $newline -match "^Version...: ([0-9\.]+)$"
+    if ($found) {
+        $RemoteVersion = $matches[1] -replace "\.",''
+    }
+}
+if ($RemoteVersion -gt $LocalVersion) {
+    $answ = [System.Windows.MessageBox]::Show("Newer version is available.`nWould you update to it?",'UPDATES','YesNo','Info')
+    if ($answ -eq "Yes") {    
+        Remove-Item -Path $LocalFile -Force > $null
+        Move-Item -Path $RemoteFile -Destination $LocalFile > $null
+        Write-Host -ForegroundColor Green 'updated'
+        [System.Windows.MessageBox]::Show("OneShot has been updated.`nPlease relaunch the script.",'UPDATES','Ok','Info') > $null
+        Exit
+    } else {
+        Write-Host -ForegroundColor Yellow 'skipped'
+        Remove-Item -Path $RemoteFile -Force > $null
+    }
+} else {
+    Write-Host -ForegroundColor Cyan 'already up to date'
+    Remove-Item -Path $RemoteFile -Force > $null
+}
+
+<# *******************************************************************************
+                                    INIT
+******************************************************************************* #>
 # importing third party modules
 $ErrorActionPreference= 'Stop'
 do {
@@ -119,7 +157,6 @@ if (Test-Path $workdir) {
 }
 New-Item -ItemType directory -Path $workdir > $null
 New-Item -ItemType directory -Path "$workdir\Modules" > $null
-$download = New-Object net.webclient
 foreach ($psm1File in (Get-GitHubContent `
     -OwnerName $theOwner `
     -RepositoryName $theRepo `
@@ -413,6 +450,12 @@ if ($runpath -match 'Graph') {
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Graph/AppKeyring.ps1', "$workdir\Graph\AppKeyring.ps1")
     New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PSWallet.ps1', "$workdir\Safety\PSWallet.ps1")
+}
+
+# MOTA integration
+if ($selectedItem.NAME -match 'AssignedLicenses') {
+    New-Item -ItemType Directory -Path "$workdir\AzureAD" | Out-Null
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/AzureAD/MOTA.ps1', "$workdir\AzureAD\MOTA.ps1")
 }
 
 # stuff scripts adopting PSWallet keyring
