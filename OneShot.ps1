@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 25.03.2
+Version...: 25.03.3
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -82,7 +82,7 @@ $LocalFile = $myinvocation.MyCommand.Definition
 foreach ($newline in (Get-Content $LocalFile)) {
     $found = $newline -match "^Version...: ([0-9\.]+)$"
     if ($found) {
-        $LocalVersion = $matches[1] -replace "\.",''
+        $LocalVersion = $matches[1]
     }
 }
 $RemoteFile = "C:$($env:HOMEPATH)\Downloads\OneShot.ps1"
@@ -91,11 +91,11 @@ $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/ma
 foreach ($newline in (Get-Content $RemoteFile)) {
     $found = $newline -match "^Version...: ([0-9\.]+)$"
     if ($found) {
-        $RemoteVersion = $matches[1] -replace "\.",''
+        $RemoteVersion = $matches[1]
     }
 }
-if ($RemoteVersion -gt $LocalVersion) {
-    $answ = [System.Windows.MessageBox]::Show("Newer version is available.`nWould you update to it?",'UPDATES','YesNo','Info')
+if (($RemoteVersion -replace "\.",'') -gt ($LocalVersion -replace "\.",'')) {
+    $answ = [System.Windows.MessageBox]::Show("Newer version is available ($RemoteVersion).`nWould you update to it?",'UPDATES','YesNo','Info')
     if ($answ -eq "Yes") {    
         Remove-Item -Path $LocalFile -Force > $null
         Move-Item -Path $RemoteFile -Destination $LocalFile > $null
@@ -123,13 +123,12 @@ do {
         
         # comment out the following lines if you cached a GitHub API Token
         Set-GitHubConfiguration -DisableTelemetry -WebRequestTimeoutSec 120 -SuppressNoTokenWarning
-        $disclaimer = @"
-The module [PowerShellForGitHub] has not yet been configured with a personal GitHub Access token.
+        Write-Host -ForegroundColor Yellow @"
 
++++ PLEASE NOTE +++
+The module [PowerShellForGitHub] has not yet been configured with a personal GitHub Access token.
 The script can still be run, but GitHub will limit your usage to 60 queries per hour.
 "@
-        [System.Windows.MessageBox]::Show($disclaimer,'DISCLAIMER','Ok','warning') > $null
-
     } catch {
         if (!(((Get-InstalledModule).Name) -contains 'PowerShellForGitHub')) {
             Install-Module PowerShellForGitHub -Scope AllUsers -Confirm:$False -Force
@@ -218,7 +217,7 @@ while ($continueBrowsing) {
     $ExLinkLabel = New-Object System.Windows.Forms.LinkLabel
     $ExLinkLabel.Location = New-Object System.Drawing.Size(510,($hmin - 80))
     $ExLinkLabel.Size = New-Object System.Drawing.Size(300,30)
-    $ExLinkLabel.Text = "Get more info about my repository"
+    $ExLinkLabel.Text = "OneShot $LocalVersion - Get more info about my repository"
     $ExLinkLabel.TextAlign = 'MiddleRight'
     $ExLinkLabel.Font = [System.Drawing.Font]::new("Microsoft Sans Serif", 8, [System.Drawing.FontStyle]::Bold)
     $ExLinkLabel.add_Click({[system.Diagnostics.Process]::start("https://github.com/dcorrada/POWERSHELL")})
@@ -316,7 +315,7 @@ while ($continueBrowsing) {
             $intoBox = $arrayContent | Out-String
         } else {
             $fileContent = (Invoke-WebRequest -Uri $selectedItem.URL -UseBasicParsing).Content.Split("`n")
-            $maxlines = 19
+            $maxlines = 49
             if ($fileContent.Count -lt $maxlines) {
                 $maxlines = $fileContent.Count - 1
             }
