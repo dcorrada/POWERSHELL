@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 25.03.2
+Version...: 25.03.3
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -565,17 +565,21 @@ $HappyEnding = @{}
 $form_panel = FormBase -w 300 -h 220 -text "HAPPY ENDING"
 if ($UseRefFile -eq 'No') {
     # enable this feature once implemented the new release
-    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Add summary pivot template"
+    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $true -x 50 -y 20 -text "Add summary pivot template"
+    $HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $true -x 50 -y 50 -text "Open Excel formatted file"
+    $HappyEnding['CLEANSWEEP'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 80 -text "Remove temporary backup"
 } else {
-    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $false -enabled $false -x 50 -y 20 -text "Add summary pivot template"
+    $HappyEnding['PIVOT'] = CheckBox -form $form_panel -checked $false -x 50 -y 20 -text "Add summary pivot template"
+    $HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $false -x 50 -y 50 -text "Open Excel formatted file"
+    $HappyEnding['CLEANSWEEP'] = CheckBox -form $form_panel -checked $true -x 50 -y 80 -text "Remove temporary backup"
 }
-$HappyEnding['PREVIEW'] = CheckBox -form $form_panel -checked $true -x 50 -y 50 -text "Open Excel formatted file"
-$HappyEnding['CLEANSWEEP'] = CheckBox -form $form_panel -checked $false -x 50 -y 80 -text "Remove temporary backup"
 OKButton -form $form_panel -x 80 -y 130 -text "Ok"  | Out-Null
 $result = $form_panel.ShowDialog()
 
 if ($HappyEnding['PIVOT'].Checked -eq $true) {
-<# review needed
+    #Close-ExcelPackage -ExcelPackage $XlsPkg
+    #$XlsPkg = Open-ExcelPackage -Path $xlsx_file
+
     Add-Worksheet -ExcelPackage $XlsPkg -WorksheetName 'SUMMARY' > $null
 
     Add-PivotTable -ExcelPackage $XlsPkg `
@@ -586,11 +590,12 @@ if ($HappyEnding['PIVOT'].Checked -eq $true) {
 
     $placeholder = ($avail_lics.Count * 3) + 11
     Add-PivotTable -ExcelPackage $XlsPkg `
-    -PivotTableName 'ASSIGNED' -Address $XlsPkg.SUMMARY.cells["B$placeholder"] `
-    -SourceWorksheet 'Assigned_Licenses' `
-    -PivotRows ('LICENSE', 'DESC') -PivotColumns 'TIMESTAMP' -PivotData 'LICENSE' `
-    -PivotTableStyle 'Dark3' -PivotTotals 'Rows'
-#> 
+    -PivotTableName 'ASSIGNEMENTS' -Address $XlsPkg.SUMMARY.cells["B$placeholder"] `
+    -SourceWorksheet 'MOTA' `
+    -PivotRows ('LICENSE', 'ACCOUNT') -PivotColumns 'TIMESTAMP' -PivotData 'LICENSE' `
+    -PivotFilter 'STATUS' `
+    -GroupDateColumn 'TIMESTAMP' -GroupDatePart 'Years,Months' `
+    -PivotTableStyle 'Dark3' -PivotTotals 'Rows' 
 }
 
 if ($HappyEnding['PREVIEW'].Checked -eq $true) {
