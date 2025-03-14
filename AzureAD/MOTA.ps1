@@ -2,7 +2,7 @@ Param([string]$InFile='NULL')
 
 <#
 Name......: MOTA.ps1
-Version...: 25.03.2
+Version...: 25.03.3
 Author....: Dario CORRADA
 
 This script would be an add on for all of the AssignedLicenses*.ps1 flavours. 
@@ -47,9 +47,6 @@ catch {
 }
 $ErrorActionPreference= 'Inquire'
 
-# just pipe more than single "Split-Path" if the script maps to nested subfolders
-$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent 
-
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -59,19 +56,12 @@ Add-Type -AssemblyName PresentationFramework
 $ErrorActionPreference= 'Stop'
 do {
     try {
-        Import-Module -Name "$workdir\Modules\Forms.psm1"
         Import-Module ImportExcel
         $ThirdParty = 'Ok'
     } catch {
-        if (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
-            Install-Module ImportExcel -Confirm:$False -Force
-            [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
-            $ThirdParty = 'Ko'
-        } else {
-            [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error') > $null
-            Write-Host -ForegroundColor Red "ERROR: $($error[0].ToString())"
-            exit
-        }
+        Install-Module ImportExcel -Confirm:$False -Force
+        [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
+        $ThirdParty = 'Ko'
     }
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
@@ -166,7 +156,7 @@ foreach ($currentUser in $RawData.Keys) {
     foreach ($currentDate in $RawData["$currentUser"].Keys) {
         foreach ($currentEvent in ($RawData["$currentUser"])["$currentDate"]) {
             if ($currentEvent -match ">>null") {
-                # data which came from AssignedLicenses worksheet
+                # data which came from Assigned_Licenses worksheet
             } else {
                 $ToBeParsed += "$currentUser"
             }
@@ -178,11 +168,11 @@ $ParsedData = @()
 foreach ($currentUser in $RawData.Keys) {
     if ($ToBeParsed -contains $currentUser) {
         foreach ($currentDate in $RawData["$currentUser"].Keys) {
-            foreach ($event in ($RawData["$currentUser"])["$currentDate"]) {
-                if ($event -match ">>null") {
+            foreach ($currentEvent in ($RawData["$currentUser"])["$currentDate"]) {
+                if ($currentEvent -match ">>null") {
                     # data which came from AssignedLicenses worksheet but
                     # this account was previously involved (also found in Orphaned worksheet)
-                    $assignement -match "^(.+)>>" | Out-Null
+                    $currentEvent -match "^(.+)>>" | Out-Null
                     $currentLicense = $matches[1]
                     $ParsedData += [pscustomobject]@{
                         TIMESTAMP   = "$currentDate"
@@ -190,8 +180,8 @@ foreach ($currentUser in $RawData.Keys) {
                         LICENSE     = $currentLicense
                         STATUS      = 'ASSIGNED'
                     }
-                } elseif ($event -match "user no longer exists on tenant") {
-                    $event -match "^(.+)>>user no longer exists on tenant since>>(.+)$" | Out-Null
+                } elseif ($currentEvent -match "user no longer exists on tenant") {
+                    $currentEvent -match "^(.+)>>user no longer exists on tenant since>>(.+)$" | Out-Null
                     $currentLicense = $matches[1]
                     $birthday = $matches[2]
                     if ($currentLicense -cne 'NONE') {
@@ -212,9 +202,9 @@ foreach ($currentUser in $RawData.Keys) {
                     } else {
                         # dismissed account in which license have been recovered before (nothing to do)
                     }
-                } elseif ($event -match 'license dismissed for this user') {
+                } elseif ($currentEvent -match 'license dismissed for this user') {
                     # dismissed license
-                    $event -match "^(.+)>>license dismissed for this user" | Out-Null
+                    $currentEvent -match "^(.+)>>license dismissed for this user" | Out-Null
                     $currentLicense = $matches[1]
                     $ParsedData += [pscustomobject]@{
                         TIMESTAMP   = "$currentDate"
@@ -222,11 +212,11 @@ foreach ($currentUser in $RawData.Keys) {
                         LICENSE     = $currentLicense
                         STATUS      = 'RECOVERED'
                     }
-                } elseif ($event -match "assigned license\(s\) to this user") {
+                } elseif ($currentEvent -match "assigned license\(s\) to this user") {
                     # account created without any license, assignement was done afterwards
                     # and already collected from AssignedLicenses worksheet
 
-                    $event -match "^(.+)>>assigned license\(s\) to this user" | Out-Null
+                    $currentEvent -match "^(.+)>>assigned license\(s\) to this user" | Out-Null
                     $currentLicense = $matches[1]
                     if ($currentLicense -cne 'NONE') {
                         # just handle any exception due to old releases of AssignedLicenses*.ps1 script
