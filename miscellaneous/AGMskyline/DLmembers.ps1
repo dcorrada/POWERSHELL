@@ -48,6 +48,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
+Import-Module ExchangeOnlineManagement
 
 # retrieve credentials
 Write-Host -NoNewline "Credential management... "
@@ -158,10 +159,46 @@ foreach ($currentGroup in $GroupList) {
         $fetched_data += $fetched_record
     }
     Write-Host -ForegroundColor Green ' Ok'
+
+    Disconnect-ExchangeOnline -Confirm:$false
 }
 
 # disconnect from Tenant
 $infoLogout = Disconnect-Graph
+
+# Dynamic Distribution Lists
+Write-Host -NoNewline "Fetching dynamic DLs..."
+try {
+    Connect-ExchangeOnline -ShowBanner:$false
+    $eolok = $true
+    Write-Host -NoNewline "."
+}
+catch {
+    Write-Host -ForegroundColor Yellow " SKIP (unable to connect to ExchangeOnLine)"
+    $eolok = $false
+    Pause
+}
+if ($eolok) {
+    foreach ($dyndl in Get-DynamicDistributionGroup) {
+        foreach ($member in Get-DynamicDistributionGroupMember -Identity $dyndl.DisplayName) {
+            $fetched_record = @{
+                DLNAME          = $dyndl.DisplayName
+                DLDESC          = $dyndl.Notes
+                DLMAIL          = $dyndl.PrimarySmtpAddress
+                DLCREATED       = $dyndl.WhenCreated | Get-Date -format "yyyy-MM-dd"
+                DLSECURITY      = 'False'
+                DLMAILENABLED   = 'True'
+                DLTYPE          = 'Dynamic'
+                FULLNAME        = $member.DisplayName
+                EMAIL           = $member.PrimarySmtpAddress
+            }
+            $fetched_data += $fetched_record
+            Write-Host -NoNewline '.'
+        }
+    }
+    Write-Host -ForegroundColor Green ' DONE'
+}
+
 
 # writing output file
 Write-Host -NoNewline "Writing output file... "
