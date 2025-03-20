@@ -167,19 +167,20 @@ foreach ($currentGroup in $GroupList) {
 $infoLogout = Disconnect-Graph
 
 # Dynamic Distribution Lists
-Write-Host -NoNewline "Fetching dynamic DLs..."
+Write-Host -NoNewline "`nFetching dynamic DLs..."
 try {
     Connect-ExchangeOnline -ShowBanner:$false
     $eolok = $true
-    Write-Host -NoNewline "."
+    Write-Host -ForegroundColor Green "LOGGED"
 }
 catch {
-    Write-Host -ForegroundColor Yellow " SKIP (unable to connect to ExchangeOnLine)"
+    Write-Host -ForegroundColor Yellow " SKIPPED`n(unable to connect to ExchangeOnLine)"
     $eolok = $false
     Pause
 }
 if ($eolok) {
     foreach ($dyndl in Get-DynamicDistributionGroup) {
+        Write-Host -NoNewline -ForegroundColor Blue "   $($dyndl.DisplayName)"
         foreach ($member in Get-DynamicDistributionGroupMember -Identity $dyndl.DisplayName) {
             $fetched_record = @{
                 DLNAME          = $dyndl.DisplayName
@@ -195,8 +196,8 @@ if ($eolok) {
             $fetched_data += $fetched_record
             Write-Host -NoNewline '.'
         }
+        Write-Host -ForegroundColor Green ' Ok'
     }
-    Write-Host -ForegroundColor Green ' DONE'
 }
 
 
