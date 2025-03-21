@@ -36,20 +36,12 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-$cercaWally = 'C:\Users\dario.corrada\Desktop\SCRIPT MIEI\Safety\Stargate.ps1'
-if (!(Test-Path -Path $cercaWally -PathType Leaf)) {
-    $cercaWally = 'C:\Users\korda\Desktop\POWERSHELL\Safety\Stargate.ps1'
-}
-if (!(Test-Path -Path $cercaWally -PathType Leaf)) {
-    $cercaWally = 'C:\Users\dario.corrada\Desktop\POWERSHELL\Safety\Stargate.ps1'
-}
-
 # local IP address of the MySQL server
 $ahost = '192.168.20.205'
 
 # MySQL login dialog
 [System.Windows.MessageBox]::Show("Insert credentials for MySQL connection",'MYSQL','Ok','Info') | Out-Null
-$pswout = PowerShell.exe -file "$cercaWally" -ascript 'AGMskyline'
+$pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'AGMskyline'
 if ($pswout.Count -eq 2) {
     ($dumpUsr, $dumpPwd) = ($pswout[0], $pswout[1])
     $MySQLpwd = ConvertTo-SecureString $pswout[1] -AsPlainText -Force    
@@ -74,7 +66,7 @@ if ($answ -eq "Yes") {
 
     # SSH login dialog
     [System.Windows.MessageBox]::Show("Insert credentials for SSH connection",'SSH','Ok','Info') | Out-Null
-    $pswout = PowerShell.exe -file "$cercaWally" -ascript 'AGMskyline'
+    $pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'AGMskyline'
     if ($pswout.Count -eq 2) {
         $SSHpwd = ConvertTo-SecureString $pswout[1] -AsPlainText -Force
         $SSHlogin = New-Object System.Management.Automation.PSCredential($pswout[0], $SSHpwd)
