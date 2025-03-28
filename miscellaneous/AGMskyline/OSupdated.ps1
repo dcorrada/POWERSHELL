@@ -211,7 +211,7 @@ Write-Host -ForegroundColor Green ' DONE'
 <# *******************************************************************************
                                     OUTPUT
 ******************************************************************************* #>
-$xlsx_file = "C:$env:HOMEPATH\Downloads\WinBuild-" + (Get-Date -format "yyMMddHHmmSS") + '.xlsx'
+$xlsx_file = "C:$env:HOMEPATH\Downloads\OSupdated-" + (Get-Date -format "yyMMddHHmmSS") + '.xlsx'
 $XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 $XlsPkg = $ParsedData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName 'PrettyFly' -TableName 'PrettyFly' -TableStyle 'Medium2' -AutoSize -PassThru
 Close-ExcelPackage -ExcelPackage $XlsPkg -Show
