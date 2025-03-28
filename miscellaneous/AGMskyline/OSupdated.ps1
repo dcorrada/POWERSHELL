@@ -1,6 +1,6 @@
 <#
-Name......: WinBuild.ps1
-Version...: 25.03.1
+Name......: OSupdated.ps1
+Version...: 25.03.2
 Author....: Dario CORRADA
 
 Questo script interroga il DB AGMSkyline e recupera le versioni di build di 
@@ -118,8 +118,8 @@ try {
     $aquery = @"
 SELECT DISTINCT EstrazioneUtenti.FULLNAME, EstrazioneUtenti.EMAIL,
        EstrazioneAsset.HOSTNAME,
-       ADcomputers.OS AS 'AD_OS',
-       CONCAT(AzureDevices.OSTYPE, ' ', AzureDevices.OSVER) AS 'AZURE_OS',
+       ADcomputers.OS AS 'AD_OS', ADcomputers.LOGONDATE AS 'AD_TM',
+       CONCAT(AzureDevices.OSTYPE, ' ', AzureDevices.OSVER) AS 'AZ_OS', AzureDevices.LOGONDATE AS 'AZ_TM',
        TrendMicroparsed.OS AS 'TM_OS'
 FROM Xhosts
 LEFT JOIN EstrazioneAsset ON Xhosts.ESTRAZIONEASSET = EstrazioneAsset.ID
@@ -160,12 +160,30 @@ $BuildDict = @{
 
 $ParsedData = $RawData | ForEach-Object {
     Write-Host -NoNewline '.'
-    if (([string]::IsNullOrEmpty($_.AD_OS)) -and ([string]::IsNullOrEmpty($_.AZURE_OS))) {
+    if (([string]::IsNullOrEmpty($_.AD_OS)) -and ([string]::IsNullOrEmpty($_.AZ_OS))) {
         # no data available (no joined to domain and/or other OS installed)
         $daBuild = 'na'
+        $daDate = '1980-02-07'
     } else {
+        $daDate_set = $false
+        if ([string]::IsNullOrEmpty($_.AD_TM)) {
+            $daDate = $_.AZ_TM
+            $daDate_set = $true
+        }
+        if ([string]::IsNullOrEmpty($_.AZ_TM)) {
+            $daDate = $_.AD_TM
+            $daDate_set = $true
+        }
+        if (!($daDate_set)) {
+            if ($_.AD_TM -ge $_.AZ_TM) {
+                $daDate = $_.AD_TM
+            } else {
+                $daDate = $_.AZ_TM
+            }
+        }
+        
         $OSs = @()
-        foreach ($currentString in ($_.AD_OS, $_.AZURE_OS, $_.TM_OS)) {
+        foreach ($currentString in ($_.AD_OS, $_.AZ_OS, $_.TM_OS)) {
             $gotcha = $currentString | Select-String -Pattern ($($BuildDict.Keys))
             if ($gotcha.Matches.Success) {
                 $OSs += $BuildDict[$gotcha.Matches.Value]
@@ -185,7 +203,8 @@ $ParsedData = $RawData | ForEach-Object {
         EMAIL      = "$($_.EMAIL)"
         HOSTNAME   = "$($_.HOSTNAME)"
         BUILD      = "$daBuild"
-    } | Select FULLNAME, EMAIL, HOSTNAME, BUILD
+        LOGONDATE  =  [DateTime]$daDate
+    } | Select FULLNAME, EMAIL, HOSTNAME, BUILD, LOGONDATE
 }
 Write-Host -ForegroundColor Green ' DONE'
 
