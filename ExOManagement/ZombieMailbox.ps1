@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailbox.ps1
-Version...: 25.2.5
+Version...: 25.4.1
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
@@ -56,6 +56,7 @@ do {
     try {
         Import-Module -Name "$workdir\Modules\Forms.psm1"
         Import-Module ExchangeOnlineManagement
+        Import-Module MSOnline
         Import-Module ImportExcel
         $ThirdParty = 'Ok'
     } catch {
@@ -66,6 +67,10 @@ do {
         } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
             Install-Module ImportExcel -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
+            $ThirdParty = 'Ko'
+        } elseif (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
+            Install-Module MSOnline -Confirm:$False -Force
+            [System.Windows.MessageBox]::Show("Installed [MSOnline] module: click Ok restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } else {
             [System.Windows.MessageBox]::Show("Error importing modules",'ABORTING','Ok','Error') > $null
@@ -107,6 +112,68 @@ if ($SIDfilter) {
         $DisabledUsers["$($DisabledItem.SID)"] = "$($DisabledItem.UserPrincipalName)"
     }
 }
+
+<# *******************************************************************************
+                                LICENSES
+******************************************************************************* #>
+<# !!! PLEASE NOTE !!!
+Connection to MSOnline (cmdlet Connect-MsolService) must be run BEFORE connection
+to ExchangeOnline (cmdlet Connect-ExchangeOnline). Inverting such sequence may 
+raise an unexpected exception (aka something like the following error message 
+"Connect-MsolService must be run prior to any other cmdlet")
+#>
+Write-Host -NoNewline "Connecting to MSOnLine... "
+try {
+    Connect-MsolService
+    Write-Host -ForegroundColor Green "Ok"
+}
+catch {
+    Write-Host -ForegroundColor Red "Ko"
+    Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+
+Write-Host -NoNewline "Gathering assigned licenses..."
+$MsolUsrData = @{}
+$tot = (Get-MsolUser -All).Count
+$usrcount = 0
+$parsebar = ProgressBar
+foreach ($item in (Get-MsolUser -All)) {
+    $usrcount ++
+    if (!($MsolUsrData.ContainsKey($item.UserPrincipalName))) {
+        $MsolUsrData[$item.UserPrincipalName] = 'null'    
+    }
+    
+    if ($item.IsLicensed -eq "True") {
+        $licenses = @()
+        foreach ($accountsku in $item.Licenses.AccountSku.SkuPartNumber) {
+            $licenses += $accountsku
+        }
+        $MsolUsrData[$item.UserPrincipalName] = $licenses -join '.'
+    } else {
+        $MsolUsrData[$item.UserPrincipalName] = 'NONE'
+    }
+
+    # progressbar
+    $percent = ($usrcount / $tot)*100
+    if ($percent -gt 100) {
+        $percent = 100
+    }
+    $formattato = '{0:0.0}' -f $percent
+    [int32]$progress = $percent   
+    $parsebar[2].Text = ("User {0} out of {1} parsed [{2}%]" -f ($usrcount, $tot, $formattato))
+    if ($progress -ge 100) {
+        $parsebar[1].Value = 100
+    } else {
+        $parsebar[1].Value = $progress
+    }
+    [System.Windows.Forms.Application]::DoEvents()
+
+    Start-Sleep -Milliseconds 10
+}
+Write-Host -ForegroundColor Green " DONE"
+$parsebar[0].Close()
 
 <# *******************************************************************************
                                     QUERYING
@@ -200,7 +267,7 @@ foreach ($entity in $EXOlist) {
         FULLACCESS      = @()
         SENDAS          = @()
         SENDONBEHALF    = @()
-        EXCLUDED         = 'No'
+        EXCLUDED        = 'No'
         LASTLOGON       = 'na'
     }
 
@@ -350,6 +417,7 @@ $parsebar[0].Close()
 
 Disconnect-ExchangeOnline -Confirm:$false
 
+
 <# *******************************************************************************
                                 GET OUTPUT
 ******************************************************************************* #>
@@ -370,7 +438,8 @@ try {
                 LASTLOGON       = [DateTime]$EXOdetailed[$_].LASTLOGON
                 GRANT           = "FULLACCESS"
                 GRANTED         = "SELF"
-            } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED
+                LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
+            } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
@@ -390,7 +459,8 @@ try {
                         LASTLOGON       = [DateTime]$EXOdetailed[$_].LASTLOGON
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
-                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED
+                        LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
+                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES
                 }
             }
         }
@@ -412,7 +482,8 @@ try {
                         LASTLOGON       = [DateTime]$EXOdetailed[$_].LASTLOGON
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
-                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED
+                        LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
+                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES
                 }
             }
         }
