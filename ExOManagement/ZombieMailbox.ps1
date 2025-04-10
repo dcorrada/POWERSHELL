@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailbox.ps1
-Version...: 25.4.1
+Version...: 25.4.2
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
@@ -135,6 +135,13 @@ catch {
 }
 
 Write-Host -NoNewline "Gathering assigned licenses..."
+$avail_lics = @()
+$AccountName = (Get-MsolAccountSku)[1].AccountName
+foreach ($item in (Get-MsolAccountSku)) {
+    if ($item.ActiveUnits -lt 10000) { # excluding the broadest licenses
+        $avail_lics += $item.SkuPartNumber
+    }
+}
 $MsolUsrData = @{}
 $tot = (Get-MsolUser -All).Count
 $usrcount = 0
@@ -148,9 +155,11 @@ foreach ($item in (Get-MsolUser -All)) {
     if ($item.IsLicensed -eq "True") {
         $licenses = @()
         foreach ($accountsku in $item.Licenses.AccountSku.SkuPartNumber) {
-            $licenses += $accountsku
+            if ($avail_lics -contains $accountsku) {
+                $licenses += $accountsku
+            }
         }
-        $MsolUsrData[$item.UserPrincipalName] = $licenses -join '.'
+        $MsolUsrData[$item.UserPrincipalName] = $licenses -join ' '
     } else {
         $MsolUsrData[$item.UserPrincipalName] = 'NONE'
     }
@@ -436,10 +445,7 @@ try {
                 UPN             = "$($EXOdetailed[$_].UPN)"
                 DISPLAYNAME     = "$($EXOdetailed[$_].DISPLAYNAME)"
                 LASTLOGON       = [DateTime]$EXOdetailed[$_].LASTLOGON
-                GRANT           = "FULLACCESS"
-                GRANTED         = "SELF"
-                LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
-            } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES
+            } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
@@ -460,7 +466,8 @@ try {
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
                         LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
-                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES
+                        NOTES           = 'null'
+                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES, NOTES
                 }
             }
         }
@@ -483,7 +490,8 @@ try {
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
                         LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
-                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES
+                        NOTES           = 'null'
+                    } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES, NOTES
                 }
             }
         }
