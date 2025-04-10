@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 25.03.3
+Version...: 25.03.4
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -361,6 +361,8 @@ while ($continueBrowsing) {
                         } | Select NAME, PATH, URL   
                     }
                 }
+        } elseif ($selectedItem.NAME -eq 'OneShot.ps1') {
+            [System.Windows.MessageBox]::Show("Hey! Why do you want to iterate myself?!",'WTF','Ok','Warning') | Out-Null
         } else {
             # run the script
             $continueBrowsing = $false
@@ -423,6 +425,7 @@ while ($continueBrowsing) {
 <# *******************************************************************************
                                     RUNNING
 ******************************************************************************* #>
+Clear-Host
 Write-Host -NoNewline "Preparing $($selectedItem.NAME)... "
 $folders = $selectedItem.PATH -split('/')
 $runpath = $workdir
@@ -466,17 +469,43 @@ if ($found.Count -ge 1) {
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PSWallet.ps1', "$workdir\Safety\PSWallet.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/Stargate.ps1', "$workdir\Safety\Stargate.ps1")
 }
+
+# AGMskyline
+if ($selectedItem.PATH -match 'AGMskyline') {
+    if (!(Test-Path "$workdir\miscellaneous\AGMskyline")) {
+        New-Item -ItemType Directory -Path "$workdir\miscellaneous" | Out-Null
+        New-Item -ItemType Directory -Path "$workdir\miscellaneous\AGMskyline" | Out-Null
+    }
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/ADcomputers.ps1', "$workdir\miscellaneous\AGMskyline\ADcomputers.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/ADusers.ps1', "$workdir\miscellaneous\AGMskyline\ADusers.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/AzureDevices.ps1', "$workdir\miscellaneous\AGMskyline\AzureDevices.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/CheckinFrom.ps1', "$workdir\miscellaneous\AGMskyline\CheckinFrom.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/DLmembers.ps1', "$workdir\miscellaneous\AGMskyline\DLmembers.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/EstrazioneAsset.ps1', "$workdir\miscellaneous\AGMskyline\EstrazioneAsset.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/EstrazioneUtenti.ps1', "$workdir\miscellaneous\AGMskyline\EstrazioneUtenti.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/PwdExpire.ps1', "$workdir\miscellaneous\AGMskyline\PwdExpire.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/SchedeAssunzione.ps1', "$workdir\miscellaneous\AGMskyline\SchedeAssunzione.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/SchedeSIM.ps1', "$workdir\miscellaneous\AGMskyline\SchedeSIM.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/SchedeTelefoni.ps1', "$workdir\miscellaneous\AGMskyline\SchedeTelefoni.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/TrendMicroparsed.ps1', "$workdir\miscellaneous\AGMskyline\TrendMicroparsed.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/o365licenses.ps1', "$workdir\miscellaneous\AGMskyline\o365licenses.ps1")
+    New-Item -ItemType Directory -Path "$workdir\Graph" | Out-Null
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Graph/AppKeyring.ps1', "$workdir\Graph\AppKeyring.ps1")
+    if (!(Test-Path "$workdir\Safety\PSWallet.ps1" -PathType Leaf)) {
+        New-Item -ItemType Directory -Path "$workdir\Safety" | Out-Null
+        $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/PSWallet.ps1', "$workdir\Safety\PSWallet.ps1")
+        $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/master/Safety/Stargate.ps1', "$workdir\Safety\Stargate.ps1")
+    }
+}
+
+
 Write-Host -ForegroundColor Green "DONE"
 
 # run the script
-if ($selectedItem.NAME -eq 'OneShot.ps1') {
-    [System.Windows.MessageBox]::Show("OneShot does not lauch itself, fresh version is downloaded in `n[$workdir]",'UPDATE','Ok','Info') | Out-Null
-} else {
-    Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
-    Start-Sleep -Milliseconds 1000
-    Clear-Host
-    PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
-}
+Write-Host -ForegroundColor Cyan "Launching $($selectedItem.NAME)..."
+Start-Sleep -Milliseconds 1000
+Clear-Host
+PowerShell.exe "& ""$runpath\$($selectedItem.NAME)"
 
 <# *******************************************************************************
                                     CLEANING
@@ -505,10 +534,5 @@ $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/te
 PowerShell.exe "& ""$workdir\miscellaneous\Quotes.ps1"
 
 # delete temps
-if ($selectedItem.NAME -cne 'OneShot.ps1') {
-    $answ = [System.Windows.MessageBox]::Show("Your script [$($selectedItem.NAME)] is terminated: `ndo you want to locally delete it?",'CLEAN','YesNo','Info')
-    if ($answ -eq "Yes") {
-        Set-Location $env:USERPROFILE     
-        Remove-Item -Path $workdir -Recurse -Force > $null
-    }
-}
+Set-Location $env:USERPROFILE     
+Remove-Item -Path $workdir -Recurse -Force > $null
