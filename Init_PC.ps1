@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 25.03.2
+Version...: 25.04.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -100,12 +100,12 @@ if ($info[2] -match 'Windows 10') {
     $stdout_winget = winget.exe source update
     $source = ('null', 'null')
     foreach ($newline in $stdout_winget) {
-        if ($newline -match "^Aggiornamento origine") {
+        if (($newline -match "^Aggiornamento origine") -or ($newline -match "^Updating all sources")) {
             $newline -match ": ([A-Za-z0-9]+)(\.{0,3})$" | Out-Null
             $source[0] = $matches[1]
-        } elseif ($newline -eq "Fatto") {
+        } elseif (($newline -eq "Fatto") -or ($newline -eq "Done")) {
             $source[1] = 'Ok'
-        } elseif ($newline -eq "Annullato") {
+        } elseif (($newline -eq "Annullato") -or ($newline -eq "Cancelled")) {
             $source[1] = 'Ko'
         }
     }
@@ -162,9 +162,7 @@ $result = $form_panel.ShowDialog()
 $msstore_opts = '--source msstore --scope machine --accept-package-agreements --accept-source-agreements --silent'
 $winget_opts = '--source winget --scope machine --accept-package-agreements --accept-source-agreements --silent'
 
-[System.Windows.MessageBox]::Show("Currently winget handling exception(s) `nis focused on IT-it language",'PLEASE NOTE','Ok','Warning') | Out-Null
 # for more deeply inspection "Start-Process" cmdlet could be run also with "-RedirectStandardError" option
-
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
