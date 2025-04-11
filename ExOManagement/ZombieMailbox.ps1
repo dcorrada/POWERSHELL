@@ -285,6 +285,7 @@ foreach ($entity in $EXOlist) {
         $EXOdetailed["$($entity.OBJ_ID)"].EXCLUDED = 'Yes'
         $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
         $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = '1980-02-07 12:00:00'
+        Start-Sleep -Milliseconds 100
     } else {
         Write-Host -ForegroundColor Cyan "$($entity.UPN)"
 
@@ -334,7 +335,7 @@ foreach ($entity in $EXOlist) {
         }
 
         foreach ($fuller in (Get-EXOMailboxPermission -id $entity.OBJ_ID)) {
-            if (($fuller.AccessRights -join ',') -cmatch 'FullAccess') {
+            if ((($fuller.AccessRights -join ',') -cmatch 'FullAccess') -and ($fuller.InheritanceType -cne 'None')) {
                 if ($fuller.User -ceq 'NT AUTHORITY\SELF') {
                     $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
                 } else {
