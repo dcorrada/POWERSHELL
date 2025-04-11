@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailbox.ps1
-Version...: 25.4.2
+Version...: 25.4.3
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
@@ -280,22 +280,23 @@ foreach ($entity in $EXOlist) {
         LASTLOGON       = 'na'
     }
 
-    $ErrorActionPreference= 'Stop'
-    try {
-        $mbs = Get-MailboxStatistics -Identity $entity.UPN | Select LastLogonTime
-        $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = "$(($mbs.LastLogonTime | Get-Date -format 'yyyy-MM-dd HH:mm:ss').ToString())"
-    }
-    catch {
-        $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = '1980-02-07 12:00:00'
-    }
-    $ErrorActionPreference= 'Inquire'
-
     if ($ExcludeList.ContainsKey($entity.UPN)) {
         Write-Host -ForegroundColor DarkGray "$($entity.UPN)"
         $EXOdetailed["$($entity.OBJ_ID)"].EXCLUDED = 'Yes'
         $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
+        $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = '1980-02-07 12:00:00'
     } else {
         Write-Host -ForegroundColor Cyan "$($entity.UPN)"
+
+        $ErrorActionPreference= 'Stop'
+        try {
+            $mbs = Get-MailboxStatistics -Identity $entity.UPN | Select LastLogonTime
+            $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = "$(($mbs.LastLogonTime | Get-Date -format 'yyyy-MM-dd HH:mm:ss').ToString())"
+        }
+        catch {
+            $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = '1980-02-07 12:00:00'
+        }
+        $ErrorActionPreference= 'Inquire'
 
         foreach ($sandman in (Get-EXOrecipientPermission -id $entity.OBJ_ID)) {
             if ((($sandman.AccessRights -join ',') -cmatch 'SendAs') -and ($sandman.Trustee -cne 'NT AUTHORITY\SELF')) {
@@ -444,8 +445,7 @@ try {
                 OBJECTID        = "$_"
                 UPN             = "$($EXOdetailed[$_].UPN)"
                 DISPLAYNAME     = "$($EXOdetailed[$_].DISPLAYNAME)"
-                LASTLOGON       = [DateTime]$EXOdetailed[$_].LASTLOGON
-            } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON
+            } | Select OBJECTID, UPN, DISPLAYNAME
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
