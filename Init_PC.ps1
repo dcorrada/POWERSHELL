@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 25.03.1
+Version...: 25.04.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -100,12 +100,12 @@ if ($info[2] -match 'Windows 10') {
     $stdout_winget = winget.exe source update
     $source = ('null', 'null')
     foreach ($newline in $stdout_winget) {
-        if ($newline -match "^Aggiornamento origine") {
+        if (($newline -match "^Aggiornamento origine") -or ($newline -match "^Updating all sources")) {
             $newline -match ": ([A-Za-z0-9]+)(\.{0,3})$" | Out-Null
             $source[0] = $matches[1]
-        } elseif ($newline -eq "Fatto") {
+        } elseif (($newline -eq "Fatto") -or ($newline -eq "Done")) {
             $source[1] = 'Ok'
-        } elseif ($newline -eq "Annullato") {
+        } elseif (($newline -eq "Annullato") -or ($newline -eq "Cancelled")) {
             $source[1] = 'Ko'
         }
     }
@@ -120,7 +120,7 @@ if ($info[2] -match 'Windows 10') {
         Add-AppxPackage $env:TEMP\source.msix
 
         Currently such patch doesn't work on some Win11 installation, no clues about
-        #>
+        #>        
     } else {
         $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
     }
@@ -130,27 +130,29 @@ if ([string]::IsNullOrEmpty($winget_exe)) {
 }
 
 $swlist = @{}
-$form_panel = FormBase -w 350 -h 540 -text "SOFTWARES"
+$form_panel = FormBase -w 350 -h 470 -text "SOFTWARES"
 $swlist['Acrobat Reader'] = CheckBox -form $form_panel -checked $true -x 20 -y 20 -text "Acrobat Reader"
-$swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "Chrome"
-$swlist['BatteryMon'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "BatteryMon"
-$swlist['TempMonitor'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "Open Hardware Monitor"
-$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 140 -text "Revo Uninstaller"
-$swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 170 -text "Office 365 Desktop"
-$swlist['Speccy'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Speccy"
-$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Supremo"
+$swlist['BatteryMon'] = CheckBox -form $form_panel -checked $true -x 20 -y 50 -text "BatteryMon"
+$swlist['Chrome'] = CheckBox -form $form_panel -checked $true -x 20 -y 80 -text "Chrome"
+$swlist['OCCT'] = CheckBox -form $form_panel -checked $true -x 20 -y 110 -text "OCCT"
 if ($info[2] -match 'Windows 11') {
-    $swlist['Teams'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 260 -text "Teams"
+    $swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 140 -text "Office 365 Desktop"
 } else {
-    $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "Teams"
+    $swlist['Office 365 Desktop'] = CheckBox -form $form_panel -checked $false -x 20 -y 140 -text "Office 365 Desktop"
 }
-$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 290 -text "TreeSize"
-$swlist['VPNold'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 320 -text "VPN WatchGuard"
-$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 350 -text "VPN Fortinet"
-$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 380 -text "7ZIP"
-OKButton -form $form_panel -x 100 -y 430 -text "Ok"  | Out-Null
+$swlist['Revo Uninstaller'] = CheckBox -form $form_panel -checked $true -x 20 -y 170 -text "Revo Uninstaller"
+$swlist['Supremo'] = CheckBox -form $form_panel -checked $true -x 20 -y 200 -text "Supremo"
+if ($info[2] -match 'Windows 11') {
+    $swlist['Teams'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 230 -text "Teams"
+} else {
+    $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
+}
+$swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
+$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "VPN Fortinet"
+$swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
+OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
-    foreach ($item in ('Acrobat Reader', 'BatteryMon', 'Chrome', 'Revo Uninstaller', 'Speccy', 'TreeSize', '7ZIP')) {
+    foreach ($item in ('Acrobat Reader', 'BatteryMon', 'Chrome', 'OCCT', 'Revo Uninstaller', 'TreeSize', '7ZIP')) {
         $swlist[$item].Checked = $false
         $swlist[$item].Enabled = $false
     }
@@ -160,15 +162,13 @@ $result = $form_panel.ShowDialog()
 $msstore_opts = '--source msstore --scope machine --accept-package-agreements --accept-source-agreements --silent'
 $winget_opts = '--source winget --scope machine --accept-package-agreements --accept-source-agreements --silent'
 
-[System.Windows.MessageBox]::Show("Currently winget handling exception(s) `nis focused on IT-it language",'PLEASE NOTE','Ok','Warning') | Out-Null
 # for more deeply inspection "Start-Process" cmdlet could be run also with "-RedirectStandardError" option
-
 foreach ($item in ($swlist.Keys | Sort-Object)) {
     if ($swlist[$item].Checked -eq $true) {
         Write-Host -ForegroundColor Blue "[$item]"
         if ($item -eq 'Acrobat Reader') {
             Write-Host -NoNewline "Installing Acrobat Reader..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Adobe Acrobat Reader (64-bit)', $winget_opts
+            $StagingArgumentList = 'install {0} {1}' -f '--id Adobe.Acrobat.Reader.64-bit', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Acrobat.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
@@ -194,7 +194,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             }
         } elseif ($item -eq 'BatteryMon') {
             Write-Host -NoNewline "Installing BatteryMon..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'BatteryMon', $winget_opts
+            $StagingArgumentList = 'install {0} {1}' -f '--id PassmarkSoftware.BatteryMon', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_BatteryMon.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
@@ -214,7 +214,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             https://stackoverflow.com/questions/75647313/winget-install-my-app-receives-installer-hash-does-not-match
             #>  
             Write-Host -NoNewline "Installing Google Chrome..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Google Chrome (EXE)', $winget_opts
+            $StagingArgumentList = 'install {0} {1}' -f '--id Google.Chrome.EXE', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Chrome.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
@@ -226,7 +226,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             } 
         } elseif ($item -eq 'Revo Uninstaller') {
             Write-Host -NoNewline "Installing Revo Uninstaller..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Revo Uninstaller', $winget_opts
+            $StagingArgumentList = 'install {0} {1}' -f '--id RevoUninstaller.RevoUninstaller', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Revo.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
@@ -259,16 +259,13 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
             #>
-        } elseif ($item -eq 'Speccy') {
-            Write-Host -NoNewline "Installing Speccy..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'Speccy', $winget_opts
-            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Speccy.log"
+        } elseif ($item -eq 'OCCT') {
+            Write-Host -NoNewline "Installing OCCT..."
+            $StagingArgumentList = 'install {0} {1}' -f '--id OCBase.OCCT.Personal', $winget_opts
+            $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_OCCT.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
             if (($stdout -match "Installazione riuscita") -or ($stdout -match "Successfully installed")) {
-                if (Test-Path -Path "$env:PUBLIC\Desktop\Speccy.lnk" -PathType Leaf) {
-                    Remove-Item -Path "$env:PUBLIC\Desktop\Speccy.lnk" -Force
-                }
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 Write-Host -ForegroundColor Red " FAILED"
@@ -299,27 +296,23 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
             #>
-        } elseif ($item -eq 'VPNold') {
-            Write-Host -NoNewline "Download software..."
-            #Invoke-WebRequest -Uri 'https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe' -OutFile "C:\Users\Public\Desktop\WatchGuard.exe"
-            $download.Downloadfile("https://cdn.watchguard.com/SoftwareCenter/Files/MUVPN_SSL/12_10_4/WG-MVPN-SSL_12_10_4.exe", "C:\Users\Public\Desktop\WatchGuard.exe")
-            Write-Host -ForegroundColor Green " DONE"
-            $answ = [System.Windows.MessageBox]::Show("Please run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'VPNnew') {
             Write-Host -NoNewline "Download software..."
+            <# no more needed with versions >= 7.4
             # download dependencies (see https://community.fortinet.com/t5/Support-Forum/FortiClientVPN-client-doesn-t-work-with-Windows-11-24H2/m-p/366570#M259815)
             $answ = [System.Windows.MessageBox]::Show("Visual C++ Redistributable for Visual Studio 2015-2022`nis already installed?",'DEPENDENCIES','YesNo','Warning')
             if ($answ -eq "No") {
                 $download.Downloadfile('https://aka.ms/vs/17/release/vc_redist.x64.exe', "C:\Users\Public\Desktop\vc_redist.x64.exe")
                 $answ = [System.Windows.MessageBox]::Show("Keep in mind to install Visual C++ libraries`nBEFORE Fortinet client installation.`n`nPlease run setup once the target account has been logged in",'INFO','Ok','Info')
             }
+            #>
             #Invoke-WebRequest -Uri 'https://links.fortinet.com/forticlient/win/vpnagent' -OutFile "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe"
             $download.Downloadfile('https://links.fortinet.com/forticlient/win/vpnagent', "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe")
             Write-Host -ForegroundColor Green " DONE"
             $answ = [System.Windows.MessageBox]::Show("Fortinet client installer downloaded.`n`nPlease run setup once the target account has been logged in",'INFO','Ok','Info')
         } elseif ($item -eq 'TreeSize') {
             Write-Host -NoNewline "Installing TreeSize Free..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f 'TreeSize Free', $winget_opts
+            $StagingArgumentList = 'install {0} {1}' -f '--id JAMSoftware.TreeSize.Free', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_Treesize.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
@@ -331,7 +324,7 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             }
         } elseif ($item -eq '7ZIP') {            
             Write-Host -NoNewline "Installing 7-Zip..."
-            $StagingArgumentList = 'install  "{0}" {1}' -f '7-Zip', $winget_opts
+            $StagingArgumentList = 'install {0} {1}' -f '--id 7zip.7zip', $winget_opts
             $winget_stdout_file = "$env:USERPROFILE\Downloads\wgetstdout_7zip.log"
             Start-Process -Wait -FilePath $winget_exe -ArgumentList $StagingArgumentList -NoNewWindow -RedirectStandardOutput $winget_stdout_file
             $stdout = Get-Content -Raw $winget_stdout_file
@@ -341,14 +334,6 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 Write-Host -ForegroundColor Red " FAILED"
                 [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
             }
-        } elseif ($item -eq 'TempMonitor') {
-            Write-Host -NoNewline "Download software..."
-            $download.Downloadfile("https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip", "$tmppath\openhardwaremonitor-v0.9.6.zip")
-            #Invoke-WebRequest -Uri 'https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip' -OutFile "$tmppath\openhardwaremonitor-v0.9.6.zip"
-            Write-Host -ForegroundColor Green " DONE"
-            Write-Host -NoNewline "Install software..."
-            Expand-Archive "$tmppath\openhardwaremonitor-v0.9.6.zip" -DestinationPath 'C:\'
-            Write-Host -ForegroundColor Green " DONE"   
         }
     }
 }
