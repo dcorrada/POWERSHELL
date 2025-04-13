@@ -1,6 +1,6 @@
 <#
 Name......: AssignedLicensesSDK.ps1
-Version...: 25.03.3
+Version...: 25.04.1
 Author....: Dario CORRADA
 
 This script will connect to the Microsoft 365 tenant and query a list of which 
@@ -369,8 +369,9 @@ if (($orphanedrecords.Count) -ge 1) {
                             WRITING REFERENCE FILE
 ******************************************************************************* #>
 if ($UseRefFile -eq 'Yes') { 
-    # create backup file    
-    $bkp_file = $xlsx_file + '-' + (Get-Date -format "yyMMdd") + '.bkp'
+    # create backup file
+    $LastOfUs = $(Get-ChildItem $xlsx_file | Select-Object -Property LastWriteTime).LastWriteTime | Get-Date -format "yyMMdd_HHmm"
+    $bkp_file = $xlsx_file + '-' + "$lastOfUs" + '.bkp'
     $bkp_file = $bkp_file.Replace('.xlsx', '')
     if (Test-Path -Path $bkp_file -PathType Leaf) {
         Remove-Item -Path $bkp_file -Force
