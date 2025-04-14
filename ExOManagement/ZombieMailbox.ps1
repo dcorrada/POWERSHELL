@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailbox.ps1
-Version...: 25.4.3
+Version...: 25.4.4
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
@@ -185,8 +185,25 @@ Write-Host -ForegroundColor Green " DONE"
 $parsebar[0].Close()
 
 <# *******************************************************************************
-                                    QUERYING
+                                DISTRIBUTION LISTS
 ******************************************************************************* #>
+$DLs = @{}
+
+# Getting static DLs
+Write-Host -NoNewline "Getting static DLs..."
+foreach ($aDL in Get-MSOLGroup -GroupType DistributionList) {
+    Write-Host -NoNewline '.'
+    $DLs["$($aDL.ObjectId)"] = @{
+        OBJECTID        = "$($aDL.ObjectId)"
+        UPN             = "$($aDL.EmailAddress)"
+        DISPLAYNAME     = "$($aDL.DisplayName)"
+        TYPE            = 'static'
+        NOTES           = "$($aDL.Description)"
+    }
+}
+Write-Host -ForegroundColor Green ' DONE'
+
+# Getting dynamic DLs
 Write-Host -NoNewline "Connecting to ExchangeOnLine... "
 try {
     Connect-ExchangeOnline -ShowBanner:$false
@@ -199,6 +216,22 @@ catch {
     exit
 }
 
+Write-Host -NoNewline "Getting dynamic DLs..."
+foreach ($dyndl in Get-DynamicDistributionGroup) {
+    Write-Host -NoNewline '.'
+    $DLs["$($dyndl.ExchangeObjectId)"] = @{
+        OBJECTID        = "$($dyndl.ExchangeObjectId)"
+        UPN             = "$($dyndl.PrimarySmtpAddress)"
+        DISPLAYNAME     = "$($dyndl.DisplayName)"
+        TYPE            = 'dynamic'
+        NOTES           = "$($dyndl.Notes)"
+    }
+}
+Write-Host -ForegroundColor Green ' DONE'
+
+<# *******************************************************************************
+                                    QUERYING
+******************************************************************************* #>
 Write-Host -NoNewline "Fetching mailbox list..."
 <#
 The Id (Identity) attribute obtained from Get-EXOMailbox cmdlet may vary, 
@@ -498,6 +531,21 @@ try {
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize -PassThru
+    Write-Host -ForegroundColor Green ' DONE'
+
+    $label = 'DistributionList'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $inData = $DLs.Keys | Foreach-Object {
+        Write-Host -NoNewline '.'
+        New-Object -TypeName PSObject -Property @{
+            OBJECTID        = "$_"
+            UPN             = "$($DLs[$_].UPN)"
+            DISPLAYNAME     = "$($DLs[$_].DISPLAYNAME)"
+            TYPE            = "$($DLs[$_].TYPE)"
+            NOTES           = "$($DLs[$_].NOTES)"
+        } | Select OBJECTID, UPN, DISPLAYNAME, TYPE, NOTES
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium4' -AutoSize -PassThru
     Write-Host -ForegroundColor Green ' DONE'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error') | Out-Null
