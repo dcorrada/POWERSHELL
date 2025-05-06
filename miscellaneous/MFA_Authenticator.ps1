@@ -1,10 +1,7 @@
 <#
-Name......: AuthO.ps1
-Version...: 25.5.1.a
-Author....: Dario CORRADA
-
-This script is intended to manage, initialize and restore MFA methods - usually 
-mediated by MS Authenticator app - related to Microsoft 365 accounts.
+Questo script vuole essere solamente un proof of concept di come gestire e 
+reinizailizzare la MFA di account Microsoft365 (via app MSAuthenticator, ecc. )
+#>
 
 <# *******************************************************************************
                                     HEADER
@@ -50,10 +47,7 @@ Add-Type -AssemblyName PresentationFramework
 $ErrorActionPreference= 'Stop'
 do {
     try {
-        Import-Module -Name "$workdir\Modules\Forms.psm1"
-        Import-Module ExchangeOnlineManagement
         Import-Module MSOnline
-        Import-Module ImportExcel
         $ThirdParty = 'Ok'
     } catch {
         if (!(((Get-InstalledModule).Name) -contains 'MSOnline')) {
@@ -85,4 +79,57 @@ catch {
     exit
 }
 
-# see https://learn.microsoft.com/en-us/answers/questions/787388/reset-and-unblock-mfa-in-azure-active-directory
+# qui di seguito una lista di account con licenza ma senza alcuna MFA attiva
+foreach ($licensedusr in (Get-MsolUser -All | Where-Object { $_.isLicensed -eq $true } | Sort-Object DisplayName)) {
+    if ($licensedusr.StrongAuthenticationMethods.Count -le 0) {
+        Write-Host "$($licensedusr.UserPrincipalName)"
+    }
+} 
+
+<#
+qui di seguito un chunk code di come si potrebbe implementare con MSOnline
+https://techcommunity.microsoft.com/discussions/microsoft-entra/powershell-cmdlets-for-mfa-settings/157678
+
+#Selected user in cloud
+$Userpricipalname = "abc@org.com"
+
+#Get settings for a user with exsisting auth data
+$User = Get-MSolUser -UserPrincipalName $Userpricipalname
+# Viewing default method
+$User.StrongAuthenticationMethods
+
+# Creating custom object for default method (here you just put in $true insted of $false, on the prefeered method you like)
+$m1=New-Object -TypeName Microsoft.Online.Administration.StrongAuthenticationMethod
+$m1.IsDefault = $false
+$m1.MethodType="OneWaySMS"
+
+$m2=New-Object -TypeName Microsoft.Online.Administration.StrongAuthenticationMethod
+$m2.IsDefault = $false
+$m2.MethodType="TwoWayVoiceMobile"
+
+$m3=New-Object -TypeName Microsoft.Online.Administration.StrongAuthenticationMethod
+$m3.IsDefault = $false
+$m3.MethodType="PhoneAppOTP"
+
+$m4=New-Object -TypeName Microsoft.Online.Administration.StrongAuthenticationMethod
+$m4.IsDefault = $True
+$m4.MethodType="PhoneAppNotification"
+
+# To set the users default method for doing second factor
+#$m=@($m1,$m2,$m3,$m4)
+
+# To force user ONLY to re-register without clearing their phonenumber or App shared secret.
+$m=@()
+
+# Set command to define new settings
+set-msoluser -Userprincipalname $user.UserPrincipalName -StrongAuthenticationMethods $m
+
+#Settings should be empty, and user is required to register new phone number or whatever they like, i case they lost their phone.
+$User = Get-MSolUser -UserPrincipalName $Userpricipalname
+$User.StrongAuthenticationMethods
+#>
+
+<# 
+Qui vengono menzionati alcuni cmdlets x usare Graph alternativamente a MSOnline
+https://learn.microsoft.com/en-us/entra/identity/authentication/howto-mfa-userdevicesettings
+#>
