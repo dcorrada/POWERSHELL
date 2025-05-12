@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailboxSDK.ps1
-Version...: 25.4.5
+Version...: 25.5.1
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
@@ -501,7 +501,7 @@ Disconnect-ExchangeOnline -Confirm:$false
 <# *******************************************************************************
                                 GET OUTPUT
 ******************************************************************************* #>
-$xlsx_file = "C:$env:HOMEPATH\Downloads\ZombieMailbox-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
+$xlsx_file = "C:$env:HOMEPATH\Downloads\ZombieMailboxSDK-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
 $XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 
 $ErrorActionPreference= 'Stop'
