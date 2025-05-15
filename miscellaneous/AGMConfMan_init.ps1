@@ -7,8 +7,152 @@ Credits...: Stefano VAILATI
 
 Questo script si occupa di installare e lanciare i servizio AGM_ConfigManager.
 
-Da integrare e lanciare dalla pipeline PPPC
++++ TO DO +++
+* integrare e lanciare dalla pipeline PPPC
 #>
+
+<# *******************************************************************************
+                                    HEADER
+******************************************************************************* #>
+# check execution policy
+foreach ($item in (Get-ExecutionPolicy -List)) {
+    if(($item.Scope -eq 'LocalMachine') -and ($item.ExecutionPolicy -cne 'Bypass')) {
+        Write-Host "No enough privileges: open a PowerShell terminal with admin privileges and run the following cmdlet:`n"
+        Write-Host -ForegroundColor Cyan "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force`n"
+        Write-Host -NoNewline "Afterwards restart this script. "
+        Pause
+        Exit
+    }
+}
+
+# elevated script execution with admin privileges
+$ErrorActionPreference= 'Stop'
+try {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+    $testadmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    if ($testadmin -eq $false) {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+        exit $LASTEXITCODE
+    }
+}
+catch {
+    Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+# just pipe more than single "Split-Path" if the script maps to nested subfolders
+$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent
+
+# graphical stuff
+$WarningPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+
+
+<# *******************************************************************************
+                                    INIT
+******************************************************************************* #>
+# check the existence of target regpath
+Write-Host -NoNewline "Check registry path... "
+if (Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Services\AGM_ConfigManager') {
+    Write-Host -ForegroundColor Green "Found"
+    $SkipInstallation = $true
+} else {
+    Write-Host -ForegroundColor Yellow "Undef"
+    $SkipInstallation = $false
+}
+
+# check if the (previous version of the) service is currently active
+Write-Host -NoNewline "Looking for service... "
+$ErrorActionPreference= 'Stop'
+Try {
+    $aService = Get-Service 'AGM_ConfigManager'
+    if ($aService.Status -cne 'Stopped') {
+        Set-Service -InputObject $aService -Status 'Stopped'
+    }
+    Write-Host -ForegroundColor Green "Stopped"
+    Write-Host -NoNewline "Looking for process... "
+    $aProcess = Get-Process 'AGM_ConfigManager'
+    Stop-Process -ID $outproc.Id -Force
+    Start-Sleep -Milliseconds 1500
+    Write-Host -ForegroundColor Green 'Killed'
+    $SkipInstallation = $false
+}
+Catch {
+    if ($error[0].InvocationInfo.InvocationName -eq 'Get-Service') { # No service found
+        Write-Host -ForegroundColor Yellow "Undef"
+        $SkipInstallation = $false
+    } elseif ($error[0].InvocationInfo.InvocationName -eq 'Set-Service') { # Service not stopped
+        Write-Host -ForegroundColor Yellow "Not stopped"
+        $SkipInstallation = $true
+    } elseif ($error[0].InvocationInfo.InvocationName -eq 'Get-Process') { # No process found
+        Write-Host -ForegroundColor Yellow "Undef"
+        $SkipInstallation = $false
+    } elseif ($error[0].InvocationInfo.InvocationName -eq 'Stop-Process') { # Process alive
+        Write-Host -ForegroundColor Yellow "Alive"
+        $SkipInstallation = $true
+    } else {
+        Write-Host -ForegroundColor Red "`nUnexpected error"
+        Write-Host "$($error[0].ToString())`n"
+        Pause
+        Exit
+    }
+
+}
+$ErrorActionPreference= 'Inquire'
+
+# create workdir if not exists
+Write-Host -NoNewline "Looking for workdir... "
+$workpath = 'C:\Program Files\AGM_ConfigManager\'
+if (!(Test-Path $workpath)) {
+    New-Item -ItemType directory -Path $workpath | Out-Null
+    Write-Host -ForegroundColor Green ' Created'
+} else {
+    Write-Host -ForegroundColor Yellow ' Already exists'
+}
+
+# downloading resources
+Write-Host -NoNewline "Downloading resources... "
+$ErrorActionPreference= 'Stop'
+Try {
+<# VBS script di Stefano che scarica cose...
+
+Option Explicit 
+On Error Resume Next 
+Sub FILE_Download(ByVal srcFILE, ByVal destPATH) 
+Dim objHTTP, objSTREAM 
+On Error Resume Next 
+Set objHTTP = createobject("Microsoft.XMLHTTP") 
+Set objSTREAM = createobject("Adodb.Stream") 
+objHTTP.Open "GET", "https://cm.agmsolutions.net:60443/agent_files/gpo_deploy/" & srcFILE, False 
+objHTTP.Send 
+objSTREAM.type = 1 
+objSTREAM.open 
+objSTREAM.write objHTTP.responseBody 
+objSTREAM.savetofile destPATH, 2 
+End Sub 
+Call FILE_Download("msvbvm60.dll", "C:\Windows\SysWOW64\AGM_ConfigManager\msvbvm60.dll") 
+Call FILE_Download("NTSVC.ocx", "C:\Windows\SysWOW64\AGM_ConfigManager\NTSVC.ocx") 
+Call FILE_Download("AGM_ConfigManager.exe", "C:\Program Files\AGM_ConfigManager\AGM_ConfigManager.exe") 
+#>
+    Write-Host -ForegroundColor Green 'Done'
+}
+Catch {
+    Write-Host -ForegroundColor Red "`nUnexpected error"
+    Write-Host "$($error[0].ToString())`n"
+    Pause
+    Exit
+}
+$ErrorActionPreference= 'Inquire'
+
+
+
+
+
+
 
 
 <#
