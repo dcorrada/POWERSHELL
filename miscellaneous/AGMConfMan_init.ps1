@@ -41,9 +41,6 @@ catch {
 }
 $ErrorActionPreference= 'Inquire'
 
-# just pipe more than single "Split-Path" if the script maps to nested subfolders
-$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent
-
 # graphical stuff
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
@@ -66,9 +63,11 @@ if (Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Services\AGM_ConfigManager') {
 
 # check if the (previous version of the) service is currently active
 Write-Host -NoNewline "Looking for service... "
+$serviceExists = $false
 $ErrorActionPreference= 'Stop'
 Try {
     $aService = Get-Service 'AGM_ConfigManager'
+    $serviceExists = $true
     if ($aService.Status -cne 'Stopped') {
         Set-Service -InputObject $aService -Status 'Stopped'
     }
@@ -104,21 +103,20 @@ Catch {
 $ErrorActionPreference= 'Inquire'
 
 # create workdirs if not exists
-Write-Host -NoNewline "Looking for workdirs..."
-foreach ($aPath in ('C:\Program Files\AGM_ConfigManager', 'C:\Windows\SysWOW64\AGM_ConfigManager')) {
-    if (!(Test-Path $aPath)) {
-        New-Item -ItemType directory -Path $aPath | Out-Null
-        Write-Host -NoNewline'.'
-    }
+Write-Host -NoNewline "Looking for workdir..."
+$aPath = "$($env:ProgramFiles)\AGM_ConfigManager"
+if (!(Test-Path $aPath)) {
+    New-Item -ItemType directory -Path $aPath | Out-Null
+    Write-Host -NoNewline '.'
 }
 Write-Host -ForegroundColor Green ' Done'
 
 # downloading resources
 Write-Host -NoNewline "Downloading resources..."
 $trgets = @{
-    'msvbvm60.dll'          = 'C:\Windows\SysWOW64\AGM_ConfigManager\'
-    'NTSVC.ocx'             = 'C:\Windows\SysWOW64\AGM_ConfigManager\'
-    'AGM_ConfigManager.exe' = 'C:\Program Files\AGM_ConfigManager\'
+    'msvbvm60.dll'          = "$($env:SystemRoot)\SysWOW64\"
+    'NTSVC.ocx'             = "$($env:SystemRoot)\SysWOW64\"
+    'AGM_ConfigManager.exe' = "$aPath\"
 }
 $aUrl = 'https://cm.agmsolutions.net:60443/agent_files/gpo_deploy/'
 $ErrorActionPreference= 'Stop'
@@ -151,13 +149,21 @@ if ($SkipInstallation) {
 
     # registering libraries, see:
     # https://stackoverflow.com/questions/37110533/powershell-to-display-regsvr32-result-in-console-instead-of-dialog
+    $regsvr_codes = @{
+        '1' = 'Invalid Argument'
+        '2' = 'OleInitialize Failed'
+        '3' = 'LoadLibrary Failed'
+        '4' = 'GetProcAddress failed'
+        '5' = 'DllRegisterServer failed'
+    }
     Write-Host -NoNewline "Registering DLLs..."
-    foreach ($aFilename in $trgets.Keys) {
+    foreach ($aFilename in ('msvbvm60.dll', 'NTSVC.ocx')) {
         $aDestination = $trgets[$aFilename] + $aFilename
         $regsvrp = Start-Process regsvr32.exe -ArgumentList "/s $aDestination" -PassThru
-        $regsvrp.WaitForExit(1000) # Wait (up to) 1 second
-        if($regsvrp.ExitCode -ne 0) {
-            Write-Host -ForegroundColor Red "regsvr32 exited with error $($regsvrp.ExitCode)"
+        Start-Sleep -Milliseconds 1500
+        if ($regsvrp.ExitCode -ne 0) {
+            Write-Host -ForegroundColor Red "ERROR with [$aFilename]: regsvr32 ExitCode $($regsvrp.ExitCode) $($regsvr_codes[$regsvrp.ExitCode])"
+            Write-Host -ForegroundColor Yellow "You should unregister libraries as follows: regsvr32 /u <dll/ocx_filename>"
             Pause
             Exit
         } else {
@@ -169,24 +175,28 @@ if ($SkipInstallation) {
     # launching installer
     Write-Host -NoNewline "Launching AGM Config Manager..."
     $aInstaller = Start-Process 'C:\Program Files\AGM_ConfigManager\AGM_ConfigManager.exe' -ArgumentList '-I' -PassThru
-    $aInstaller.WaitForExit(2000)
+    Start-Sleep -Milliseconds 2000
     Write-Host -ForegroundColor Green ' Done'
 
     # creating service
     $ErrorActionPreference= 'Stop'
-    try {
-        Write-Host -NoNewline "Creating service..."
-        $params = @{
-            Name            = 'AGM_ConfigManager'
-            BinaryPathName  = 'C:\Program Files\AGM_ConfigManager\AGM_ConfigManager.exe'
-            DisplayName     = "AGM Config Manager"
-            StartupType     = "Automatic"
+    Try {
+        Write-Host -NoNewline "Check service..."
+        if (!$serviceExists) {
+            $params = @{
+                Name            = 'AGM_ConfigManager'
+                BinaryPathName  = "$aPath\AGM_ConfigManager.exe"
+                DisplayName     = "AGM Config Manager"
+                StartupType     = "Automatic"
+            }
+            New-Service @params
+            Start-Sleep -Milliseconds 1000
         }
-        New-Service @params
-        Set-Service -Name AGM_ConfigManager -Status Running -PassThru
+        $sObject = Set-Service -Name AGM_ConfigManager -Status Running -StartupType Automatic -PassThru
         Write-Host -ForegroundColor Green ' Done'
     }
-    catch {
+    Catch {
+        # should investigate inside ServiceController object ($sObject) that displays the results?
         Write-Host -ForegroundColor Red "`nUnexpected error"
         Write-Host "$($error[0].ToString())`n"
         Pause
