@@ -1,13 +1,9 @@
-
 <#
 Name......: AGMConfMan_init.ps1
 Version...: 25.05.1
 Author....: Dario CORRADA
 
-Questo script si occupa di installare e lanciare i servizio AGM_ConfigManager.
-
-+++ TO DO +++
-* integrare e lanciare dalla pipeline PPPC
+Questo script si occupa di installare e lanciare il servizio AGM_ConfigManager.
 #>
 
 <# *******************************************************************************
