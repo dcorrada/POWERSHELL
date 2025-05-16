@@ -3,7 +3,6 @@
 Name......: AGMConfMan_init.ps1
 Version...: 25.05.1
 Author....: Dario CORRADA
-Credits...: Stefano VAILATI
 
 Questo script si occupa di installare e lanciare i servizio AGM_ConfigManager.
 
@@ -104,41 +103,35 @@ Catch {
 }
 $ErrorActionPreference= 'Inquire'
 
-# create workdir if not exists
-Write-Host -NoNewline "Looking for workdir... "
-$workpath = 'C:\Program Files\AGM_ConfigManager\'
-if (!(Test-Path $workpath)) {
-    New-Item -ItemType directory -Path $workpath | Out-Null
-    Write-Host -ForegroundColor Green ' Created'
-} else {
-    Write-Host -ForegroundColor Yellow ' Already exists'
+# create workdirs if not exists
+Write-Host -NoNewline "Looking for workdirs..."
+foreach ($aPath in ('C:\Program Files\AGM_ConfigManager', 'C:\Windows\SysWOW64\AGM_ConfigManager')) {
+    if (!(Test-Path $aPath)) {
+        New-Item -ItemType directory -Path $aPath | Out-Null
+        Write-Host -NoNewline'.'
+    }
 }
+Write-Host -ForegroundColor Green ' Done'
 
 # downloading resources
-Write-Host -NoNewline "Downloading resources... "
+Write-Host -NoNewline "Downloading resources..."
+$trgets = @{
+    'msvbvm60.dll'          = 'C:\Windows\SysWOW64\AGM_ConfigManager\'
+    'NTSVC.ocx'             = 'C:\Windows\SysWOW64\AGM_ConfigManager\'
+    'AGM_ConfigManager.exe' = 'C:\Program Files\AGM_ConfigManager\'
+}
+$aUrl = 'https://cm.agmsolutions.net:60443/agent_files/gpo_deploy/'
 $ErrorActionPreference= 'Stop'
 Try {
-<# VBS script di Stefano che scarica cose...
-
-Option Explicit 
-On Error Resume Next 
-Sub FILE_Download(ByVal srcFILE, ByVal destPATH) 
-Dim objHTTP, objSTREAM 
-On Error Resume Next 
-Set objHTTP = createobject("Microsoft.XMLHTTP") 
-Set objSTREAM = createobject("Adodb.Stream") 
-objHTTP.Open "GET", "https://cm.agmsolutions.net:60443/agent_files/gpo_deploy/" & srcFILE, False 
-objHTTP.Send 
-objSTREAM.type = 1 
-objSTREAM.open 
-objSTREAM.write objHTTP.responseBody 
-objSTREAM.savetofile destPATH, 2 
-End Sub 
-Call FILE_Download("msvbvm60.dll", "C:\Windows\SysWOW64\AGM_ConfigManager\msvbvm60.dll") 
-Call FILE_Download("NTSVC.ocx", "C:\Windows\SysWOW64\AGM_ConfigManager\NTSVC.ocx") 
-Call FILE_Download("AGM_ConfigManager.exe", "C:\Program Files\AGM_ConfigManager\AGM_ConfigManager.exe") 
-#>
-    Write-Host -ForegroundColor Green 'Done'
+    foreach ($aFilename in $trgets.Keys) {
+        $aDestination = $trgets[$aFilename] + $aFilename
+        if (!(Test-Path $aDestination -PathType Leaf)) {
+            $aSource = $aUrl + $aFilename
+            Invoke-WebRequest -Uri "$aSource" -OutFile "$aDestination"
+            Write-Host -NoNewline '.'
+        }
+    }
+    Write-Host -ForegroundColor Green ' Done'
 }
 Catch {
     Write-Host -ForegroundColor Red "`nUnexpected error"
@@ -148,26 +141,64 @@ Catch {
 }
 $ErrorActionPreference= 'Inquire'
 
+<# *******************************************************************************
+                                    INSTALL
+******************************************************************************* #>
+if ($SkipInstallation) {
+    [System.Windows.MessageBox]::Show("Installation skipped",'ABORT','Ok','Warning') | Out-Null
+} else {
+    Write-Host -ForegroundColor Cyan "`n*** INSTALL ***"
 
+    # registering libraries, see:
+    # https://stackoverflow.com/questions/37110533/powershell-to-display-regsvr32-result-in-console-instead-of-dialog
+    Write-Host -NoNewline "Registering DLLs..."
+    foreach ($aFilename in $trgets.Keys) {
+        $aDestination = $trgets[$aFilename] + $aFilename
+        $regsvrp = Start-Process regsvr32.exe -ArgumentList "/s $aDestination" -PassThru
+        $regsvrp.WaitForExit(1000) # Wait (up to) 1 second
+        if($regsvrp.ExitCode -ne 0) {
+            Write-Host -ForegroundColor Red "regsvr32 exited with error $($regsvrp.ExitCode)"
+            Pause
+            Exit
+        } else {
+            Write-Host -NoNewline '.'
+        }
+    }
+    Write-Host -ForegroundColor Green ' Done'
 
+    # launching installer
+    Write-Host -NoNewline "Launching AGM Config Manager..."
+    $aInstaller = Start-Process 'C:\Program Files\AGM_ConfigManager\AGM_ConfigManager.exe' -ArgumentList '-I' -PassThru
+    $aInstaller.WaitForExit(2000)
+    Write-Host -ForegroundColor Green ' Done'
 
-
-
-
+    # creating service
+    $ErrorActionPreference= 'Stop'
+    try {
+        Write-Host -NoNewline "Creating service..."
+        $params = @{
+            Name            = 'AGM_ConfigManager'
+            BinaryPathName  = 'C:\Program Files\AGM_ConfigManager\AGM_ConfigManager.exe'
+            DisplayName     = "AGM Config Manager"
+            StartupType     = "Automatic"
+        }
+        New-Service @params
+        Set-Service -Name AGM_ConfigManager -Status Running -PassThru
+        Write-Host -ForegroundColor Green ' Done'
+    }
+    catch {
+        Write-Host -ForegroundColor Red "`nUnexpected error"
+        Write-Host "$($error[0].ToString())`n"
+        Pause
+    }
+    $ErrorActionPreference= 'Inquire'
+}
 
 <#
-Qui di seguito la traccia dello script di Stefano in versione batch file, 
-che crea internamente e richiama uno script vbs.
++++ original script +++
+Name......: deploy.bat
+Author....: Stefano VAILATI
 
-*** Note di sviluppo ***
-Il comando 'sc' serve per creare e gestire l'esecuzione di servizi
-https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc754599(v=ws.11)
-
-Esiste il cmdlet equivalente 'Set-Service'
-https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-service?view=powershell-5.1
-#>
-
-<#
 @echo off
 
 reg query HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AGM_ConfigManager
