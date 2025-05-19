@@ -1,6 +1,6 @@
 <#
 Name......: PPPC.ps1
-Version...: 24.11.1
+Version...: 25.5.1
 Author....: Dario CORRADA
 
 Pipeline per la preparazione di nuovi PC
