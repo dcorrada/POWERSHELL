@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailboxSDK.ps1
-Version...: 25.5.1
+Version...: 25.5.2
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
@@ -9,6 +9,9 @@ The aim is to find any account delegated revealed as dismissed (aka zombie).
 
 More details about ExOv3 module cmdlets are available at:
 https://learn.microsoft.com/en-us/powershell/module/exchange/?view=exchange-ps#powershell-v3-module
+
++++ TO DO +++
+Remove trailing carriage return from update Notes imported by previous xlsx template
 
 <# *******************************************************************************
                                     HEADER
@@ -204,7 +207,7 @@ foreach ($item in ($MgUsrs | Sort-Object DisplayName)) {
 
     Start-Sleep -Milliseconds 10
 }
-Write-Host -ForegroundColor Green " done"
+Write-Host -ForegroundColor Green " Done"
 $parsebar[0].Close()
 
 <# *******************************************************************************
@@ -214,13 +217,12 @@ $parsebar[0].Close()
 $DLs = @{}
 
 # Getting static DLs
-Write-Host -NoNewline "Getting static DLs..."
+Write-Host "Getting static DLs..."
 $GroupList = Get-MgGroup -All  -Property Id, DisplayName, Description, Mail, CreatedDateTime, GroupTypes, mailEnabled, securityEnabled `
     | Select-Object Id, DisplayName, Description, Mail, CreatedDateTime, GroupTypes, mailEnabled, securityEnabled
 foreach ($aDL in $GroupList) {
-    Write-Host -NoNewline '.'
     if (($aDL.GroupTypes -cnotcontains 'Unified') -and ($aDL.SecurityEnabled -ne 'True')) {
-            Write-Host "$($aDL.DisplayName)"
+        Write-Host -ForegroundColor Yellow "  $($aDL.DisplayName)"
         $DLs["$($aDL.Id)"] = @{
             OBJECTID        = "$($aDL.Id)"
             UPN             = "$($aDL.Mail)"
@@ -231,7 +233,7 @@ foreach ($aDL in $GroupList) {
         }
     }
 }
-Write-Host -ForegroundColor Green ' done'
+Write-Host 'Done'
 
 # disconnect from Tenant
 Write-Host -NoNewline "Disconnecting from Tenant... "
@@ -263,7 +265,7 @@ foreach ($dyndl in Get-DynamicDistributionGroup) {
         NOTES           = "$($dyndl.Notes)"
     }
 }
-Write-Host -ForegroundColor Green ' done'
+Write-Host -ForegroundColor Green ' Done'
 
 <# *******************************************************************************
                                     QUERYING
@@ -499,6 +501,43 @@ Disconnect-ExchangeOnline -Confirm:$false
 
 
 <# *******************************************************************************
+                                UPDATING NOTES
+******************************************************************************* #>
+$answ = [System.Windows.MessageBox]::Show("Do you have a xlsx template for updating notes?",'UPDATES','YesNo','Info')
+if ($answ -eq 'Yes') {
+    Write-Host "`n"
+    [System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
+    $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $OpenFileDialog.Title = "Open File"
+    $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+    $OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
+    $OpenFileDialog.ShowDialog() | Out-Null
+    $xlsx_template = $OpenFileDialog.filename
+
+    $Worksheet_list = Get-ExcelSheetInfo -Path $xlsx_template
+    $ManualNotes = @{}
+    foreach ($templateWorksheet in ('UserMailbox', 'SharedMailbox', 'DistributionList')) {
+        if ($Worksheet_list.Name -contains "$templateWorksheet") {
+            $ManualNotes["$templateWorksheet"] = @{}
+            Write-Host -NoNewline "Fetching [$templateWorksheet] data..."
+            foreach ($history in (Import-Excel -Path $xlsx_template -WorksheetName "$templateWorksheet")) {
+                $objID = $history.OBJECTID
+                $note = $history.NOTES
+
+                if (!($ManualNotes["$templateWorksheet"].ContainsKey("$objID"))) {
+                    $($ManualNotes["$templateWorksheet"])["$objID"] = ($note | Out-String)
+                    Write-Host -NoNewline '.'
+                }
+            }
+            Write-Host -ForegroundColor Green ' Done'
+        } else {
+            Write-Host -ForegroundColor Magenta "No [$templateWorksheet] worksheet found"
+        }
+    }   
+}
+
+
+<# *******************************************************************************
                                 GET OUTPUT
 ******************************************************************************* #>
 $xlsx_file = "C:$env:HOMEPATH\Downloads\ZombieMailboxSDK-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
@@ -519,7 +558,7 @@ try {
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' done'
+    Write-Host -ForegroundColor Green ' Done'
 
     $label = 'UserMailbox'
     Write-Host -NoNewline "Writing worksheet [$label]..."
@@ -528,6 +567,13 @@ try {
             Write-Host -NoNewline '.'
             foreach ($GrantType in ('FULLACCESS', 'SENDAS', 'SENDONBEHALF')) {
                 foreach ($Granted in (($EXOdetailed[$_])[$GrantType])) {
+                    $aNote = 'null'
+                    if ($ManualNotes.ContainsKey('UserMailbox')) {
+                        if ($($ManualNotes.UserMailbox).ContainsKey("$_")) {
+                            $aNote = $ManualNotes.UserMailbox["$_"]
+                        }
+                    }
+
                     New-Object -TypeName PSObject -Property @{
                         OBJECTID        = "$_"
                         UPN             = "$($EXOdetailed[$_].UPN)"
@@ -536,14 +582,14 @@ try {
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
                         LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
-                        NOTES           = 'null'
+                        NOTES           = "$aNote"
                     } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES, NOTES
                 }
             }
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' done'
+    Write-Host -ForegroundColor Green ' Done'
 
     $label = 'SharedMailbox'
     Write-Host -NoNewline "Writing worksheet [$label]..."
@@ -552,6 +598,13 @@ try {
             Write-Host -NoNewline '.'
             foreach ($GrantType in ('FULLACCESS', 'SENDAS', 'SENDONBEHALF')) {
                 foreach ($Granted in (($EXOdetailed[$_])[$GrantType])) {
+                    $aNote = 'null'
+                    if ($ManualNotes.ContainsKey('SharedMailbox')) {
+                        if ($($ManualNotes.SharedMailbox).ContainsKey("$_")) {
+                            $aNote = $ManualNotes.SharedMailbox["$_"]
+                        }
+                    }
+
                     New-Object -TypeName PSObject -Property @{
                         OBJECTID        = "$_"
                         UPN             = "$($EXOdetailed[$_].UPN)"
@@ -560,30 +613,38 @@ try {
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
                         LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
-                        NOTES           = 'null'
+                        NOTES           = "$aNote"
                     } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES, NOTES
                 }
             }
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' done'
+    Write-Host -ForegroundColor Green ' Done'
     
     $label = 'DistributionList'
     Write-Host -NoNewline "Writing worksheet [$label]..."
     $inData = $DLs.Keys | Foreach-Object {
         Write-Host -NoNewline '.'
+
+        $aNote = "$($DLs[$_].NOTES)"
+        if ($ManualNotes.ContainsKey('DistributionList')) {
+            if ($($ManualNotes.DistributionList).ContainsKey("$_")) {
+                $aNote = $ManualNotes.DistributionList["$_"]
+            }
+        }
+
         New-Object -TypeName PSObject -Property @{
             OBJECTID        = "$_"
             UPN             = "$($DLs[$_].UPN)"
             DISPLAYNAME     = "$($DLs[$_].DISPLAYNAME)"
             TYPE            = "$($DLs[$_].TYPE)"
             CREATED         = "$($DLs[$_].CREATED)"
-            NOTES           = "$($DLs[$_].NOTES)"
+            NOTES           = "$aNote"
         } | Select OBJECTID, UPN, DISPLAYNAME, TYPE, CREATED, NOTES
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium4' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' done'
+    Write-Host -ForegroundColor Green ' Done'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error') | Out-Null
     Write-Host -ForegroundColor Red ' FAIL'
