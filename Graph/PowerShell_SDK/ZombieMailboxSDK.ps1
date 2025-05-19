@@ -204,7 +204,7 @@ foreach ($item in ($MgUsrs | Sort-Object DisplayName)) {
 
     Start-Sleep -Milliseconds 10
 }
-Write-Host -ForegroundColor Green " Done"
+Write-Host -ForegroundColor Green " done"
 $parsebar[0].Close()
 
 <# *******************************************************************************
@@ -230,13 +230,13 @@ foreach ($aDL in $GroupList) {
         }
     }
 }
-Write-Host 'Done'
+Write-Host -ForegroundColor Green 'done'
 
 # disconnect from Tenant
 Write-Host -NoNewline "Disconnecting from Tenant... "
 $infoLogout = Disconnect-Graph
 Start-Sleep -Milliseconds 3000
-Write-Host -ForegroundColor Green "Done"
+Write-Host -ForegroundColor Green "done"
 
 Write-Host -NoNewline "Connecting to ExchangeOnLine... "
 try {
@@ -262,7 +262,7 @@ foreach ($dyndl in Get-DynamicDistributionGroup) {
         NOTES           = "$($dyndl.Notes)"
     }
 }
-Write-Host -ForegroundColor Green ' Done'
+Write-Host -ForegroundColor Green ' done'
 
 <# *******************************************************************************
                                     QUERYING
@@ -287,7 +287,7 @@ $EXOlist = Get-EXOMailbox -RecipientTypeDetails UserMailbox,SharedMailbox -Resul
         DISPLAY     = "$($_.DisplayName)"
     } | Select ID, TYPE, OBJ_ID, UPN, DISPLAY
 }
-Write-Host -ForegroundColor Green " Done"
+Write-Host -ForegroundColor Green " done"
 
 Write-Host -NoNewline "Searching inactive mailbox..."
 $orphaned = Get-EXOMailbox -InactiveMailboxOnly -RecipientTypeDetails UserMailbox,SharedMailbox -ResultSize unlimited | ForEach-Object {
@@ -349,13 +349,13 @@ foreach ($entity in $EXOlist) {
     }
 
     if ($ExcludeList.ContainsKey($entity.UPN)) {
-        Write-Host -ForegroundColor DarkGray "$($entity.UPN)"
+        Write-Host -ForegroundColor DarkGray "  $($entity.UPN)"
         $EXOdetailed["$($entity.OBJ_ID)"].EXCLUDED = 'Yes'
         $EXOdetailed["$($entity.OBJ_ID)"].FULLACCESS += 'SELF'
         $EXOdetailed["$($entity.OBJ_ID)"].LASTLOGON = '1980-02-07 12:00:00'
         Start-Sleep -Milliseconds 100
     } else {
-        Write-Host -ForegroundColor Cyan "$($entity.UPN)"
+        Write-Host -ForegroundColor Cyan "  $($entity.UPN)"
 
         $ErrorActionPreference= 'Stop'
         try {
@@ -491,7 +491,7 @@ foreach ($entity in $EXOlist) {
     }
     [System.Windows.Forms.Application]::DoEvents()
 }
-Write-Host -ForegroundColor Green "Done"
+Write-Host -ForegroundColor Green "done"
 $parsebar[0].Close()
 
 Disconnect-ExchangeOnline -Confirm:$false
@@ -526,7 +526,7 @@ if ($answ -eq 'Yes') {
                     Write-Host -NoNewline '.'
                 }
             }
-            Write-Host -ForegroundColor Green ' Done'
+            Write-Host -ForegroundColor Green ' done'
         } else {
             Write-Host -ForegroundColor Magenta "No [$templateWorksheet] worksheet found"
         }
@@ -555,7 +555,7 @@ try {
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' Done'
+    Write-Host -ForegroundColor Green ' done'
 
     $label = 'UserMailbox'
     Write-Host -NoNewline "Writing worksheet [$label]..."
@@ -586,7 +586,7 @@ try {
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium2' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' Done'
+    Write-Host -ForegroundColor Green ' done'
 
     $label = 'SharedMailbox'
     Write-Host -NoNewline "Writing worksheet [$label]..."
@@ -617,7 +617,7 @@ try {
         }
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium3' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' Done'
+    Write-Host -ForegroundColor Green ' done'
     
     $label = 'DistributionList'
     Write-Host -NoNewline "Writing worksheet [$label]..."
@@ -641,7 +641,7 @@ try {
         } | Select OBJECTID, UPN, DISPLAYNAME, TYPE, CREATED, NOTES
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium4' -AutoSize -PassThru
-    Write-Host -ForegroundColor Green ' Done'
+    Write-Host -ForegroundColor Green ' done'
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error') | Out-Null
     Write-Host -ForegroundColor Red ' FAIL'
