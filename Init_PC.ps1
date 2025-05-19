@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 25.04.2
+Version...: 25.05.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -165,7 +165,7 @@ if ($info[2] -match 'Windows 11') {
     $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
 }
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
-$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "VPN Fortinet"
+$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 290 -text "VPN Fortinet" # gia' gestito da PPPC
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
