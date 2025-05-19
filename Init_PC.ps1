@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 25.04.1
+Version...: 25.05.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -112,15 +112,32 @@ if ($info[2] -match 'Windows 10') {
 
     if ($source[1] -eq 'Ko') {
         Write-Host -ForegroundColor Red "Failed to update [$($source[0])] source"
-        <# 
-        You can try to manually install cache file as suggested in
-        https://github.com/microsoft/winget-cli/issues/4446
+<# UPDATE April the 14th, 2025
+Such issue mainly involve "winget" repository (currently no events collected 
+for "msstore"). This bug has been initilally reported on StackExchange[1], for
+what concern hosts in which Windows 11 23H2 has been installed.
 
-        Invoke-WebRequest -Uri https://cdn.winget.microsoft.com/cache/source.msix -OutFile $env:TEMP\source.msix
-        Add-AppxPackage $env:TEMP\source.msix
+Recently, such issue raised again onto Windows 11 24H2 installations. Another 
+possible solution was found on GitHub issue thread[2]:
 
-        Currently such patch doesn't work on some Win11 installation, no clues about
-        #>        
+    Start a shell as admin:
+    Find-PackageProvider -Name NuGet -ForceBootstrap -IncludeDependencies -Force
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+    Install-Module -Name PSDownloader -Scope AllUsers
+    Import-Module PSDownloader
+    Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+    $ProgressPreference = "SilentlyContinue"
+    Start-Download -Url "https://cdn.winget.microsoft.com/cache/source.msix" -Threads 8 -Force -MaxRetry 3 -Destination ".\source.msix" -NoProgress
+    Add-AppxPackage -Path ".\source.msix" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
+
+    Then exit, start a new shell as admin:
+    winget source update
+    winget list --accept-source-agreements
+
+
+[1] https://superuser.com/questions/1858012/winget-wont-upgrade-on-windows-11/1891855
+[2] https://github.com/microsoft/winget-cli/issues/5366
+#>
     } else {
         $winget_exe = Get-ChildItem -Path 'C:\Program Files\WindowsApps\' -Filter 'winget.exe' -Recurse -ErrorAction SilentlyContinue -Force
     }
@@ -148,7 +165,7 @@ if ($info[2] -match 'Windows 11') {
     $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
 }
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
-$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "VPN Fortinet"
+$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 290 -text "VPN Fortinet" # gia' gestito da PPPC
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
