@@ -1,6 +1,6 @@
 <#
 Name......: ZombieMailboxSDK.ps1
-Version...: 25.5.2
+Version...: 25.5.3
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
@@ -9,9 +9,6 @@ The aim is to find any account delegated revealed as dismissed (aka zombie).
 
 More details about ExOv3 module cmdlets are available at:
 https://learn.microsoft.com/en-us/powershell/module/exchange/?view=exchange-ps#powershell-v3-module
-
-+++ TO DO +++
-Remove trailing carriage return from update Notes imported by previous xlsx template
 
 <# *******************************************************************************
                                     HEADER
@@ -582,7 +579,7 @@ try {
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
                         LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
-                        NOTES           = "$aNote"
+                        NOTES           = "$($aNote.Trim())"
                     } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES, NOTES
                 }
             }
@@ -613,7 +610,7 @@ try {
                         GRANT           = "$GrantType"
                         GRANTED         = "$Granted"
                         LICENSES        = "$($MsolUsrData["$($EXOdetailed[$_].UPN)"])"
-                        NOTES           = "$aNote"
+                        NOTES           = "$($aNote.Trim())"
                     } | Select OBJECTID, UPN, DISPLAYNAME, LASTLOGON, GRANT, GRANTED, LICENSES, NOTES
                 }
             }
@@ -640,7 +637,7 @@ try {
             DISPLAYNAME     = "$($DLs[$_].DISPLAYNAME)"
             TYPE            = "$($DLs[$_].TYPE)"
             CREATED         = "$($DLs[$_].CREATED)"
-            NOTES           = "$aNote"
+            NOTES           = "$($aNote.Trim())"
         } | Select OBJECTID, UPN, DISPLAYNAME, TYPE, CREATED, NOTES
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium4' -AutoSize -PassThru
