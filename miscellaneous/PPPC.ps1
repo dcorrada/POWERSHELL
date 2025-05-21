@@ -1,6 +1,6 @@
 <#
 Name......: PPPC.ps1
-Version...: 25.5.1
+Version...: 25.5.2
 Author....: Dario CORRADA
 
 Pipeline per la preparazione di nuovi PC
@@ -103,9 +103,13 @@ if ($foundit -ne 'NuGet') {
     $ErrorActionPreference= 'Inquire'
 }
 
-# verifico se winget funziona
+# verifico se winget funziona e se SecureBoot sia su
 $info = systeminfo
 if ($info[2] -match 'Windows 11') {
+    if (!(Confirm-SecureBootUEFI)) {
+        [System.Windows.MessageBox]::Show("It seems Secure Boot is disabled",'SECURE BOOT','Ok','Warning') | Out-Null
+    }
+
     winget.exe source update
 }
 
