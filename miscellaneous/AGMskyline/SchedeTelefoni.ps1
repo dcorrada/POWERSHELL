@@ -37,8 +37,8 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # percorsi di rete
 $target_paths = @{
-    'ASSEGNAZIONI' = '\\192.168.2.251\Share\AREA HR\Selezione\ASSEGNAZIONI - VISITE - SICUREZZA\VARIE\Strumenti aziendali\Assegnazioni dipendenti'
-    'CONSEGNE' = '\\192.168.2.251\Share\AREA HR\Selezione\ASSEGNAZIONI - VISITE - SICUREZZA\VARIE\Strumenti aziendali\Consegne dipendenti\Cellulari'
+    'ASSEGNAZIONI' = '\\192.168.2.251\Share\AREA HR\Selezione\ASSEGNAZIONI - VISITE - SICUREZZA\VARIE\Strumenti aziendali\Assegnazioni dipendenti\Assegnazione CELL'
+    'CONSEGNE' = '\\192.168.2.251\Share\AREA HR\Selezione\ASSEGNAZIONI - VISITE - SICUREZZA\VARIE\Strumenti aziendali\Consegne  - resi dipendenti\Cellulari'
 }
 
 $aword = New-Object -ComObject Word.application
