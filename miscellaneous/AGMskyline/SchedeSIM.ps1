@@ -60,15 +60,27 @@ $i = 2
 $totrec = ($asheet.UsedRange.Rows).Count
 $parsebar = ProgressBar
 do {
-    $phonenum = $asheet.Cells.Item($i,2).Text
-    $phonenum = $phonenum -replace '^\s+', ''
-    $phonenum = $phonenum -replace '\s+$', ''
-    $fullname = $asheet.Cells.Item($i,3).Text + ' ' + $asheet.Cells.Item($i,4).Text
-    $fullname = $fullname -replace '\(', ''
-    $fullname = $fullname -replace 'TO\)', ''
-    $fullname = $fullname -replace '\s\s\s*', ' '
-    $attivazione = $asheet.Cells.Item($i,7).Text | Get-Date  -f yyyy-MM-dd
-    $note = $asheet.Cells.Item($i,8).Text
+    $ErrorActionPreference= 'Stop'
+    try {
+        $phonenum = $asheet.Cells.Item($i,2).Text
+        $phonenum = $phonenum -replace '^\s+', ''
+        $phonenum = $phonenum -replace '\s+$', ''
+        $fullname = $asheet.Cells.Item($i,3).Text + ' ' + $asheet.Cells.Item($i,4).Text
+        $fullname = $fullname -replace '\([\s\w]+\)', ''
+        $fullname = $fullname -replace '^\s+', ''
+        $fullname = $fullname -replace '\s+$', ''
+        $fullname = $fullname -replace '\s{2,}', ' '
+        $attivazione = $asheet.Cells.Item($i,8).Text | Get-Date  -f yyyy-MM-dd
+        $note = $asheet.Cells.Item($i,9).Text
+    }
+    catch {
+        $parsebar[0].Close()
+        [System.Windows.MessageBox]::Show("Unexpected parsing error`nPlease check the output file for the last row succeded.",'ABORTING','Ok','Error') | Out-Null
+        $abook.close()
+        $aexcel.Quit()
+        Exit
+    }
+    $ErrorActionPreference= 'Inquire'
 
     $string = ("AGM{0:d5};{1};{2};{3};{4}" -f (($i-1),$fullname,$phonenum,$attivazione,$note))
     $string = $string -replace ';\s*;', ';NULL;'
