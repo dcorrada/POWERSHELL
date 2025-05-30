@@ -500,6 +500,7 @@ Disconnect-ExchangeOnline -Confirm:$false
 <# *******************************************************************************
                                 UPDATING NOTES
 ******************************************************************************* #>
+$ManualNotes = @{}
 $answ = [System.Windows.MessageBox]::Show("Do you have a xlsx template for updating notes?",'UPDATES','YesNo','Info')
 if ($answ -eq 'Yes') {
     Write-Host "`n"
@@ -512,7 +513,6 @@ if ($answ -eq 'Yes') {
     $xlsx_template = $OpenFileDialog.filename
 
     $Worksheet_list = Get-ExcelSheetInfo -Path $xlsx_template
-    $ManualNotes = @{}
     foreach ($templateWorksheet in ('UserMailbox', 'SharedMailbox', 'DistributionList')) {
         if ($Worksheet_list.Name -contains "$templateWorksheet") {
             $ManualNotes["$templateWorksheet"] = @{}
