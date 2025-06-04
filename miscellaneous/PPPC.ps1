@@ -1,6 +1,6 @@
 <#
 Name......: PPPC.ps1
-Version...: 25.5.2
+Version...: 25.6.1
 Author....: Dario CORRADA
 
 Pipeline per la preparazione di nuovi PC
@@ -138,6 +138,11 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\S
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\PedoMellon.ps1' -DestinationPath "$tmppath\Safety"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
 
+# +++ TESTING +++
+# aggiornare puntamento per branch [master] (e spostare riga di codice sul blocco precedente)
+$downbin = $tmppath + '\Safety\Disable_Bitlocker.ps1'
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/unstable/Safety/Disable_Bitlocker.ps1' -OutFile $downbin -ErrorAction Stop | out-null
+
 # download di materiale custom dal branch 'tempus'
 New-Item -ItemType directory -Path "$tmppath\miscellaneous" > $null
 $downbin = $tmppath + '\miscellaneous\AGMConfMan_init.ps1'
@@ -165,6 +170,8 @@ New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
 Pause
 PowerShell.exe "& "'$tmppath\miscellaneous\AGMConfMan_init.ps1'
+Pause
+PowerShell.exe "& "'$tmppath\Safety\Disable_Bitlocker.ps1'
 Pause
 PowerShell.exe "& "'$tmppath\Updates\drvUpdate_Win10.ps1'
 Pause
