@@ -1,6 +1,6 @@
 <#
 Name......: Disable_BitLocker.ps1
-Version...: 25.06.1
+Version...: 25.06.2
 Author....: Dario CORRADA
 
 This script disables BitLocker: by defaults this script expects to find a unique 
@@ -38,40 +38,36 @@ catch {
 }
 $ErrorActionPreference= 'Inquire'
 
+# just pipe more than single "Split-Path" if the script maps to nested subfolders
+$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent
+
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
+Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 <# *******************************************************************************
-                                    BODY
+                                    CHECK
 ******************************************************************************* #>
-if ((Get-BitLockerVolume).VolumeStatus -ceq 'FullyEncrypted') {
-    $answ = [System.Windows.MessageBox]::Show("The system volume is encrypted.`nDo you wanto to proceed to disable Bitlocker?",'BitLocker','YesNo','Info')
-    if ($answ -eq 'Yes') {
-        $ErrorActionPreference= 'Stop'
-        Try {
-            Disable-BitLocker -MountPoint 'C:'
-            $ErrorActionPreference= 'Inquire'
-        }
-        Catch {
-            Write-Output "`nError: $($error[0].ToString())"
-            [System.Windows.MessageBox]::Show("Disabling BitLocker Failed",'BitLocker','Ok','Warning') | Out-Null
-            exit
-        }
-
-        # monitoring until decryption is full
-        $BLremain = 100
-        while ($BLremain -gt 0) {
-            #Clear-Host
-            Write-Host "Decryption in progress - $BLremain%"
-            $BLremain = (Get-BitLockerVolume).EncryptionPercentage
-            Start-Sleep -Milliseconds 5000
-        }
-
-        [System.Windows.MessageBox]::Show("Bitlocker disabled!",'BitLocker','Ok','Info') | Out-Null    
+# searching system volume defaults
+Write-Host -NoNewline "Searching volume(s)..."
+foreach ($item in Get-BitLockerVolume) {
+    if (($item.MountPoint -ceq 'C:') -and ($item.VolumeType -ceq 'OperatingSystem')) {
+        $BLnow = $item.VolumeStatus
+        $BLprot = ($item.KeyProtector).KeyProtectorType -join ','
+        $BLauto = $item.AutoUnlockEnabled
     }
-} elseif ((Get-BitLockerVolume).VolumeStatus -ceq 'FullyDecrypted') {
+}
+Write-Host -ForegroundColor Green " DONE"
+
+# check status
+$Proceed = 'No'
+Write-Host -NoNewline "Checking status..."
+if (($BLnow -ceq 'FullyEncrypted') -or ($BLnow -ceq 'EncryptionInProgress')) {
+    $Proceed = [System.Windows.MessageBox]::Show("The system volume is encrypted.`nDo you wanto to proceed to disable Bitlocker?",'BitLocker','YesNo','Info')
+
+} elseif ($BLnow -ceq 'FullyDecrypted') {
     [System.Windows.MessageBox]::Show("The system volume seems already decrypted.`nNothing to do",'BitLocker','Ok','Info') | Out-Null
 } else {
     # stampo una lista degli attributi, per gestione eccezioni
@@ -79,3 +75,63 @@ if ((Get-BitLockerVolume).VolumeStatus -ceq 'FullyEncrypted') {
     Get-BitLockerVolume | Format-List
     Pause
 }
+Write-Host -ForegroundColor Green " DONE"
+
+# extras
+Write-Host -NoNewline "Looking for additional settings..."
+if ($BLprot -cne 'Tpm,RecoveryPassword') {
+    $Proceed = [System.Windows.MessageBox]::Show("Found additional protectors: [$BLprotectors]`nProceed anyway?",'BitLocker','YesNo','Warning')
+}
+if ($BLauto -ne $null) {
+    $Proceed = [System.Windows.MessageBox]::Show("Automatic unlocking keys founr`nClear them before proceed?",'BitLocker','YesNo','Warning')
+    if ($Proceed -eq 'Yes') {
+         Disable-BitLockerAutoUnlock -MountPoint 'C:'
+    }
+}
+Write-Host -ForegroundColor Green " NONE"
+
+<# *******************************************************************************
+                                    DECRYPT
+******************************************************************************* #>
+if ($Proceed -eq 'Yes') {
+    $ErrorActionPreference= 'Stop'
+    Try {
+        $stdout = Disable-BitLocker -MountPoint 'C:'
+        $ErrorActionPreference= 'Inquire'
+    }
+    Catch {
+        Write-Output "`nError: $($error[0].ToString())"
+        [System.Windows.MessageBox]::Show("Disabling BitLocker Failed",'BitLocker','Ok','Warning') | Out-Null
+        exit
+    }
+
+    # monitoring until decryption is full
+    $parsebar = ProgressBar
+    $BLremain = 100
+    Write-Host -NoNewline "Decryption in progress..."
+    while ($BLremain -gt 0) {
+        Write-Host -NoNewline "."
+        $BLremain = (Get-BitLockerVolume).EncryptionPercentage
+        
+        # progressbar
+        $percent = $BLremain
+        if ($percent -gt 100) {
+            $percent = 100
+        }
+        $formattato = '{0:0.0}' -f $percent
+        [int32]$progress = $percent   
+        $parsebar[2].Text = ("Encryption remaining [$percent%]")
+        if ($progress -ge 100) {
+            $parsebar[1].Value = 100
+        } else {
+            $parsebar[1].Value = $progress
+        }
+        [System.Windows.Forms.Application]::DoEvents()
+
+        Start-Sleep -Milliseconds 5000
+    }
+    Write-Host -ForegroundColor Green " DONE"
+    $parsebar[0].Close()
+    [System.Windows.MessageBox]::Show("Bitlocker disabled!",'BitLocker','Ok','Info') | Out-Null    
+}
+
