@@ -1,6 +1,6 @@
 <#
 Name......: Init_PC.ps1
-Version...: 25.05.1
+Version...: 25.06.1
 Author....: Dario CORRADA
 
 This script finalize fresh OS installations:
@@ -165,7 +165,17 @@ if ($info[2] -match 'Windows 11') {
     $swlist['Teams'] = CheckBox -form $form_panel -checked $true -x 20 -y 230 -text "Teams"
 }
 $swlist['TreeSize'] = CheckBox -form $form_panel -checked $true -x 20 -y 260 -text "TreeSize"
-$swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 290 -text "VPN Fortinet" # gia' gestito da PPPC
+if ($info[2] -match 'Windows 11') {
+    # l'installazione del client e' gia' gestita via PPPC
+    $swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -enabled $false -x 20 -y 290 -text "VPN Fortinet"
+} else {
+    <#
+    per qualche motivo su Win10 viene installata una versione vecchia del client
+    lascio il flag disponibile per poter scaricare installer e dipendenze da
+    gestire manualmente
+    #>
+    $swlist['VPNnew'] = CheckBox -form $form_panel -checked $false -x 20 -y 290 -text "VPN Fortinet"
+}
 $swlist['7ZIP'] = CheckBox -form $form_panel -checked $true -x 20 -y 320 -text "7ZIP"
 OKButton -form $form_panel -x 100 -y 370 -text "Ok"  | Out-Null
 if ([string]::IsNullOrEmpty($winget_exe)) {
@@ -315,14 +325,13 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
             #>
         } elseif ($item -eq 'VPNnew') {
             Write-Host -NoNewline "Download software..."
-            <# no more needed with versions >= 7.4
-            # download dependencies (see https://community.fortinet.com/t5/Support-Forum/FortiClientVPN-client-doesn-t-work-with-Windows-11-24H2/m-p/366570#M259815)
+            # download dependencies (no more needed with client versions >= 7.4)
+            # see https://community.fortinet.com/t5/Support-Forum/FortiClientVPN-client-doesn-t-work-with-Windows-11-24H2/m-p/366570#M259815)
             $answ = [System.Windows.MessageBox]::Show("Visual C++ Redistributable for Visual Studio 2015-2022`nis already installed?",'DEPENDENCIES','YesNo','Warning')
             if ($answ -eq "No") {
                 $download.Downloadfile('https://aka.ms/vs/17/release/vc_redist.x64.exe', "C:\Users\Public\Desktop\vc_redist.x64.exe")
                 $answ = [System.Windows.MessageBox]::Show("Keep in mind to install Visual C++ libraries`nBEFORE Fortinet client installation.`n`nPlease run setup once the target account has been logged in",'INFO','Ok','Info')
             }
-            #>
             #Invoke-WebRequest -Uri 'https://links.fortinet.com/forticlient/win/vpnagent' -OutFile "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe"
             $download.Downloadfile('https://links.fortinet.com/forticlient/win/vpnagent', "C:\Users\Public\Desktop\FortiClientVPNOnlineInstaller.exe")
             Write-Host -ForegroundColor Green " DONE"
