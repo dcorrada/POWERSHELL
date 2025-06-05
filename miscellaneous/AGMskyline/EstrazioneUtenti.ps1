@@ -49,7 +49,7 @@ $headers = @{
 
 # query parameters
 $query_params = @(
-    'limit=1000'
+    'limit=100000'
     'offset=0'
 )
 $uri_suffix = '?' + ($query_params -join '&')
@@ -60,7 +60,7 @@ Try {
     $ErrorActionPreference= 'Inquire'
 }
 Catch {
-    [System.Windows.MessageBox]::Show("$($error[0].ToString())",'ABORTING','Ok','Error')
+    [System.Windows.MessageBox]::Show("$($error[0].ToString())`n`nPlease check whenever token has not been expired",'ABORTING','Ok','Error') | Out-Null
     exit
 }
 
