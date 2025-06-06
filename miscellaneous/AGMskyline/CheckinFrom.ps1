@@ -1,3 +1,8 @@
+<#
+Per cercare tabelle e sintassi delle API Resttful guardare su:
+https://snipe-it.readme.io/reference/api-overview
+#>
+
 # check execution policy
 foreach ($item in (Get-ExecutionPolicy -List)) {
     if(($item.Scope -eq 'LocalMachine') -and ($item.ExecutionPolicy -cne 'Bypass')) {
@@ -35,54 +40,152 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
-# carico il csv estratto dalla query sul DB di Snipe (v. CheckinFrom.sql)
-$answ = [System.Windows.MessageBox]::Show("Disponi di un file CSV?",'INFILE','YesNo','Warning')
-if ($answ -eq "No") {    
-    Write-Host -ForegroundColor red "Aborting..."
-    Start-Sleep -Seconds 3
-    Exit
+# settaggi per accesso a SnipeIT
+$uri_prefix = 'http://192.168.2.184/'
+$token_file = $env:LOCALAPPDATA + '\SnipeIT.token'
+$token_string = Get-Content $token_file
+$headers = @{
+    'Authorization' = "Bearer $token_string"
+    'Accept' = 'application/json'
+    'Content-Type' = 'application/json'
 }
-[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null
-$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-$OpenFileDialog.Title = "Open File"
-$OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Downloads"
-$OpenFileDialog.filter = 'CSV file (*.csv)| *.csv'
-$OpenFileDialog.ShowDialog() | Out-Null
-$infile = $OpenFileDialog.filename
 
-$rawdata = Import-Csv -Path $infile
-$chomp = @()
-$selected_fields = ('timestamp', 'action_type', 'fullname', 'email', 'deleted_at', 'asset', 'serial', 'status')
-foreach ($item in $rawdata) {
-    $arecord = @{}
-    foreach ($akey in $selected_fields) {
-        if ($akey -eq 'timestamp') {
-            $matches = @()
-            $item."$akey" -match "^([0-9\-]+)" > $null
-            $arecord["$akey"] = $matches[1]
-        } elseif ($akey -eq 'deleted_at') {
-            if ($item."$akey" -eq 'NULL') {
-                $arecord["$akey"] = 'ASSUNTO'                    
+# query tabella assets
+Write-Host -NoNewline "Fetching asset list..."
+$query_params = @(
+    'limit=100000'
+    'offset=0'
+)
+$uri_suffix = '?' + ($query_params -join '&')
+$uri = $uri_prefix + 'api/v1/hardware' + $uri_suffix
+$ErrorActionPreference= 'Stop'
+Try {
+    $rawdata = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    [System.Windows.MessageBox]::Show("$($error[0].ToString())`n`nPlease check whenever token has not been expired",'ABORTING','Ok','Error') | Out-Null
+    exit
+}
+$TheAssets = @{}
+foreach ($record in $rawdata.rows) {
+    Write-Host -NoNewline '.'
+    $TheAssets[$record.name] = @{
+        ASSET       = $record.name
+        SERIAL      = $record.serial
+        STATUS      = $record.status_label.name
+    } 
+}
+Write-Host -ForegroundColor Green " DONE"
+
+# query tabella users
+Write-Host -NoNewline "Fetching users list..."
+$query_params = @(
+    'limit=100000'
+    'offset=0'
+)
+$uri_suffix = '?' + ($query_params -join '&')
+$uri = $uri_prefix + 'api/v1/users' + $uri_suffix
+$ErrorActionPreference= 'Stop'
+Try {
+    $rawdata = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    [System.Windows.MessageBox]::Show("$($error[0].ToString())`n`nPlease check whenever token has not been expired",'ABORTING','Ok','Error') | Out-Null
+    exit
+}
+$TheUsers = @{}
+foreach ($record in $rawdata.rows) {
+    Write-Host -NoNewline '.'
+    $TheUsers[$record.name] = @{
+        FULLNAME    = $record.name
+        EMAIL       = $record.email
+    } 
+}
+Write-Host -ForegroundColor Green " DONE"
+
+# query tabella logs
+Write-Host -NoNewline "Fetching activity logs..."
+$query_params = @(
+    'limit=100000'
+    'offset=0'
+)
+$uri_suffix = '?' + ($query_params -join '&')
+$uri = $uri_prefix + 'api/v1/reports/activity' + $uri_suffix
+$ErrorActionPreference= 'Stop'
+Try {
+    $rawdata = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    [System.Windows.MessageBox]::Show("$($error[0].ToString())`n`nPlease check whenever token has not been expired",'ABORTING','Ok','Error') | Out-Null
+    exit
+}
+$TheLogs = @{}
+$BlackList = @('Sim Telefonica (3401730777)') # lista di asset e/o refusi da non considerare
+foreach ($record in $rawdata.rows) {
+    if (($record.item.type -eq 'asset') -and (('checkin from', 'checkout') -contains $record.action_type) -and ($BlackList -cnotcontains $record.item.name)) {
+        $record.item.name -match "^([A-Z0-9\-]+)\s\(" | Out-Null
+        $AssetFound = "$($matches[1])"
+        if ($AssetFound -eq $null) {
+            [System.Windows.MessageBox]::Show("Unexpected asset found`"$($record.item.name)`"`nUpdate `$Blacklist array, if necessary, and rerun the script",'ABORTING','Ok','Warning') | Out-Null
+            Write-Host "$($record.item.name)"
+            Exit
+        } elseif ($TheAssets.ContainsKey($AssetFound)) {
+            Write-Host -NoNewline '.'
+            $UsrAlive = 'CESSATO'
+            $UsrMail = 'NULL'
+
+            # BUG: x qualche strano motivo, su alcune transazioni, questo dato e' saltato (v. asset 5CG9014LPR sul checkout del 2023-06-12 2:14PM)
+            if ($record.target.name -eq $null) {
+                $TargetUsr = 'unknown'
             } else {
-                $arecord["$akey"] = 'CESSATO'
+                $TargetUsr = $record.target.name
             }
-        } else {
-            $arecord["$akey"] = $item."$akey"
+
+            if ($TheUsers.ContainsKey($TargetUsr)) {
+                $UsrAlive = 'ASSUNTO'
+                $UsrMail = $TheUsers[$TargetUsr].EMAIL
+                if ($UsrMail -notmatch '@') {
+                    $UsrMail = 'NULL'
+                }
+            }
+
+            $TheLogs[$record.id] = @{
+                UPTIME          = "$($record.created_at.datetime)"
+                CHECKINOUT      = $record.action_type
+                FULLNAME        = $TargetUsr
+                MAIL            = $UsrMail
+                USRSTATUS       = $usrAlive
+                HOSTNAME        = $TheAssets[$AssetFound].ASSET
+                SERIAL          = $TheAssets[$AssetFound].SERIAL
+                ASSET_STATUS    = $TheAssets[$AssetFound].STATUS
+            }
         }
     }
-    $chomp += $arecord
 }
+Write-Host -ForegroundColor Green " DONE"
 
 # writing output file
 Write-Host -NoNewline "Writing output file... "
 $outfile = "C:\Users\$env:USERNAME\Downloads\" + (Get-Date -format "yyMMdd") + '-CheckinFrom.csv'
 
-
 $i = 1
-$totrec = $chomp.Count
+$totrec = $TheLogs.Keys.Count
 $parsebar = ProgressBar
-foreach ($item in $chomp) {
-    $string = ("AGM{0:d5};{1};{2};{3};{4};{5};{6};{7};{8}" -f ($i,$item['timestamp'],$item['action_type'],$item['fullname'],$item['email'],$item['deleted_at'],$item['asset'],$item['serial'],$item['status']))
+foreach ($item in $TheLogs.Keys) {
+    $string = ("AGM{0:d5};{1};{2};{3};{4};{5};{6};{7};{8}" -f ( `
+        $i, ` 
+        $TheLogs[$item].UPTIME, `
+        $TheLogs[$item].CHECKINOUT, `
+        $TheLogs[$item].FULLNAME, `
+        $TheLogs[$item].MAIL,`
+        $TheLogs[$item].USRSTATUS, `
+        $TheLogs[$item].HOSTNAME, `
+        $TheLogs[$item].SERIAL, `
+        $TheLogs[$item].ASSET_STATUS
+    ))
     $string = $string -replace ';\s*;', ';NULL;'
     $string = $string -replace ';+\s*$', ';NULL'
     $string = $string -replace ';\s\[\];', ';NULL;'
