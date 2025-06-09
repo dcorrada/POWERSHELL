@@ -136,12 +136,8 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Updates\
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Upkeep\Powerize.ps1' -DestinationPath "$tmppath\Upkeep"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\Stargate.ps1' -DestinationPath "$tmppath\Safety"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\PedoMellon.ps1' -DestinationPath "$tmppath\Safety"
+DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\Disable_Bitlocker.ps1' -DestinationPath "$tmppath\Safety"
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
-
-# +++ TESTING +++
-# aggiornare puntamento per branch [master] (e spostare riga di codice sul blocco precedente)
-$downbin = $tmppath + '\Safety\Disable_Bitlocker.ps1'
-Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/unstable/Safety/Disable_Bitlocker.ps1' -OutFile $downbin -ErrorAction Stop | out-null
 
 # download di materiale custom dal branch 'tempus'
 New-Item -ItemType directory -Path "$tmppath\miscellaneous" > $null
