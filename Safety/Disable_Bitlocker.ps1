@@ -80,7 +80,7 @@ Write-Host -ForegroundColor Green " DONE"
 # extras
 Write-Host -NoNewline "Looking for additional settings..."
 if ($BLprot -cne 'Tpm,RecoveryPassword') {
-    $Proceed = [System.Windows.MessageBox]::Show("Found additional protectors: [$BLprotectors]`nProceed anyway?",'BitLocker','YesNo','Warning')
+    $Proceed = [System.Windows.MessageBox]::Show("Unexpected protectors setting: [$BLprotectors]`nProceed anyway?",'BitLocker','YesNo','Warning')
 }
 if ($BLauto -ne $null) {
     $Proceed = [System.Windows.MessageBox]::Show("Automatic unlocking keys founr`nClear them before proceed?",'BitLocker','YesNo','Warning')
