@@ -106,10 +106,14 @@ $totrec = $fetched_data.Count
 $parsebar = ProgressBar
 foreach ($item in $fetched_data) {
     $string = ("AGM{0:d5};{1};{2};{3};{4}" -f ($i,$item.FULLNAME,$item.USRNAME,$item.EMAIL,$item.PHONE))
+    # fix miscoded chars
+    $string = $string -replace '&#039;', "'"
+    $string = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding(1252).GetBytes("$string"))
+
+    # formatting rows
     $string = $string -replace ';_;', ';NULL;'
     $string = $string -replace ';\s*;', ';NULL;'
     $string = $string -replace ';\s*$', ';NULL'
-    $string = $string -replace '&#039;', "'"
     $string = $string -replace ';', '";"'
     $string = '"' + $string + '"'
     $string = $string -replace '"NULL"', 'NULL'

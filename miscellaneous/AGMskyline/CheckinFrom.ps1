@@ -154,11 +154,6 @@ foreach ($record in $rawdata.rows) {
                 }
             }
 
-            # Fix special chars
-            if ($TargetUsr -match '&#039;') {
-                $TargetUsr = $TargetUsr.Replace('&#039;',"'")
-            }
-
             $TheLogs[$record.id] = @{
                 UPTIME          = "$($record.created_at.datetime)"
                 CHECKINOUT      = $record.action_type
@@ -193,6 +188,12 @@ foreach ($item in $TheLogs.Keys) {
         $TheLogs[$item].SERIAL, `
         $TheLogs[$item].ASSET_STATUS
     ))
+
+    # fix miscoded chars
+    $string = $string -replace '&#039;', "'"
+    $string = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding(1252).GetBytes("$string"))
+
+    # formatting rows
     $string = $string -replace ';\s*;', ';NULL;'
     $string = $string -replace ';+\s*$', ';NULL'
     $string = $string -replace ';\s\[\];', ';NULL;'
