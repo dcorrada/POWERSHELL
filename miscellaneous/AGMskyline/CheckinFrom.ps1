@@ -101,7 +101,7 @@ foreach ($record in $rawdata.rows) {
     $TheUsers[$record.name] = @{
         FULLNAME    = $record.name
         EMAIL       = $record.email
-    } 
+    }
 }
 Write-Host -ForegroundColor Green " DONE"
 
@@ -122,6 +122,7 @@ Catch {
     [System.Windows.MessageBox]::Show("$($error[0].ToString())`n`nPlease check whenever token has not been expired",'ABORTING','Ok','Error') | Out-Null
     exit
 }
+
 $TheLogs = @{}
 $BlackList = @('Sim Telefonica (3401730777)') # lista di asset e/o refusi da non considerare
 foreach ($record in $rawdata.rows) {
@@ -144,12 +145,18 @@ foreach ($record in $rawdata.rows) {
                 $TargetUsr = $record.target.name
             }
 
+            # se l'utente e' presente solo nei log vuol dire che non e' piu' in forze
             if ($TheUsers.ContainsKey($TargetUsr)) {
                 $UsrAlive = 'ASSUNTO'
                 $UsrMail = $TheUsers[$TargetUsr].EMAIL
                 if ($UsrMail -notmatch '@') {
                     $UsrMail = 'NULL'
                 }
+            }
+
+            # Fix special chars
+            if ($TargetUsr -match '&#039;') {
+                $TargetUsr = $TargetUsr.Replace('&#039;',"'")
             }
 
             $TheLogs[$record.id] = @{
