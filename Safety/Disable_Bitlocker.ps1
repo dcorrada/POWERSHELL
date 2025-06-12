@@ -111,7 +111,7 @@ if ($Proceed -eq 'Yes') {
     Write-Host -NoNewline "Decryption in progress..."
     while ($BLremain -gt 0) {
         Write-Host -NoNewline "."
-        $BLremain = (Get-BitLockerVolume).EncryptionPercentage
+        $BLremain = (Get-BitLockerVolume -MountPoint 'C:').EncryptionPercentage
         
         # progressbar
         $percent = $BLremain
