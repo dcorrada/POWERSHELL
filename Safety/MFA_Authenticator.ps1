@@ -5,6 +5,10 @@ Author....: Dario CORRADA
 
 This script is intended to manage, initialize and restore MFA methods - usually 
 mediated by MS Authenticator app - related to Microsoft 365 accounts.
+
+Alternatively to MSOnline, the implementation adopting Graph modules should be 
+available (for SDK v2.0, currently in beta):
+https://learn.microsoft.com/en-us/entra/identity/authentication/howto-mfa-userdevicesettings
 #>
 
 <# *******************************************************************************
@@ -176,11 +180,7 @@ phonenumber or App shared secret.
 The following chunk may be a template for managing MFA in more details, see also:
 https://techcommunity.microsoft.com/discussions/microsoft-entra/powershell-cmdlets-for-mfa-settings/157678
 
-Apart from adopting MSOnline module here there is an alternative ref for 
-implementing the same things adopting Graph modules instead:
-https://learn.microsoft.com/en-us/entra/identity/authentication/howto-mfa-userdevicesettings
-#>
-<#
+
 #Selected user in cloud
 $Userpricipalname = "abc@org.com"
 
