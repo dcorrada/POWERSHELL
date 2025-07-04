@@ -70,7 +70,7 @@ Try {
     Write-Host -ForegroundColor Green "Stopped"
     Write-Host -NoNewline "Looking for process... "
     $aProcess = Get-Process 'AGM_ConfigManager'
-    Stop-Process -ID $outproc.Id -Force
+    Stop-Process -ID $aProcess.Id -Force
     Start-Sleep -Milliseconds 1500
     Write-Host -ForegroundColor Green 'Killed'
     $SkipInstallation = $false
