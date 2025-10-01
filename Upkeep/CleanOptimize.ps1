@@ -76,16 +76,21 @@ if ($answ -eq "Yes") {
     }
 }
 
-# Optimize
+# see https://docs.microsoft.com/en-us/powershell/module/storage/optimize-volume?view=windowsserver2019-ps
+$issd = Get-PhysicalDisk
+Clear-Host
+Write-Host -ForegroundColor Yellow "STORAGE DEVICE SPECS"
+Write-Host -ForegroundColor Cyan @"
+ * $($issd.Model)
+ * $($issd.MediaType)
+ * $($issd.HealthStatus)
+ * $($issd.BusType)
+"@
 $answ = [System.Windows.MessageBox]::Show("Optimize Volume C:?",'OPTIMIZE','YesNo','Info')
 if ($answ -eq "Yes") {
-    # see https://docs.microsoft.com/en-us/powershell/module/storage/optimize-volume?view=windowsserver2019-ps
-    $issd = Get-PhysicalDisk
-    if ($issd.MediaType -eq 'SSD') {
-        Write-Host "Found SSD drive"
+    if ($issd.MediaType -eq 'SSD') {       
         Optimize-Volume -DriveLetter C -ReTrim -Verbose
     } else {
-        Write-Host "Found HDD drive"
         Optimize-Volume -DriveLetter C -Defrag -Verbose
     }  
 }
