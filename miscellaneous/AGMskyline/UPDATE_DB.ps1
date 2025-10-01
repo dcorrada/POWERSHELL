@@ -79,7 +79,7 @@ if ($answ -eq "Yes") {
     $ErrorActionPreference= 'Stop'
     try {
         $sshsession = New-SSHSession -ComputerName $ahost -Credential $SSHlogin -Force -Verbose
-        [string]$backupcmd = ("mysqldump -u {0} -p{1} AGMskyline > /home/dario.corrada/share/{2}-AGMskyline_dump.sql" -f ($dumpUsr, $dumpPwd, (Get-Date -format "yyMMdd")))
+        [string]$backupcmd = ("mysqldump -u {0} -p{1} AGMskyline > /home/dario.corrada/AGMskyline_DB/{2}-AGMskyline_dump_compact.sql" -f ($dumpUsr, $dumpPwd, (Get-Date -format "yyMMdd")))
         $stdout = Invoke-SSHCommand -SSHSession $sshsession -Command $backupcmd
         Remove-SSHSession -SSHSession $sshsession
     } catch {
