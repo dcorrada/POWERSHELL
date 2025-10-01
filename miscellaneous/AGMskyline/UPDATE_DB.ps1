@@ -37,7 +37,7 @@ Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
 
 # local IP address of the MySQL server
-$ahost = '192.168.20.205'
+$ahost = '192.168.1.30'
 
 # MySQL login dialog
 [System.Windows.MessageBox]::Show("Insert credentials for MySQL connection",'MYSQL','Ok','Info') | Out-Null
@@ -79,7 +79,7 @@ if ($answ -eq "Yes") {
     $ErrorActionPreference= 'Stop'
     try {
         $sshsession = New-SSHSession -ComputerName $ahost -Credential $SSHlogin -Force -Verbose
-        [string]$backupcmd = ("mysqldump -u {0} -p{1} AGMskyline > /home/darcor/VirtualBox\ VMs/share/{2}-AGMskyline_dump.sql" -f ($dumpUsr, $dumpPwd, (Get-Date -format "yyMMdd")))
+        [string]$backupcmd = ("mysqldump -u {0} -p{1} AGMskyline > /home/dario.corrada/share/{2}-AGMskyline_dump.sql" -f ($dumpUsr, $dumpPwd, (Get-Date -format "yyMMdd")))
         $stdout = Invoke-SSHCommand -SSHSession $sshsession -Command $backupcmd
         Remove-SSHSession -SSHSession $sshsession
     } catch {
