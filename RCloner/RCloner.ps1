@@ -141,7 +141,7 @@ listed at https://rclone.org/
 $formlist = FormBase -w 400 -h 200 -text 'LOGS'
 Label -form $formlist -x 10 -y 20 -w 80 -h 30 -text 'Log level:' | Out-Null
 $verbosity = DropDown -form $formlist -x 90 -y 20 -w 250 -h 30 -opts ('DEBUG', 'INFO', 'NOTICE', 'ERROR')
-$verbosity.Text = 'NOTICE'
+$verbosity.Text = 'INFO'
 Label -form $formlist -x 10 -y 60 -w 80 -h 30 -text 'Log file:' | Out-Null
 $logdia = TxtBox -form $formlist -x 90 -y 60 -w 250 -h 30 -text 'C:\RClone\Melampo.log'
 OKButton -form $formlist -x 100 -y 100 -text "Ok" | Out-Null
