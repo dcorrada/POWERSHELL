@@ -56,13 +56,30 @@ Add-Type -AssemblyName PresentationFramework
 $ErrorActionPreference= 'Stop'
 try {
     Get-AppxPackage Microsoft.OutlookForWindows -AllUsers | Remove-AppxPackage
+    Write-Host -ForegroundColor Green "Outlook New (for Windows) banned from this machine"
 }
 catch {
-    Write-Output "`nError: $($error[0].ToString())"
+    Write-Host -ForegroundColor Red "Error: $($error[0].ToString())"
     Pause
     exit
 }
 $ErrorActionPreference= 'Inquire'
 
 # hiding toggle
-
+$regpath = 'HKCU:\SOFTWARE\Microsoft\Office\16.0\Outlook\Options\General'
+if (Test-Path $regpath) {
+    $ErrorActionPreference= 'Stop'
+    try {
+        New-ItemProperty -Path $regpath -Name 'HideNewOutlookToggle' -Value 1 -PropertyType DWord
+        Write-Host -ForegroundColor Green "`nToggle hided from Outlook Classic client"
+    }
+    catch {
+        Write-Host -ForegroundColor Red "`nError: $($error[0].ToString())"
+        Pause
+        exit
+    }
+    $ErrorActionPreference= 'Inquire'
+} else {
+    Write-Host -ForegroundColor Yellow "`nNo registry key (for Office Desktop) found"
+}
+Pause
