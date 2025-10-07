@@ -3,7 +3,7 @@ Name......: OutlookNew_Banned.ps1
 Version...: 25.10.1
 Author....: Dario CORRADA
 
-This script looks for Outlook for Windows (aka Outlook New on Windows 11) and 
+This script looks for Outlook for Windows (aka Outlook New) on Windows 11 and 
 try to remove it. In addition, whenever Outlook Classic is present, the script 
 will hide the "Try Outlook New" toggle
 #>
@@ -39,10 +39,30 @@ catch {
 }
 $ErrorActionPreference= 'Inquire'
 
+# just pipe more than single "Split-Path" if the script maps to nested subfolders
+$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent
+
 # graphical stuff
 $WarningPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 
+<# *******************************************************************************
+                                    BODY
+******************************************************************************* #>
+
+# removing Outlook New
+$ErrorActionPreference= 'Stop'
+try {
+    Get-AppxPackage Microsoft.OutlookForWindows -AllUsers | Remove-AppxPackage
+}
+catch {
+    Write-Output "`nError: $($error[0].ToString())"
+    Pause
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+# hiding toggle
 
