@@ -1,6 +1,6 @@
 <#
 Name......: OutlookNew_Banned.ps1
-Version...: 25.10.1
+Version...: 25.10.2
 Author....: Dario CORRADA
 
 This script looks for Outlook for Windows (aka Outlook New) on Windows 11 and 
@@ -67,19 +67,32 @@ $ErrorActionPreference= 'Inquire'
 
 # hiding toggle
 $regpath = 'HKCU:\SOFTWARE\Microsoft\Office\16.0\Outlook\Options\General'
+$regname = 'HideNewOutlookToggle'
 if (Test-Path $regpath) {
     $ErrorActionPreference= 'Stop'
     try {
-        New-ItemProperty -Path $regpath -Name 'HideNewOutlookToggle' -Value 1 -PropertyType DWord
-        Write-Host -ForegroundColor Green "`nToggle hided from Outlook Classic client"
+        $donothing = Get-ItemProperty -Path $regpath -Name $regname
+        if ($donothing.HideNewOutlookToggle -ne 1) {
+            Set-ItemProperty -Path $regpath -Name $regname -Value 1
+            Write-Host -ForegroundColor Green "`nToggle hided from Outlook Classic client"
+        } else {
+            Write-Host -ForegroundColor Cyan "`nRegistry Key already configured"
+        }
     }
     catch {
-        Write-Host -ForegroundColor Red "`nError: $($error[0].ToString())"
-        Pause
-        exit
+        try {
+                New-ItemProperty -Path $regpath -Name $regname -Value 1 -PropertyType DWord
+                Write-Host -ForegroundColor Green "`nToggle hided from Outlook Classic client"
+            }
+        catch {
+            Write-Host -ForegroundColor Red "`nError: $($error[0].ToString())"
+            Pause
+            exit
+        }
     }
     $ErrorActionPreference= 'Inquire'
 } else {
     Write-Host -ForegroundColor Yellow "`nNo registry key (for Office Desktop) found"
 }
+
 Pause
