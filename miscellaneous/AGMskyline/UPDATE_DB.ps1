@@ -39,7 +39,7 @@ Import-Module -Name "$workdir\Modules\Forms.psm1"
 # local IP address of the MySQL server
 $form_panel = FormBase -w 300 -h 180 -text "DB CONFIG"
 Label -form $form_panel -x 20 -y 20 -w 80 -h 30 -text 'IP ADDRESS:' | Out-Null
-$ipaddress = TxtBox -form $form_panel -x 110 -y 20 -w 100 -h 30 -text '192.168.1.30'
+$ipaddress = TxtBox -form $form_panel -x 110 -y 20 -w 100 -h 30 -text '192.168.20.203'
 $dodump = CheckBox -form $form_panel -checked $true -x 20 -y 45 -w 150 -text "Dump the current DB"
 OKButton -form $form_panel -x 90 -y 90 -text "Ok" | Out-Null
 $result = $form_panel.ShowDialog()
