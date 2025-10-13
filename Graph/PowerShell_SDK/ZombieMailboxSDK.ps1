@@ -1,11 +1,15 @@
 <#
 Name......: ZombieMailboxSDK.ps1
-Version...: 25.5.3
+Version...: 25.7.1
 Author....: Dario CORRADA
 
 This script look for any [user|shared] mailbox present on ExchangeOnLine. Then 
 it seek for any [SeandAs|SendOnBehalfTo|FullAccess] permission for each one. 
 The aim is to find any account delegated revealed as dismissed (aka zombie).
+
+Moreover the script is looking for any forwarding rules applied to each mailbox. 
+Acknowledegements to Vasil Michev and his own script:
+https://github.com/michevnew/PowerShell/blob/master/Mailbox_Forwarding_inventoryV2.ps1
 
 More details about ExOv3 module cmdlets are available at:
 https://learn.microsoft.com/en-us/powershell/module/exchange/?view=exchange-ps#powershell-v3-module
@@ -277,15 +281,18 @@ based on different kind of id types:
 * Legacy User Name    ie: username
 #>
 
-$EXOlist = Get-EXOMailbox -RecipientTypeDetails UserMailbox,SharedMailbox -ResultSize unlimited | ForEach-Object {
-    Write-Host -NoNewline '.'        
+$EXOlist = Get-EXOMailbox -RecipientTypeDetails UserMailbox,SharedMailbox -ResultSize unlimited -Properties ForwardingAddress,ForwardingSMTPAddress | ForEach-Object {
+    Write-Host -NoNewline '.'
+       
     New-Object -TypeName PSObject -Property @{
         ID          = "$($_.Id)"
         TYPE        = "$($_.RecipientTypeDetails)"
         OBJ_ID      = "$($_.ExternalDirectoryObjectId)"
         UPN         = "$($_.UserPrincipalName)"
         DISPLAY     = "$($_.DisplayName)"
-    } | Select ID, TYPE, OBJ_ID, UPN, DISPLAY
+        FWDINT      = "$($_.ForwardingAddress)"
+        FWDEXT      = "$($_.ForwardingSmtpAddress)"
+    } | Select ID, TYPE, OBJ_ID, UPN, DISPLAY, FWDINT, FWDEXT
 }
 Write-Host -ForegroundColor Green " done"
 
@@ -346,6 +353,9 @@ foreach ($entity in $EXOlist) {
         SENDONBEHALF    = @()
         EXCLUDED        = 'No'
         LASTLOGON       = 'na'
+        FWDINT          = "$($entity.FWDINT)"
+        FWDEXT          = "$($entity.FWDEXT)"       
+        FWDRULE         = ''
     }
 
     if ($ExcludeList.ContainsKey($entity.UPN)) {
@@ -474,6 +484,27 @@ foreach ($entity in $EXOlist) {
                 $EXOdetailed["$($entity.OBJ_ID)"].SENDONBEHALF += $Beowulf
             }
         }
+
+        $FwdRules = @()
+        foreach ($Rulez in (Get-InboxRule -Mailbox $entity.UPN -IncludeHidden)) {
+            if ($Rulez.ForwardTo) {
+                $FwdRules += $Rulez.ForwardTo
+            } elseif ($Rulez.ForwardAsAttachmentTo) {
+                $FwdRules += $Rulez.ForwardAsAttachementTo
+            } elseif ($Rulez.RedirectTo) {
+                $FwdRules += $Rulez.RedirectTo
+            }
+        }
+        if ($FwdRules.Count -gt 0) {
+            for ($i = 0; $i -lt $FwdRules.Count; $i++) {
+                if ($FwdRules[$i] -match " \[EX:") {
+                    $FwdRules[$i] -match "^(.+) \[EX:" | Out-Null
+                    $FwdRules[$i] = "$($matches[1])"
+                }
+            }
+            $EXOdetailed["$($entity.OBJ_ID)"].FWDRULE = $FwdRules -join '; '
+        }
+
     }
 
     # progressbar
@@ -642,6 +673,35 @@ try {
     }
     $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium4' -AutoSize -PassThru
     Write-Host -ForegroundColor Green ' done'
+
+    $label = 'FeedForward'
+    Write-Host -NoNewline "Writing worksheet [$label]..."
+    $inData = $EXOdetailed.Keys | Foreach-Object {
+        if ($EXOdetailed[$_].EXCLUDED -eq 'No') {
+            Write-Host -NoNewline '.'     
+
+            $anyFwd = "$($EXOdetailed[$_].FWDINT)" + "$($EXOdetailed[$_].FWDEXT)" + "$($EXOdetailed[$_].FWDRULE)"
+            if ($anyFwd -ne '') {
+                if ("$($EXOdetailed[$_].FWDEXT)" -match "^smtp:") {
+                    $external = "[$($EXOdetailed[$_].FWDEXT)]"
+                } else {
+                    $external = "$($EXOdetailed[$_].FWDEXT)"
+                }
+
+                New-Object -TypeName PSObject -Property @{
+                    OBJECTID        = "$_"
+                    UPN             = "$($EXOdetailed[$_].UPN)"
+                    DISPLAYNAME     = "$($EXOdetailed[$_].DISPLAYNAME)"
+                    INTERNAL        = "$($EXOdetailed[$_].FWDINT)"
+                    EXTERNAL        = "$external"
+                    RULES           = "$($EXOdetailed[$_].FWDRULE)"
+                } | Select OBJECTID, UPN, DISPLAYNAME, INTERNAL, EXTERNAL, RULES
+            }
+        }
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium4' -AutoSize -PassThru
+    Write-Host -ForegroundColor Green ' done'
+
 } catch {
     [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error') | Out-Null
     Write-Host -ForegroundColor Red ' FAIL'
