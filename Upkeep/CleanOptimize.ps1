@@ -94,9 +94,10 @@ foreach ($item in $VolMap) {
     }
 }
 
+$i = 1
 foreach ($aDisk in $issd) {
     Clear-Host
-    Write-Host -ForegroundColor Yellow "STORAGE DEVICE FOUND"
+    Write-Host -ForegroundColor Yellow "STORAGE DEVICE FOUND #$i"
     Write-Host -ForegroundColor Cyan @"
     * $($aDisk.Model)
     * $($aDisk.MediaType)
@@ -115,6 +116,7 @@ foreach ($aDisk in $issd) {
     } else {
         Pause
     }
+    $i++
 }
 
 # reboot
