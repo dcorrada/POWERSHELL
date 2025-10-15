@@ -60,6 +60,30 @@ do {
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
+<# *******************************************************************************
+                                    INIT
+******************************************************************************* #>
+
+# paths
+[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
+$foldername = New-Object System.Windows.Forms.FolderBrowserDialog
+$foldername.RootFolder = "MyComputer"
+$foldername.ShowNewFolderButton = $false
+$foldername.Description = "SOURCE FOLDER"
+$foldername.ShowDialog() > $null
+$SOURCEpath = $foldername.SelectedPath
+[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
+$foldername = New-Object System.Windows.Forms.FolderBrowserDialog
+$foldername.RootFolder = "MyComputer"
+$foldername.ShowNewFolderButton = $false
+$foldername.Description = "DESTINATION FOLDER"
+$foldername.ShowDialog() > $null
+$DESTpath = $foldername.SelectedPath
+
+# reproducing source folder tree on destination
+
+
+
 
 
 # Tutto cio' a valle di questo commeto e' da considerarsi temporaneo. 
