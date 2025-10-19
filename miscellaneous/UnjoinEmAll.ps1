@@ -51,7 +51,6 @@ $ErrorActionPreference= 'Stop'
 do {
     try {
         Import-Module -Name "$workdir\Modules\Forms.psm1"
-        Import-Module ActiveDiirectory
         Import-Module ImportExcel
         $ThirdParty = 'Ok'
     } catch {
@@ -115,8 +114,10 @@ foreach ($record in $rawdata.rows) {
     if ($fetched_record.STATUS -cne 'Assegnato') {
         $fetched_record.NAME = $record.name        
         $SnipeIT_data += $fetched_record
+        Write-Host -NoNewline '+'
+    } else {
+        Write-Host -NoNewline '.'
     }
-    Write-Host -NoNewline "."
 }
 Write-Host -NoNewline -ForegroundColor Green "Done`n"
 Start-Sleep -Milliseconds 1500
@@ -125,20 +126,47 @@ Start-Sleep -Milliseconds 1500
                                 ACTIVE DIRECTORY
 ******************************************************************************* #>
 Write-Host -NoNewline -ForegroundColor Cyan "`nLooking for assets on AD"
-$Joined_assets = @()
+$Joined_assets = @{}
 foreach ($item in $SnipeIT_data) {
-    $infopc = Get-ADComputer -Identity 'pippo' -Properties *
+    $ErrorActionPreference= 'Stop'
+    try {
+        $infopc = Get-ADComputer -Identity $item.NAME -Properties *
+        $infopc.CanonicalName -match "/(.+)/$($item.NAME)$" > $null
+        $ou = $matches[1]
+        Write-Host -NoNewline '+'
+        try {
+            $Joined_assets[$item.NAME] = @{
+                STATUS  = $item.STATUS
+                OU      = $ou 
+                DATE    = $infopc.LastLogonDate | Get-Date -format "yyyy-MM-dd"
+            }
+        }
+        catch {
+            $Joined_assets[$item.NAME] = @{
+                STATUS  = $item.STATUS
+                OU      = $ou 
+                DATE    = 'na'
+            }
+        }
+    }
+    catch {
+        Write-Host -NoNewline '.'
+    }
+    $ErrorActionPreference= 'Inquire'
 }
 Write-Host -NoNewline -ForegroundColor Green "Done`n"
 Start-Sleep -Milliseconds 1500
 
+<# *******************************************************************************
+                                GET OUTPUT
+******************************************************************************* #>
+$xlsx_file = "C:$env:HOMEPATH\Downloads\UnkoinEmAll-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
+$XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
+
+
+
+
 <# +++ TODO LIST +++
-
-2) Interrogare AD e selezionare solo quegli asset ancora a dominio
-
-3) Interrogare AzureAD e raccogliere i last logon di questa selezione
-
-4) Produrre un Excel di questa selezione e mostrarlo: mettere in pausa lo script
-
-5) Se confermato, eliminare da AD questi host (usare le credenziali "adm.nome.cognome")
+* Produrre un Excel di questa selezione e mostrarlo: mettere in pausa lo script
+* Se confermato, eliminare da AD questi host (usare le credenziali "adm.nome.cognome")
 #>
