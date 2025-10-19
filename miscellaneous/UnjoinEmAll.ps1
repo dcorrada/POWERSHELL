@@ -51,6 +51,7 @@ $ErrorActionPreference= 'Stop'
 do {
     try {
         Import-Module -Name "$workdir\Modules\Forms.psm1"
+        Import-Module ActiveDiirectory
         Import-Module ImportExcel
         $ThirdParty = 'Ok'
     } catch {
@@ -72,9 +73,66 @@ do {
 $ErrorActionPreference= 'Inquire'
 
 
-<# +++ TODO LIST +++
+<# *******************************************************************************
+                                  SNIPE IT
+******************************************************************************* #>
+Write-Host -NoNewline -ForegroundColor Cyan "`nFetching SnipeIT unassigned assets"
+# accessing info
+$uri_prefix = 'http://192.168.2.184/' # IP Snipe webserver
+$token_file = $env:LOCALAPPDATA + '\SnipeIT.token'
+$token_string = Get-Content $token_file
 
-1) Interrogare SinpeIT e collezionare hostname e status di tutti gli asset non assegnati
+# header for request
+$headers = @{
+    'Authorization' = "Bearer $token_string"
+    'Accept' = 'application/json'
+    'Content-Type' = 'application/json'
+}
+
+# query parameters
+$query_params = @(
+    'limit=100000'
+    'offset=0'
+)
+$uri_suffix = '?' + ($query_params -join '&')
+$uri = $uri_prefix + 'api/v1/hardware' + $uri_suffix
+$ErrorActionPreference= 'Stop'
+Try {
+    $rawdata = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
+    $ErrorActionPreference= 'Inquire'
+}
+Catch {
+    [System.Windows.MessageBox]::Show("$($error[0].ToString())`n`nPlease check whenever token has not been expired",'ABORTING','Ok','Error') | Out-Null
+    exit
+}
+
+# collecting data
+$enc = [System.Text.Encoding]::UTF8
+$SnipeIT_data = @()
+foreach ($record in $rawdata.rows) {
+    $fetched_record = @{}
+    $fetched_record.STATUS = $record.status_label.name
+    if ($fetched_record.STATUS -cne 'Assegnato') {
+        $fetched_record.NAME = $record.name        
+        $SnipeIT_data += $fetched_record
+    }
+    Write-Host -NoNewline "."
+}
+Write-Host -NoNewline -ForegroundColor Green "Done`n"
+Start-Sleep -Milliseconds 1500
+
+<# *******************************************************************************
+                                ACTIVE DIRECTORY
+******************************************************************************* #>
+Write-Host -NoNewline -ForegroundColor Cyan "`nLooking for assets on AD"
+$Joined_assets = @()
+foreach ($item in $SnipeIT_data) {
+    $infopc = Get-ADComputer -Identity 'pippo' -Properties *
+}
+Write-Host -NoNewline -ForegroundColor Green "Done`n"
+Start-Sleep -Milliseconds 1500
+
+<# +++ TODO LIST +++
 
 2) Interrogare AD e selezionare solo quegli asset ancora a dominio
 
