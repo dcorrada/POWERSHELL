@@ -119,7 +119,7 @@ foreach ($record in $rawdata.rows) {
         Write-Host -NoNewline '.'
     }
 }
-Write-Host -NoNewline -ForegroundColor Green "Done`n"
+Write-Host -NoNewline -ForegroundColor Green " Done`n"
 Start-Sleep -Milliseconds 1500
 
 <# *******************************************************************************
@@ -154,19 +154,89 @@ foreach ($item in $SnipeIT_data) {
     }
     $ErrorActionPreference= 'Inquire'
 }
-Write-Host -NoNewline -ForegroundColor Green "Done`n"
+Write-Host -NoNewline -ForegroundColor Green " Done`n"
 Start-Sleep -Milliseconds 1500
 
 <# *******************************************************************************
                                 GET OUTPUT
 ******************************************************************************* #>
+Write-Host -NoNewline -ForegroundColor Cyan "`nPreparing Excel report"
 $xlsx_file = "C:$env:HOMEPATH\Downloads\UnkoinEmAll-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
 $XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 
+$ErrorActionPreference= 'Stop'
+try {  
+    $label = 'UnassignedAssets'
+    $inData = $Joined_assets.Keys | Foreach-Object {
+
+        New-Object -TypeName PSObject -Property @{
+            HOSTNAME  = "$_"
+            STATUS    = "$($Joined_assets[$_].STATUS)"
+            OU        = "$($Joined_assets[$_].OU)"
+            LASTLOGON = "$($Joined_assets[$_].DATE)"
+        } | Select HOSTNAME, OU, STATUS, LASTLOGON
+        Write-Host -NoNewline '.'
+    }
+    $XlsPkg = $inData | Export-Excel -ExcelPackage $XlsPkg -WorksheetName $label -TableName $label -TableStyle 'Medium1' -AutoSize -PassThru
+} catch {
+    [System.Windows.MessageBox]::Show("Error updating data",'ABORTING','Ok','Error') | Out-Null
+    Write-Host -ForegroundColor Red ' FAIL'
+    Write-Host -ForegroundColor Yellow "ERROR: $($error[0].ToString())"
+    exit
+}
+$ErrorActionPreference= 'Inquire'
+
+Close-ExcelPackage -ExcelPackage $XlsPkg -Show
+Write-Host -NoNewline -ForegroundColor Green " Done`n"
+Start-Sleep -Milliseconds 1500
+
+$proceed2ujoin = [System.Windows.MessageBox]::Show(@"
+[$xlsx_file] 
+
+Questo file illustra una lista di asset che possono essere 
+rimossi da dominio.
+
+Cliccando su "Si" questo file verra' ricaricato dallo script, 
+che procedera' alla rimozione di tutti gli asset che legge 
+da tale file. Puoi quindi editare e salvare questo file 
+prima di procedere. 
+
+Cliccando su "No" lo script termina qui. 
+"@,'UNJOIN ASSET','YesNo','Warning')
 
 
+<# *******************************************************************************
+                             UNJOIN FROM AD
+******************************************************************************* #>
+if ($proceed2ujoin -eq 'Yes') {
+    # getting AD credentials
+    Write-Host -NoNewline "Credential management... "
+    $pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'Join2Domain'
+    if ($pswout.Count -eq 2) {
+        $ad_login = New-Object System.Management.Automation.PSCredential($pswout[0], (ConvertTo-SecureString $pswout[1] -AsPlainText -Force))
+    } else {
+        [System.Windows.MessageBox]::Show("Error connecting to PSWallet",'ABORTING','Ok','Error')
+        Write-Host -ForegroundColor Red "Ko"
+        Pause
+        exit
+    }
+    Write-Host -ForegroundColor Green 'Ok'
 
-<# +++ TODO LIST +++
-* Produrre un Excel di questa selezione e mostrarlo: mettere in pausa lo script
-* Se confermato, eliminare da AD questi host (usare le credenziali "adm.nome.cognome")
-#>
+    $DeadList = Import-Excel -Path $xlsx_file -WorksheetName 'UnassignedAssets'
+    Clear-Host
+    Write-Host -ForegroundColor Yellow "*** UNJOINIG HOSTS ***`n"
+    foreach ($Zombie in $DeadList.HOSTNAME) {
+        Write-Host -ForegroundColor Blue -NoNewline "Removing $zombie "
+        $ErrorActionPreference= 'Stop'
+        try {
+            # eliminare da AD gli host presenti nel file Excel (usare le credenziali "adm.nome.cognome")
+            Start-Sleep -Milliseconds 750
+            Write-Host -ForegroundColor Green " Done"
+        }
+        catch {
+            Write-Host -ForegroundColor Red "Failed"
+        }
+        $ErrorActionPreference= 'Inquire'
+    }    
+}
+Pause
