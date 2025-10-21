@@ -161,7 +161,7 @@ Start-Sleep -Milliseconds 1500
                                 GET OUTPUT
 ******************************************************************************* #>
 Write-Host -NoNewline -ForegroundColor Cyan "`nPreparing Excel report"
-$xlsx_file = "C:$env:HOMEPATH\Downloads\UnkoinEmAll-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
+$xlsx_file = "C:$env:HOMEPATH\Downloads\UnjoinEmAll-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
 $XlsPkg = Open-ExcelPackage -Path $xlsx_file -Create
 
 $ErrorActionPreference= 'Stop'
@@ -223,20 +223,41 @@ if ($proceed2ujoin -eq 'Yes') {
     Write-Host -ForegroundColor Green 'Ok'
 
     $DeadList = Import-Excel -Path $xlsx_file -WorksheetName 'UnassignedAssets'
+    $StillAlive = @()
     Clear-Host
     Write-Host -ForegroundColor Yellow "*** UNJOINIG HOSTS ***`n"
-    foreach ($Zombie in $DeadList.HOSTNAME) {
+    foreach ($Zombie in $DeadList) {
         Write-Host -ForegroundColor Blue -NoNewline "Removing $zombie "
         $ErrorActionPreference= 'Stop'
         try {
-            # eliminare da AD gli host presenti nel file Excel (usare le credenziali "adm.nome.cognome")
-            Start-Sleep -Milliseconds 750
+            Remove-ADComputer -Identity $Zombie.HOSTNAME -Credential $ad_login -confirm:$false
             Write-Host -ForegroundColor Green " Done"
         }
         catch {
+            $StillAlive += $Zombie
             Write-Host -ForegroundColor Red "Failed"
         }
         $ErrorActionPreference= 'Inquire'
-    }    
+        Start-Sleep -Milliseconds 500
+    }
+
+    if ($StillAlive.Count -gt 0) {
+        $xlsx_alive = "C:$env:HOMEPATH\Downloads\UnjoinEmAll-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
+        $AlivePkg = Open-ExcelPackage -Path $xlsx_file -Create
+        $AlivePkg = $inData | Export-Excel -ExcelPackage $AlivePkg -WorksheetName 'UnassignedAssets' -TableName 'UnassignedAssets' -TableStyle 'Medium1' -AutoSize -PassThru
+        
+        $answer = [System.Windows.MessageBox]::Show(@"
+Alcuni asset non sono stati rimossi da dominio.
+Aprire il seguente file?
+
+[$xlsx_alive] 
+"@,'UNJOIN FAILED','YesNo','Error')
+        if ($answer -eq 'Yes') {
+            Close-ExcelPackage -ExcelPackage $AlivePkg -Show
+        } else {
+            Close-ExcelPackage -ExcelPackage $AlivePkg
+        }
+    }
+
+    Remove-Item -Path $xlsx_file -Force
 }
-Pause
