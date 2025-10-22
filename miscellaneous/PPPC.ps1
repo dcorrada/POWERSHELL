@@ -165,7 +165,7 @@ New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
 @"
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
 Pause
-PowerShell.exe "& "'$tmppath\miscellaneous\AGMConfMan_init.ps1'
+PowerShell.exe "& "'$tmppath\miscellaneous\AGM_Scripts\AGMConfMan_init.ps1'
 Pause
 PowerShell.exe "& "'$tmppath\Safety\Disable_Bitlocker.ps1'
 Pause
