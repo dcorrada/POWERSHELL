@@ -140,9 +140,9 @@ DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Safety\D
 DownloadFilesFromRepo -Owner 'dcorrada' -Repository 'POWERSHELL' -Path 'Init_PC.ps1' -DestinationPath $tmppath
 
 # download di materiale custom dal branch 'tempus'
-New-Item -ItemType directory -Path "$tmppath\miscellaneous" > $null
-$downbin = $tmppath + '\miscellaneous\AGMConfMan_init.ps1'
-Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMConfMan_init.ps1' -OutFile $downbin -ErrorAction Stop | out-null
+New-Item -ItemType directory -Path "$tmppath\miscellaneous\AGM_scripts" > $null
+$downbin = $tmppath + '\miscellaneous\AGM_scripts\AGMConfMan_init.ps1'
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGM_scripts/AGMConfMan_init.ps1' -OutFile $downbin -ErrorAction Stop | out-null
 $downbin = $tmppath + '\miscellaneous\Quotes.ps1'
 Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/Quotes.ps1' -OutFile $downbin -ErrorAction Stop | out-null
 
@@ -165,7 +165,7 @@ New-Item -ItemType file -Path "$tmppath\STEP03.cmd" > $null
 @"
 PowerShell.exe "& "'$tmppath\Upkeep\Powerize.ps1'
 Pause
-PowerShell.exe "& "'$tmppath\miscellaneous\AGMConfMan_init.ps1'
+PowerShell.exe "& "'$tmppath\miscellaneous\AGM_Scripts\AGMConfMan_init.ps1'
 Pause
 PowerShell.exe "& "'$tmppath\Safety\Disable_Bitlocker.ps1'
 Pause
