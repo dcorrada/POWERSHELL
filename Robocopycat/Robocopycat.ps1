@@ -80,9 +80,10 @@ $foldername.Description = "DESTINATION FOLDER"
 $foldername.ShowDialog() > $null
 $DESTpath = $foldername.SelectedPath
 
-# reproducing source folder tree on destination
 
 
+# fare dei test di questo comando su un albero poco ramificato contenente file e sottocartelle
+Get-ChildItem -Path $SOURCEpath -Recurse
 
 
 <#
