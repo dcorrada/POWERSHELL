@@ -39,7 +39,7 @@ catch {
 $ErrorActionPreference= 'Inquire'
 
 # just pipe more than single "Split-Path" if the script maps to nested subfolders
-$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent
+$workdir = Split-Path $myinvocation.MyCommand.Definition -Parent | Split-Path -Parent  | Split-Path -Parent
 
 # graphical stuff
 Add-Type -AssemblyName System.Windows.Forms
