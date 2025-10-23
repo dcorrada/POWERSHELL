@@ -202,13 +202,15 @@ da tale file. Puoi quindi editare e salvare questo file
 prima di procedere. 
 
 Cliccando su "No" lo script termina qui. 
-"@,'UNJOIN ASSET','YesNo','Warning')
+"@,'UNJOIN ASSET','YesNo','Info')
 
 
 <# *******************************************************************************
                              UNJOIN FROM AD
 ******************************************************************************* #>
 if ($proceed2ujoin -eq 'Yes') {
+    [System.Windows.MessageBox]::Show("Prima di procedere chiudere il file, se aperto in Excel`n[$xlsx_file]",'UNJOIN ASSET','Ok','Warning') | Out-Null
+
     # getting AD credentials
     Write-Host -NoNewline "Credential management... "
     $pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'Join2Domain'
@@ -242,9 +244,9 @@ if ($proceed2ujoin -eq 'Yes') {
     }
 
     if ($StillAlive.Count -gt 0) {
-        $xlsx_alive = "C:$env:HOMEPATH\Downloads\UnjoinEmAll-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
-        $AlivePkg = Open-ExcelPackage -Path $xlsx_file -Create
-        $AlivePkg = $inData | Export-Excel -ExcelPackage $AlivePkg -WorksheetName 'UnassignedAssets' -TableName 'UnassignedAssets' -TableStyle 'Medium1' -AutoSize -PassThru
+        $xlsx_alive = "C:$env:HOMEPATH\Downloads\NotUnjoined-" + (Get-Date -format "yyMMddHHmm") + '.xlsx'
+        $AlivePkg = Open-ExcelPackage -Path $xlsx_alive -Create
+        $AlivePkg = $StillAlive | Export-Excel -ExcelPackage $AlivePkg -WorksheetName 'UnassignedAssets' -TableName 'UnassignedAssets' -TableStyle 'Medium1' -AutoSize -PassThru
         
         $answer = [System.Windows.MessageBox]::Show(@"
 Alcuni asset non sono stati rimossi da dominio.
