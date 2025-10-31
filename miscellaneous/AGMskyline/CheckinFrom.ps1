@@ -128,7 +128,7 @@ $BlackList = @('Sim Telefonica (3401730777)') # lista di asset e/o refusi da non
 foreach ($record in $rawdata.rows) {
     if (($record.item.type -eq 'asset') -and (('checkin from', 'checkout') -contains $record.action_type) -and ($BlackList -cnotcontains $record.item.name)) {
         $record.item.name -match "^([A-Z0-9\-]+)\s\(" | Out-Null
-        $AssetFound = "$($matches[1])"
+        $AssetFound = $matches[1]      
         if ($AssetFound -eq $null) {
             [System.Windows.MessageBox]::Show("Unexpected asset found`"$($record.item.name)`"`nUpdate `$Blacklist array, if necessary, and rerun the script",'ABORTING','Ok','Warning') | Out-Null
             Write-Host "$($record.item.name)"
