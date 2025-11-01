@@ -1,6 +1,6 @@
 <#
 Name......: Robocopycat.ps1
-Version...: 25.10.1
+Version...: 25.11.1
 Author....: Dario CORRADA
 
 This script performs a data mirroring using robocopy command: each subfolder 
@@ -13,6 +13,8 @@ from the backup jobs.
 For a complete reference on how robocopy works take a look to
 https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy
 #>
+
+
 
 <# *******************************************************************************
                                     HEADER
@@ -67,10 +69,12 @@ do {
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
 
+
+
 <# *******************************************************************************
                                     INPUTS
 ******************************************************************************* #>
-Write-Host -ForegroundColor Cyan -NoNewline "Looking for source tree and replicate onto destination"
+Write-Host -ForegroundColor Cyan -NoNewline "`nLooking for source tree to replicate onto destination"
 
 # paths
 [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
@@ -80,6 +84,7 @@ $foldername.ShowNewFolderButton = $false
 $foldername.Description = "SOURCE FOLDER"
 $foldername.ShowDialog() > $null
 $SOURCEpath = $foldername.SelectedPath -replace '\\', '/'
+Write-Host -NoNewline '.'
 [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
 $foldername = New-Object System.Windows.Forms.FolderBrowserDialog
 $foldername.RootFolder = "MyComputer"
@@ -88,106 +93,185 @@ $foldername.Description = "DESTINATION FOLDER"
 $foldername.ShowDialog() > $null
 $DESTpath = $foldername.SelectedPath -replace '\\', '/'
 
+# initial params for define the amount of jobs
+Write-Host -NoNewline '.'
+$DeepForm = FormBase -w 350 -h 210 -text 'SAERCHING LEVELS'
+Label -form $DeepForm -x 30 -y 27 -w 80 -text 'Recurse level:' | Out-Null
+$recurselvel = TxtBox -form $DeepForm -x 110 -y 25 -w 40 -text "5"
+$addhidden = CheckBox -form $DeepForm -x 160 -y 10 -text 'Include hidden folders' 
+$addexclude = CheckBox -form $DeepForm -x 160 -y 35 -text 'Import exclude list' 
+Label -form $DeepForm -x 30 -y 80 -w 250 -text 'The recurse level value specify how deeply to look for subfolders recursively' | Out-Null
+OKButton -form $DeepForm -x 90 -y 130 -w 120 -text "Proceed" | Out-Null
+$resultButton = $DeepForm.ShowDialog()
+if ($addhidden.Checked) {
+    $children = Get-ChildItem -Path $SOURCEpath -Directory -Recurse -Force
+} else {
+    $children = Get-ChildItem -Path $SOURCEpath -Directory -Recurse
+}
+$DeepSeek = $recurselvel.Text
+
 # exclude list
-$OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-$OpenFileDialog.Title = "Select exclude list file"
-$OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
-$OpenFileDialog.filename = 'exclude.list'
-$OpenFileDialog.filter = 'Plain text file | *.*'
-$OpenFileDialog.ShowDialog() | Out-Null
-$ExcludeList = @{}
-foreach ($item in (Get-Content $OpenFileDialog.filename)) {
-    $ExcludeList[$item] = 'file'
+$ExcludeList = @{
+    FILES   = @()
+    FOLDERS = @()
+}
+if ($addexclude.Checked) {
+    $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $OpenFileDialog.Title = "Select exclude list file"
+    $OpenFileDialog.initialDirectory = "C:$env:HOMEPATH"
+    $OpenFileDialog.filename = 'exclude.list'
+    $OpenFileDialog.filter = 'Plain text file | *.*'
+    $OpenFileDialog.ShowDialog() | Out-Null
+    foreach ($item in (Get-Content $OpenFileDialog.filename)) {
+        Write-Host -NoNewline '.'
+        if ($item -match "^\+\s") {
+            $item -match "^\+\s(.+)$" | Out-Null
+            $ExcludeList.FOLDERS += $matches[1]
+        } elseif ($item -match "^\-\s") {
+            $item -match "^\-\s(.+)$" | Out-Null
+            $ExcludeList.FILES += $matches[1]
+        }
+    }
 }
 
-# RETRIEVING SOURCE TREE
-# the number of subfolders found will define the amount of independent robocopy
-# jobs that will be parallelized
-$sourceTree = @{}
-# the deepSeek value specify how much deeply looking for subfolders recursively
-$deepSeek = 10
-$ErrorActionPreference= 'SilentlyContinue'
-$sourceTree[$SOURCEpath] = 0
+$jobArray = @()
 $deepestLevel = 0
-for ($i = 1; $i -lt $deepSeek; $i++) {
-    foreach ($parent in $sourceTree.Keys) {
-        if ($sourceTree[$parent] -eq ($i - 1)) {
-            foreach ($child in Get-ChildItem -Path $parent) {
-                if ($child.Mode -eq 'd-----') { # new subfolder
-                    $astring = $parent + '/' + $child.Name
-                    $proceed = $true
-                    foreach ($blackListed in $ExcludeList.Keys) {
-                        if ($astring -cmatch "$blacklisted") {
-                            $proceed = $false
-                            $ExcludeList[$blackListed] = 'folder'
-                        }
-                    }
-                    if ($proceed) {
-                        $sourceTree[$astring] = $i
-                        if ($i -gt $deepestLevel) {
-                            $deepestLevel = $i
-                        }
-                        Write-Host -NoNewline '.'
-                    }
+foreach ($item in $children) {
+    Write-Host -NoNewline '.' 
+    $NewPath = $item.FullName -replace '\\', '/'
+    $SubLevels = 0
+    while ($NewPath -cne $SOURCEpath) {
+        $NewPath = (Split-Path $NewPath -Parent) -replace '\\', '/'
+        $SubLevels ++
+    }
+    if ($SubLevels -le $DeepSeek) {
+        $includeRecord = $true
+        if ($ExcludeList.FOLDERS.Count -gt 0) {
+            foreach ($pattern in $ExcludeList.FOLDERS) {
+                if ($item.FullName -match "$pattern") {
+                    $includeRecord = $false
                 }
+            }
+        }
+        
+        if ($includeRecord) {
+            $arecord = @{
+                SOURCE  = $item.FullName
+                VALUE   = $SubLevels
+                DEST    = $null
+                TOTFILE = 0
+            }
+            $jobArray += $arecord
+
+            # update the deepest level reached amomng all jobs
+            if ($SubLevels -gt $deepestLevel) {
+                $deepestLevel = $SubLevels
             }
         }
     }
 }
-$ErrorActionPreference= 'Inquire'
+Write-Host -ForegroundColor Green ' Done'
 
-# each record of $jobArray couple a source path with a destination path,
-# plus a value of how deep is nested such couple
-$jobArray = @()
-foreach ($item in $sourceTree.Keys) {
-    $adest = $item -replace "$SOURCEpath", "$DESTpath"
-    $arecord = @{
-        SOURCE  = $item
-        VALUE   = $sourceTree[$item]
-        DEST    = $adest
-    }
-    $jobArray += $arecord
-    Write-Host -NoNewline '.'
-}
-
-# GENERATING DESTINATION TREE
-for ($i = 1; $i -lt $deepSeek; $i++) {
+# generating destination tree
+Write-Host -ForegroundColor Cyan -NoNewline "`nReproducing source folder tree on destination path"
+for ($i = 1; $i -le $deepSeek; $i++) {
     foreach ($item in $jobArray) {
         if ($item.VALUE -eq $i) {
-            New-Item -Path $item.DEST -ItemType Directory | Out-Null
             Write-Host -NoNewline '.'
+            $apath = $item.SOURCE -replace '\\', '/'
+            $apath -match "^$SOURCEpath(.*)$" | Out-Null
+            $item.DEST = ("$DESTpath" + "$($matches[1])") -replace '/', '\'
+            New-Item -Path $item.DEST -ItemType Directory | Out-Null
         }
     }
 }
-Write-Host -ForegroundColor Green " Done`n"
+Write-Host -ForegroundColor Green ' Done'
+
 
 <# *******************************************************************************
                                   DRY RUN
 ******************************************************************************* #>
+Write-Host -ForegroundColor Cyan -NoNewline "`nPerforming a simulation of data transfer"
 
-$source_path = 'C:/Users/korda/Desktop/POWERSHELL/Robocopycat/RoboCopyCat_TEST'
-$dest_path = 'C:/Users/korda/Downloads/TEST'
-$logfile = 'C:/Users/korda/Downloads/robocopy.log'
+# create log folder
+if (Test-Path 'C:\ROBOCOPYCAT_TEMP') {
+    Remove-Item 'C:\ROBOCOPYCAT_TEMP' -Force
+}
+New-Item 'C:\ROBOCOPYCAT_TEMP' -ItemType Directory | Out-Null
 
-# standard params adopted for
-$stdParms = '/XJ /R:3 /NP /NDL /NC /NJH /NJS'
-
-# extra params for those job at deepest level
-$tailParms = '/E /MIR'
-
-# extra params for dry runs
-$dryParms = '/L /BYTES'
-
+# standard parameters (please note /L is specific for dry runs)
+$stagingParms = '/XJ /R:3 /NP /NDL /NC /NJH /NJS /BYTES /LOG:"C:\ROBOCOPYCAT_TEMP\test.log" /L'
 # extra params for excluding files
-$excParms = '/XF'
-foreach ($item in $ExcludeList.Keys) {
-    if ($ExcludeList[$item] -eq 'file') {
-        $excParms += " $item"
-    }
+if ($ExcludeList.FILES.Count -gt 0) {
+    $excParms = ' /XF'
+    foreach ($item in $ExcludeList.FILES) {
+        $string = ' "' + $item + '"'
+        $excParms += $string
+    }    
+    $stagingParms += $excParms
 }
 
-$StagingArgumentList = '"{0}" "{1}" /LOG:"{2}" /E /MIR {3} /XF' -f $source_path, $dest_path, $logfile, $stdParms
-Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+foreach ($dryjob in $jobArray) {
+    Write-Host -NoNewline '.'
+    if ($dryjob.VALUE -eq $deepestLevel) {
+        # extra params for those job at deepest level
+        $StagingArgumentList = '"{0}" c:\fakepath {1} /E /MIR' -f $dryjob.SOURCE, $stagingParms
+    } else {
+        $StagingArgumentList = '"{0}" c:\fakepath {1}' -f $dryjob.SOURCE, $stagingParms
+    }
+    Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
+    $StagingContent = Get-Content -Path "C:\ROBOCOPYCAT_TEMP\test.log"
+    $dryjob.TOTFILE = $StagingContent.Count
+    Remove-Item "C:\ROBOCOPYCAT_TEMP\test.log" -Force
+}
+Write-Host -ForegroundColor Green ' Done'
+
+# output a summary
+Clear-Host
+Write-Host -ForegroundColor Yellow @"
+*** READY TO GO SUMMARY ***
+
+FILES   SOURCE PATH
+-------------------------------------------------------------------------------
+"@
+foreach ($item in $jobArray) {
+    $anumber = '{0:d5}' -f $item.TOTFILE
+    Write-Host -ForegroundColor Blue -NoNewline "$anumber"
+    if ($item.VALUE -eq $deepestLevel) {
+        Write-Host -ForegroundColor Red -NoNewline '+'
+        Write-Host -ForegroundColor Cyan "  $($item.SOURCE)"
+    } else {
+        Write-Host -ForegroundColor Cyan "   $($item.SOURCE)"
+    }
+}
+Write-Host -ForegroundColor Yellow "-------------------------------------------------------------------------------"
+
+<# *******************************************************************************
+                                  JOB RUN
+******************************************************************************* #>
+$answ = [System.Windows.MessageBox]::Show("Do you want to proceed to data transfer?",'STARTJOB','YesNo','Info')
+if ($answ -eq "Yes") {
+<# *** TO DO *** 
+
+NOTE A MARGINE
+* Rimuovere, dalla stringa del job di robocopy, l'opzione di girare 
+  ricorsivamente nelle sottocartelle (a meno delle cartelle a piu basso livello)
+
+* Una volta finiti i test spostare Data_Backup nel branch [tempus] essendo una
+  versione legacy/deprecated
+#>
+} else {
+    Remove-Item 'C:\ROBOCOPYCAT_TEMP' -Force
+    Write-Host -ForegroundColor Cyan -NoNewline "`nRemoving destination paths"
+    foreach ($item in $jobArray) {
+        Write-Host -NoNewline '.'
+        if ($item.VALUE -eq 1) {
+            Remove-Item $item.DEST -Recurse -Force
+        }
+    }
+    Write-Host -ForegroundColor Green " Done"
+    Start-Sleep -Milliseconds 1500
+}
 
 <#
 +++++++++++++++++++++
@@ -197,9 +281,5 @@ Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
 * Gestire un file exclude list per i path da escludere
     gestire $blacklisted come se fosse un hash in cui flaggare se si tratta di un path o di un file (e quindi da aggiungere alla lista /XF nel job)
 
-* Rimuovere, dalla stringa del job di robocopy, l'opzione di girare ricorsivamente nelle sottocartelle 
 
-* Togliere da GitHub il source tree di testing [unstable]/Robocopycat/RoboCopyCat_TEST
-
-* Una volta finiti i test spostare Data_Backup nel branch [tempus] essendo una versione legacy
 #>

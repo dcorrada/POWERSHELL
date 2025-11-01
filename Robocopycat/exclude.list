@@ -1,3 +1,10 @@
-NTUSER.DAT
-PAPA
-ntuser.dat*
+# This is a template example of exclude List.
+#
+# Patterns which starts with '+ ' char are considered folders to be excluded
+# Patterns which starts with '- ' char are considered files to be excluded
+#
+# PLEASE NOTE: in the pattern string the character '\' must be escapeed as '\\'
+
++ AppData\\LocalLow
++ AppData\\Local
+- NTUSER.DAT
