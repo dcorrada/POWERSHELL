@@ -95,20 +95,31 @@ $DESTpath = $foldername.SelectedPath -replace '\\', '/'
 
 # initial params for define the amount of jobs
 Write-Host -NoNewline '.'
-$DeepForm = FormBase -w 350 -h 210 -text 'SAERCHING LEVELS'
-Label -form $DeepForm -x 30 -y 27 -w 80 -text 'Recurse level:' | Out-Null
-$recurselvel = TxtBox -form $DeepForm -x 110 -y 25 -w 40 -text "5"
-$addhidden = CheckBox -form $DeepForm -x 160 -y 10 -text 'Include hidden folders' 
-$addexclude = CheckBox -form $DeepForm -x 160 -y 35 -text 'Import exclude list' 
-Label -form $DeepForm -x 30 -y 80 -w 250 -text 'The recurse level value specify how deeply to look for subfolders recursively' | Out-Null
-OKButton -form $DeepForm -x 90 -y 130 -w 120 -text "Proceed" | Out-Null
+
+$DeepForm = FormBase -w 450 -h 300 -text 'SAERCHING LEVELS'
+Label -form $DeepForm -x 80 -y 10 -w 150 -text 'RECURSE LEVEL' | Out-Null
+$recurselevel = Slider -form $DeepForm -x 20 -y 35 -min 1 -max 8 -defval 2
+$recurselevelLabel = Label -form $DeepForm -x 225 -y 40 -w 20 -text $recurselevel.Value
+$recurselevel.add_ValueChanged({
+    $SliderValue = $recurselevel.Value
+    $TextString =  $SliderValue
+    $recurselevelLabel.Text = $TextString
+})
+$addhidden = CheckBox -form $DeepForm -x 260 -y 15 -text 'Include hidden folders' 
+$addexclude = CheckBox -form $DeepForm -x 260 -y 45 -text 'Import exclude list' 
+Label -form $DeepForm -x 30 -y 90 -w 350 -h 100 -text @"
+Recurse level value will define how many levels of nested subfolders to consider as separate backup jobs.
+
+Low values are suggested if you have to backup several folder at the same tree level, otherwise consider higher value for few folders heavy nested.
+"@ | Out-Null
+OKButton -form $DeepForm -x 150 -y 190 -w 120 -text "Proceed" | Out-Null
 $resultButton = $DeepForm.ShowDialog()
 if ($addhidden.Checked) {
     $children = Get-ChildItem -Path $SOURCEpath -Directory -Recurse -Force
 } else {
     $children = Get-ChildItem -Path $SOURCEpath -Directory -Recurse
 }
-$DeepSeek = $recurselvel.Text
+$DeepSeek = $recurselevel.Value
 
 # exclude list
 $ExcludeList = @{
