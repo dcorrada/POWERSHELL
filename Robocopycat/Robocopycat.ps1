@@ -148,7 +148,7 @@ foreach ($item in $children) {
         $includeRecord = $true
         if ($ExcludeList.FOLDERS.Count -gt 0) {
             foreach ($pattern in $ExcludeList.FOLDERS) {
-                if ($item.FullName -match "$pattern") {
+                if (($item.FullName -replace '\\', '/') -match ($pattern -replace '\\', '/')) {
                     $includeRecord = $false
                 }
             }
@@ -210,6 +210,16 @@ if ($ExcludeList.FILES.Count -gt 0) {
     }    
     $stagingParms += $excParms
 }
+# extra params for excluding fdolders
+if ($ExcludeList.FOLDERS.Count -gt 0) {
+    $excParms = ' /XD'
+    foreach ($item in $ExcludeList.FILES) {
+        $string = ' "' + $item + '"'
+        $excParms += $string
+    }    
+    $stagingParms += $excParms
+}
+
 
 foreach ($dryjob in $jobArray) {
     Write-Host -NoNewline '.'

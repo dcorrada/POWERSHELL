@@ -5,6 +5,6 @@
 #
 # PLEASE NOTE: in the pattern string the character '\' must be escapeed as '\\'
 
-+ AppData\\LocalLow
-+ AppData\\Local
++ AppData\LocalLow
++ AppData\Local
 - NTUSER.DAT
