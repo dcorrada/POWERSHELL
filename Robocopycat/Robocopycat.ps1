@@ -224,7 +224,7 @@ if ($ExcludeList.FILES.Count -gt 0) {
 # extra params for excluding fdolders
 if ($ExcludeList.FOLDERS.Count -gt 0) {
     $excParms = ' /XD'
-    foreach ($item in $ExcludeList.FILES) {
+    foreach ($item in $ExcludeList.FOLDERS) {
         $string = ' "' + $item + '"'
         $excParms += $string
     }    
