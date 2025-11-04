@@ -74,7 +74,7 @@ $ErrorActionPreference= 'Inquire'
 <# *******************************************************************************
                                     INPUTS
 ******************************************************************************* #>
-Write-Host -ForegroundColor Cyan -NoNewline "`nLooking for source tree to replicate onto destination"
+Write-Host -ForegroundColor Cyan -NoNewline "`nDefining for source tree"
 
 # paths
 [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
@@ -84,18 +84,8 @@ $foldername.ShowNewFolderButton = $false
 $foldername.Description = "SOURCE FOLDER"
 $foldername.ShowDialog() > $null
 $SOURCEpath = $foldername.SelectedPath -replace '\\', '/'
-Write-Host -NoNewline '.'
-[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
-$foldername = New-Object System.Windows.Forms.FolderBrowserDialog
-$foldername.RootFolder = "MyComputer"
-$foldername.ShowNewFolderButton = $false
-$foldername.Description = "DESTINATION FOLDER"
-$foldername.ShowDialog() > $null
-$DESTpath = $foldername.SelectedPath -replace '\\', '/'
 
 # initial params for define the amount of jobs
-Write-Host -NoNewline '.'
-
 $DeepForm = FormBase -w 450 -h 300 -text 'SAERCHING LEVELS'
 Label -form $DeepForm -x 80 -y 10 -w 150 -text 'RECURSE LEVEL' | Out-Null
 $recurselevel = Slider -form $DeepForm -x 20 -y 35 -min 1 -max 8 -defval 2
@@ -147,6 +137,7 @@ if ($addexclude.Checked) {
 
 $jobArray = @()
 $deepestLevel = 0
+$jobCounter = 0
 foreach ($item in $children) {
     Write-Host -NoNewline '.' 
     $NewPath = $item.FullName -replace '\\', '/'
@@ -166,9 +157,11 @@ foreach ($item in $children) {
         }
         
         if ($includeRecord) {
+            $jobCounter++
             $arecord = @{
+                JOBNANE = 'ROBOCOP-' + ('{0:d3}' -f $jobCounter)
                 SOURCE  = $item.FullName
-                VALUE   = $SubLevels
+                LEVEL   = $SubLevels
                 DEST    = $null
                 TOTFILE = 0
             }
@@ -184,10 +177,17 @@ foreach ($item in $children) {
 Write-Host -ForegroundColor Green ' Done'
 
 # generating destination tree
-Write-Host -ForegroundColor Cyan -NoNewline "`nReproducing source folder tree on destination path"
+Write-Host -ForegroundColor Cyan -NoNewline "`nSetting destination path"
+[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
+$foldername = New-Object System.Windows.Forms.FolderBrowserDialog
+$foldername.RootFolder = "MyComputer"
+$foldername.ShowNewFolderButton = $false
+$foldername.Description = "DESTINATION FOLDER"
+$foldername.ShowDialog() > $null
+$DESTpath = $foldername.SelectedPath -replace '\\', '/'
 for ($i = 1; $i -le $deepSeek; $i++) {
     foreach ($item in $jobArray) {
-        if ($item.VALUE -eq $i) {
+        if ($item.LEVEL -eq $i) {
             Write-Host -NoNewline '.'
             $apath = $item.SOURCE -replace '\\', '/'
             $apath -match "^$SOURCEpath(.*)$" | Out-Null
@@ -234,7 +234,7 @@ if ($ExcludeList.FOLDERS.Count -gt 0) {
 
 foreach ($dryjob in $jobArray) {
     Write-Host -NoNewline '.'
-    if ($dryjob.VALUE -eq $deepestLevel) {
+    if ($dryjob.LEVEL -eq $deepestLevel) {
         # extra params for those job at deepest level
         $StagingArgumentList = '"{0}" c:\fakepath {1} /E /MIR' -f $dryjob.SOURCE, $stagingParms
     } else {
@@ -258,7 +258,7 @@ FILES   SOURCE PATH
 foreach ($item in $jobArray) {
     $anumber = '{0:d5}' -f $item.TOTFILE
     Write-Host -ForegroundColor Blue -NoNewline "$anumber"
-    if ($item.VALUE -eq $deepestLevel) {
+    if ($item.LEVEL -eq $deepestLevel) {
         Write-Host -ForegroundColor Red -NoNewline '+'
         Write-Host -ForegroundColor Cyan "  $($item.SOURCE)"
     } else {
@@ -286,7 +286,7 @@ NOTE A MARGINE
     Write-Host -ForegroundColor Cyan -NoNewline "`nRemoving destination paths"
     foreach ($item in $jobArray) {
         Write-Host -NoNewline '.'
-        if ($item.VALUE -eq 1) {
+        if ($item.LEVEL -eq 1) {
             Remove-Item $item.DEST -Recurse -Force
         }
     }
