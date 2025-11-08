@@ -317,7 +317,7 @@ do {
         $ErrorActionPreference= 'Stop'
         try {
             if ((Get-Job -Name $item).State -eq 'Running') {
-                Write-Host -ForegroundColor Green "[$item] Fromm <$($jobArray[$item].SOURCE_PATH)> to <$DESTpath>"
+                Write-Host -ForegroundColor Green "[$item] From <$($jobArray[$item].SOURCE_PATH)> to <$DESTpath>"
             }
         }
         catch {
