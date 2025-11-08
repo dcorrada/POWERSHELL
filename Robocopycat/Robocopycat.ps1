@@ -72,11 +72,9 @@ $ErrorActionPreference= 'Inquire'
 
 
 <# *******************************************************************************
-                                    INPUTS
+                                DEFINING INPUTS
 ******************************************************************************* #>
-Write-Host -ForegroundColor Cyan -NoNewline "`nDefining for source tree"
-
-# paths
+# define source path
 [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
 $foldername = New-Object System.Windows.Forms.FolderBrowserDialog
 $foldername.RootFolder = "MyComputer"
@@ -135,11 +133,24 @@ if ($addexclude.Checked) {
     }
 }
 
-$jobArray = @()
+
+
+<# *******************************************************************************
+                          BUILDING ARRAY OF JOB
+******************************************************************************* #>
+# create log folder
+$logPath = 'C:\ROBOCOPYCAT_TEMP'
+if (Test-Path $logPath) {
+    Remove-Item $logPath -Recurse -Force
+}
+New-Item $logPath -ItemType Directory | Out-Null
+
+
+Write-Host -ForegroundColor Cyan -NoNewline "`nExploring source tree"
 $deepestLevel = 0
+$jobArray = @{}
 $jobCounter = 0
 foreach ($item in $children) {
-    Write-Host -NoNewline '.' 
     $NewPath = $item.FullName -replace '\\', '/'
     $SubLevels = 0
     while ($NewPath -cne $SOURCEpath) {
@@ -158,14 +169,16 @@ foreach ($item in $children) {
         
         if ($includeRecord) {
             $jobCounter++
-            $arecord = @{
-                JOBNANE = 'ROBOCOP-' + ('{0:d3}' -f $jobCounter)
-                SOURCE  = $item.FullName
-                LEVEL   = $SubLevels
-                DEST    = $null
-                TOTFILE = 0
+            $ajobname = 'ROBOCOP-' + ('{0:d4}' -f $jobCounter)
+            $jobArray[$ajobname] = @{
+                SOURCE_PATH = $item.FullName
+                DEST_PATH   = $null
+                PARAMS      = "/XJ /R:3 /W:10 /ZB /NP /NDL /NC /BYTES /LOG+:$logPath\$ajobname.log"
+                LEVEL       = $SubLevels
+                STATUS      = 'queued'
+                
             }
-            $jobArray += $arecord
+            Write-Host -NoNewline '.' 
 
             # update the deepest level reached amomng all jobs
             if ($SubLevels -gt $deepestLevel) {
@@ -176,8 +189,11 @@ foreach ($item in $children) {
 }
 Write-Host -ForegroundColor Green ' Done'
 
-# generating destination tree
-Write-Host -ForegroundColor Cyan -NoNewline "`nSetting destination path"
+
+
+<# *******************************************************************************
+                              DEFINING OUTPUTS
+******************************************************************************* #>
 [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") > $null
 $foldername = New-Object System.Windows.Forms.FolderBrowserDialog
 $foldername.RootFolder = "MyComputer"
@@ -185,122 +201,148 @@ $foldername.ShowNewFolderButton = $false
 $foldername.Description = "DESTINATION FOLDER"
 $foldername.ShowDialog() > $null
 $DESTpath = $foldername.SelectedPath -replace '\\', '/'
+
+Write-Host -ForegroundColor Cyan -NoNewline "`nGenerating destination tree"
 for ($i = 1; $i -le $deepSeek; $i++) {
-    foreach ($item in $jobArray) {
-        if ($item.LEVEL -eq $i) {
+    foreach ($item in $jobArray.Keys) {
+        if ($jobArray[$item].LEVEL -eq $i) {
             Write-Host -NoNewline '.'
-            $apath = $item.SOURCE -replace '\\', '/'
+            $apath = $jobArray[$item].SOURCE_PATH -replace '\\', '/'
             $apath -match "^$SOURCEpath(.*)$" | Out-Null
-            $item.DEST = ("$DESTpath" + "$($matches[1])") -replace '/', '\'
-            New-Item -Path $item.DEST -ItemType Directory | Out-Null
+            $jobArray[$item].DEST_PATH = ("$DESTpath" + "$($matches[1])") -replace '/', '\'
+            New-Item -Path $jobArray[$item].DEST_PATH -ItemType Directory | Out-Null
         }
     }
 }
 Write-Host -ForegroundColor Green ' Done'
 
 
+
 <# *******************************************************************************
-                                  DRY RUN
+                              TUNING PARAMS
 ******************************************************************************* #>
-Write-Host -ForegroundColor Cyan -NoNewline "`nPerforming a simulation of data transfer"
-
-# create log folder
-if (Test-Path 'C:\ROBOCOPYCAT_TEMP') {
-    Remove-Item 'C:\ROBOCOPYCAT_TEMP' -Force
+# for those paths that define the lowest level of the destination tree recursive 
+# setting options will be added
+Write-Host -ForegroundColor Cyan -NoNewline "`nSelecting recursive jobs"
+foreach ($item in $jobArray.Keys) {
+    if ($jobArray[$item].LEVEL -eq $deepestLevel) {
+        $jobArray[$item].PARAMS += ' /E /MIR'
+        Write-Host -NoNewline '.'
+    }
 }
-New-Item 'C:\ROBOCOPYCAT_TEMP' -ItemType Directory | Out-Null
+Write-Host -ForegroundColor Green ' Done'
 
-# standard parameters (please note /L is specific for dry runs)
-$stagingParms = '/XJ /R:3 /NP /NDL /NC /NJH /NJS /BYTES /LOG:"C:\ROBOCOPYCAT_TEMP\test.log" /L'
+# adding exclusionns
+$excParms = ''
 # extra params for excluding files
 if ($ExcludeList.FILES.Count -gt 0) {
-    $excParms = ' /XF'
+    $excParms += ' /XF'
     foreach ($item in $ExcludeList.FILES) {
         $string = ' "' + $item + '"'
         $excParms += $string
     }    
-    $stagingParms += $excParms
 }
 # extra params for excluding fdolders
 if ($ExcludeList.FOLDERS.Count -gt 0) {
-    $excParms = ' /XD'
+    $excParms += ' /XD'
     foreach ($item in $ExcludeList.FOLDERS) {
         $string = ' "' + $item + '"'
         $excParms += $string
     }    
-    $stagingParms += $excParms
+}
+foreach ($item in $jobArray.Keys) {
+    $jobArray[$item].PARAMS += $excParms
 }
 
-
-foreach ($dryjob in $jobArray) {
-    Write-Host -NoNewline '.'
-    if ($dryjob.LEVEL -eq $deepestLevel) {
-        # extra params for those job at deepest level
-        $StagingArgumentList = '"{0}" c:\fakepath {1} /E /MIR' -f $dryjob.SOURCE, $stagingParms
-    } else {
-        $StagingArgumentList = '"{0}" c:\fakepath {1}' -f $dryjob.SOURCE, $stagingParms
+# dry run
+$answ = [System.Windows.MessageBox]::Show("Would you perform a simulation `ninstead of effective data transfer?",'DRY RUN','YesNo','Info')
+if ($answ -eq "Yes") { 
+    Write-Host -ForegroundColor Cyan -NoNewline "`nCleaning dest paths"
+    for ($i = $deepSeek; $i -ge 1; $i--) {
+        foreach ($item in $jobArray.Keys) {
+            if ($jobArray[$item].LEVEL -eq $i) {
+                $jobArray[$item].PARAMS += ' /L'
+                Remove-Item -Path $jobArray[$item].DEST_PATH -Recurse -Force | Out-Null
+                Write-Host -NoNewline '.'
+            }
+        }    
     }
-    Start-Process -Wait -FilePath robocopy.exe -ArgumentList $StagingArgumentList
-    $StagingContent = Get-Content -Path "C:\ROBOCOPYCAT_TEMP\test.log"
-    $dryjob.TOTFILE = $StagingContent.Count
-    Remove-Item "C:\ROBOCOPYCAT_TEMP\test.log" -Force
+    Write-Host -ForegroundColor Green ' Done'
 }
-Write-Host -ForegroundColor Green ' Done'
 
-# output a summary
-Clear-Host
-Write-Host -ForegroundColor Yellow @"
-*** READY TO GO SUMMARY ***
 
-FILES   SOURCE PATH
--------------------------------------------------------------------------------
-"@
-foreach ($item in $jobArray) {
-    $anumber = '{0:d5}' -f $item.TOTFILE
-    Write-Host -ForegroundColor Blue -NoNewline "$anumber"
-    if ($item.LEVEL -eq $deepestLevel) {
-        Write-Host -ForegroundColor Red -NoNewline '+'
-        Write-Host -ForegroundColor Cyan "  $($item.SOURCE)"
-    } else {
-        Write-Host -ForegroundColor Cyan "   $($item.SOURCE)"
-    }
-}
-Write-Host -ForegroundColor Yellow "-------------------------------------------------------------------------------"
 
 <# *******************************************************************************
-                                  JOB RUN
+                                JOB RUN
 ******************************************************************************* #>
-$answ = [System.Windows.MessageBox]::Show("Do you want to proceed to data transfer?",'STARTJOB','YesNo','Info')
-if ($answ -eq "Yes") {
-<# *** TO DO *** 
 
-NOTE A MARGINE
-* Rimuovere, dalla stringa del job di robocopy, l'opzione di girare 
-  ricorsivamente nelle sottocartelle (a meno delle cartelle a piu basso livello)
-
-* Una volta finiti i test spostare Data_Backup nel branch [tempus] essendo una
-  versione legacy/deprecated
+<# NOTE PER ME DA DEBUGGARE
+Sembra che parta il primo blocco di runs e poi finsice tutto
+In realtà nemmeno il primo blocco di runs parte (altrimenti avrei dei log files)
 #>
-} else {
-    Remove-Item 'C:\ROBOCOPYCAT_TEMP' -Force
-    Write-Host -ForegroundColor Cyan -NoNewline "`nRemoving destination paths"
-    foreach ($item in $jobArray) {
-        Write-Host -NoNewline '.'
-        if ($item.LEVEL -eq 1) {
-            Remove-Item $item.DEST -Recurse -Force
-        }
-    }
-    Write-Host -ForegroundColor Green " Done"
-    Start-Sleep -Milliseconds 1500
+
+
+$RoboCopyBlock = {
+    params($source_path, $dest_path, $opts)
+    $argstring = "$source_path $dest_path $opts" 
+    Start-Process -Wait -FilePath Robocopy.exe -ArgumentList $argstring
 }
 
-<#
-+++++++++++++++++++++
-+++  NOTE PER ME  +++
-+++++++++++++++++++++
+# this variable defineshow many job will run simultaneuosly
+$ConcurrentRuns = 8
 
-* Gestire un file exclude list per i path da escludere
-    gestire $blacklisted come se fosse un hash in cui flaggare se si tratta di un path o di un file (e quindi da aggiungere alla lista /XF nel job)
+$RunningJobs = 0
+do {
+
+    foreach ($item in $jobArray.Keys) {
+        if (($jobArray[$item].STATUS -eq 'queued') -and ($RunningJobs -lt $ConcurrentRuns)) {
+            $jobArray[$item].STATUS = 'started'
+            Start-Job $RoboCopyBlock -Name $item -ArgumentList $jobArray[$item].SOURCE_PATH, $jobArray[$item].DEST_PATH, $jobArray[$item].PARAMS | Out-Null
+            $RunningJobs++
+        }
+    }
+
+    $RunningJobs = 0
+    $jobSnapshot = Get-Job
+    foreach ($photo in $jobSnapshot) {
+        if ($photo.State -cne 'Completed') {
+            $RunningJobs++
+        }
+    }
+    
+    $StillAlive = 0
+    Clear-Host
+    Write-Host -ForegroundColor Yellow "*** RUNNING JOBS ***"
+    foreach ($item in $jobArray.Keys) {
+        $ErrorActionPreference= 'Stop'
+        try {
+            if ((Get-Job -Name $item).State -eq 'Running') {
+                Write-Host -ForegroundColor Green "[$item] Fromm <$($jobArray[$item].SOURCE_PATH)> to <$DESTpath>"
+            }
+        }
+        catch {
+            <# do nothing #>
+        }
+        $ErrorActionPreference= 'Inquire'
+    }
+
+    Write-Host -ForegroundColor Blue -NoNewline "`n`nPENDING JOBS "
+    $pending_counter = 0
+    foreach ($item in $jobArray.Keys) {
+        $ErrorActionPreference= 'Stop'
+        try {
+            if ((Get-Job -Name $item).State -ne 'Completed') {
+                $StillAlive++
+            }
+        }
+        catch {
+            $pending_counter++
+        }
+        $ErrorActionPreference= 'Inquire'
+    }
+    Write-Host "$pending_counter"
+
+    Start-Sleep -Milliseconds 2000
+} while ($StillAlive -gt 0)
 
 
-#>
