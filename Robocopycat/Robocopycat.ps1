@@ -273,7 +273,7 @@ if ($answ -eq "Yes") {
 
 
 <# *******************************************************************************
-                                JOB RUN
+                                 JOB RUN
 ******************************************************************************* #>
 
 <# NOTE PER ME DA DEBUGGARE
@@ -346,3 +346,10 @@ do {
 } while ($StillAlive -gt 0)
 
 
+<# *******************************************************************************
+                                 JOB RUN
+******************************************************************************* #>
+$answ = [System.Windows.MessageBox]::Show("Would you keep log files stored in [$logpath]?",'DRY RUN','YesNo','Info')
+if ($answ -eq "No") { 
+    Remove-Item -Path $logPath -Recurse -Force | Out-Null
+}
