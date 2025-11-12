@@ -139,7 +139,7 @@ if ($addexclude.Checked) {
                           BUILDING ARRAY OF JOB
 ******************************************************************************* #>
 # create log folder
-$logPath = 'C:\ROBOCOPYCAT_TEMP'
+$logPath = 'C:\\ROBOCOPYCAT_TEMP'
 if (Test-Path $logPath) {
     Remove-Item $logPath -Recurse -Force
 }
@@ -173,7 +173,7 @@ foreach ($item in $children) {
             $jobArray[$ajobname] = @{
                 SOURCE_PATH = $item.FullName
                 DEST_PATH   = $null
-                PARAMS      = "/XJ /R:3 /W:10 /ZB /NP /NDL /NC /BYTES /LOG+:$logPath\$ajobname.log"
+                PARAMS      = "/XJ /R:3 /W:10 /ZB /NP /NDL /NC /BYTES /LOG:" + '"' + "$logPath\\$ajobname.log" + '"'
                 LEVEL       = $SubLevels
                 STATUS      = 'queued'
                 
@@ -270,6 +270,17 @@ if ($answ -eq "Yes") {
     Write-Host -ForegroundColor Green ' Done'
 }
 
+foreach ($item in $jobArray.Keys) {
+    $src = '"' + $jobArray[$item].SOURCE_PATH + '"'
+    $dst = '"' + $jobArray[$item].DEST_PATH + '"'
+
+    $src = $src -replace '\\', '\\'
+    $dst = $dst -replace '\\', '\\'
+
+    $jobArray[$item].SOURCE_PATH = $src
+    $jobArray[$item].DEST_PATH = $dst
+}
+
 
 
 <# *******************************************************************************
@@ -347,7 +358,7 @@ do {
 
 
 <# *******************************************************************************
-                                 JOB RUN
+                              CLEANSWEEP
 ******************************************************************************* #>
 $answ = [System.Windows.MessageBox]::Show("Would you keep log files stored in [$logpath]?",'DRY RUN','YesNo','Info')
 if ($answ -eq "No") { 
