@@ -173,7 +173,7 @@ foreach ($item in $children) {
             $jobArray[$ajobname] = @{
                 SOURCE_PATH = $item.FullName
                 DEST_PATH   = $null
-                PARAMS      = "/XJ /R:3 /W:10 /ZB /NP /NDL /NC /BYTES /LOG:" + '"' + "$logPath\\$ajobname.log" + '"'
+                PARAMS      = "/XJ /R:3 /W:10 /ZB /NP /NDL /NC /BYTES /LOG+:" + '"' + "$logPath\\$ajobname.log" + '"'
                 LEVEL       = $SubLevels
                 STATUS      = 'queued'
                 
@@ -282,21 +282,19 @@ foreach ($item in $jobArray.Keys) {
 }
 
 
-
 <# *******************************************************************************
                                  JOB RUN
 ******************************************************************************* #>
+# create a list of job files
+$jobFiles = @{}
+foreach ($aname in $jobArray.Keys) {
+    $filename = "$logPath\\$aname.ps1"
 
-<# NOTE PER ME DA DEBUGGARE
-Sembra che parta il primo blocco di runs e poi finsice tutto
-In realtà nemmeno il primo blocco di runs parte (altrimenti avrei dei log files)
-#>
+    @"
+robocopy $($jobArray[$aname].SOURCE_PATH) $($jobArray[$aname].DEST_PATH) $($jobArray[$aname].PARAMS)
+"@ | Out-File $filename -Encoding ASCII -Append
 
-
-$RoboCopyBlock = {
-    params($source_path, $dest_path, $opts)
-    $argstring = "$source_path $dest_path $opts" 
-    Start-Process -Wait -FilePath Robocopy.exe -ArgumentList $argstring
+    $jobFiles[$aname] = $filename
 }
 
 # this variable defineshow many job will run simultaneuosly
@@ -308,7 +306,7 @@ do {
     foreach ($item in $jobArray.Keys) {
         if (($jobArray[$item].STATUS -eq 'queued') -and ($RunningJobs -lt $ConcurrentRuns)) {
             $jobArray[$item].STATUS = 'started'
-            Start-Job $RoboCopyBlock -Name $item -ArgumentList $jobArray[$item].SOURCE_PATH, $jobArray[$item].DEST_PATH, $jobArray[$item].PARAMS | Out-Null
+            Start-Job -FilePath $jobFiles[$item] -Name $item | Out-Null
             $RunningJobs++
         }
     }
