@@ -299,7 +299,6 @@ robocopy $($jobArray[$aname].SOURCE_PATH) $($jobArray[$aname].DEST_PATH) $($jobA
 
 # this variable defineshow many job will run simultaneuosly
 $ConcurrentRuns = 8
-
 $RunningJobs = 0
 do {
 
@@ -311,48 +310,28 @@ do {
         }
     }
 
+    Clear-Host
+    Write-Host -ForegroundColor Yellow "*** ACTIVE JOBS ***"
     $RunningJobs = 0
     $jobSnapshot = Get-Job
     foreach ($photo in $jobSnapshot) {
         if ($photo.State -cne 'Completed') {
+            Write-Host -ForegroundColor Green "[$($photo.Name)] From <$($jobArray[$photo.Name].SOURCE_PATH)>"
             $RunningJobs++
         }
     }
     
-    $StillAlive = 0
-    Clear-Host
-    Write-Host -ForegroundColor Yellow "*** RUNNING JOBS ***"
-    foreach ($item in $jobArray.Keys) {
-        $ErrorActionPreference= 'Stop'
-        try {
-            if ((Get-Job -Name $item).State -eq 'Running') {
-                Write-Host -ForegroundColor Green "[$item] From <$($jobArray[$item].SOURCE_PATH)> to <$DESTpath>"
-            }
-        }
-        catch {
-            <# do nothing #>
-        }
-        $ErrorActionPreference= 'Inquire'
-    }
-
     Write-Host -ForegroundColor Blue -NoNewline "`n`nPENDING JOBS "
     $pending_counter = 0
     foreach ($item in $jobArray.Keys) {
-        $ErrorActionPreference= 'Stop'
-        try {
-            if ((Get-Job -Name $item).State -ne 'Completed') {
-                $StillAlive++
-            }
-        }
-        catch {
+        if ($jobArray[$item].STATUS -eq 'queued') {
             $pending_counter++
         }
-        $ErrorActionPreference= 'Inquire'
     }
     Write-Host "$pending_counter"
 
-    Start-Sleep -Milliseconds 2000
-} while ($StillAlive -gt 0)
+    Start-Sleep -Milliseconds 500
+} until (($pending_counter -eq 0) -and ($RunningJobs -eq 0))
 
 
 <# *******************************************************************************
