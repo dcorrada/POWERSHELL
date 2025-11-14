@@ -88,7 +88,7 @@ foreach ($currentDevice in $deviceList) {
     }
 
     if ($parseddata.ContainsKey($currentDevice.DisplayName)) {
-        $uptime = $currentDevice.ApproximateLastSignInDateTime | Get-Date -f yyy-MM-dd
+        $uptime = $currentDevice.ApproximateLastSignInDateTime | Get-Date -f yyyy-MM-dd
         if ($uptime -gt $parseddata[$currentDevice.DisplayName].LastLogon) {
             $parseddata[$currentDevice.DisplayName].LastLogon = $uptime
             $parseddata[$currentDevice.DisplayName].OSType = $currentDevice.OperatingSystem
@@ -97,14 +97,28 @@ foreach ($currentDevice in $deviceList) {
             $parseddata[$currentDevice.DisplayName].Email = $upn
         }
     } else {
-        $parseddata[$currentDevice.DisplayName] = @{
-            'LastLogon' = $currentDevice.ApproximateLastSignInDateTime | Get-Date -f yyy-MM-dd
-            'OSType' = $currentDevice.OperatingSystem
-            'OSVersion' = $currentDevice.OperatingSystemVersion
-            'HostName' = $currentDevice.DisplayName
-            'Owner' = $fullname
-            'Email' = $upn
+        $ErrorActionPreference= 'Stop'
+        try {
+            $parseddata[$currentDevice.DisplayName] = @{
+                'LastLogon' = $currentDevice.ApproximateLastSignInDateTime | Get-Date -f yyyy-MM-dd
+                'OSType' = $currentDevice.OperatingSystem
+                'OSVersion' = $currentDevice.OperatingSystemVersion
+                'HostName' = $currentDevice.DisplayName
+                'Owner' = $fullname
+                'Email' = $upn
+            }
         }
+        catch {
+            $parseddata[$currentDevice.DisplayName] = @{
+                'LastLogon' = '1980-02-07'
+                'OSType' = $currentDevice.OperatingSystem
+                'OSVersion' = $currentDevice.OperatingSystemVersion
+                'HostName' = $currentDevice.DisplayName
+                'Owner' = $fullname
+                'Email' = $upn
+            }
+        }
+        $ErrorActionPreference= 'Inquire'
     }
 
     # progress
