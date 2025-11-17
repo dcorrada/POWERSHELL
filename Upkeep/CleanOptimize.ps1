@@ -1,6 +1,6 @@
 ﻿<#
 Name......: CleanOptimize.ps1
-Version...: 24.10.1
+Version...: 25.10.1
 Author....: Dario CORRADA
 
 This script runs a disk cleanup on volume C: and optimize it
@@ -78,21 +78,45 @@ if ($answ -eq "Yes") {
 
 # see https://docs.microsoft.com/en-us/powershell/module/storage/optimize-volume?view=windowsserver2019-ps
 $issd = Get-PhysicalDisk
-Clear-Host
-Write-Host -ForegroundColor Yellow "STORAGE DEVICE SPECS"
-Write-Host -ForegroundColor Cyan @"
- * $($issd.Model)
- * $($issd.MediaType)
- * $($issd.HealthStatus)
- * $($issd.BusType)
+
+# looking for volume C:
+$VolMap = Get-PhysicalDisk | ForEach-Object {
+    $physicalDisk = $_
+    $physicalDisk |
+        Get-Disk |
+        Get-Partition |
+        Where-Object DriveLetter |
+        Select-Object DriveLetter, @{n='SerialNumber';e={ $physicalDisk.SerialNumber}}
+}
+foreach ($item in $VolMap) {
+    if ($item.DriveLetter -ceq 'C') {
+        $theC = $item.SerialNumber
+    }
+}
+
+$i = 1
+foreach ($aDisk in $issd) {
+    Clear-Host
+    Write-Host -ForegroundColor Yellow "STORAGE DEVICE FOUND #$i"
+    Write-Host -ForegroundColor Cyan @"
+    * $($aDisk.Model)
+    * $($aDisk.MediaType)
+    * $($aDisk.HealthStatus)
+    * $($aDisk.BusType)
 "@
-$answ = [System.Windows.MessageBox]::Show("Optimize Volume C:?",'OPTIMIZE','YesNo','Info')
-if ($answ -eq "Yes") {
-    if ($issd.MediaType -eq 'SSD') {       
-        Optimize-Volume -DriveLetter C -ReTrim -Verbose
+    if ($aDisk.SerialNumber -ceq $theC) {
+        $answ = [System.Windows.MessageBox]::Show("Optimize Volume C:?",'OPTIMIZE','YesNo','Info')
+        if ($answ -eq "Yes") {
+            if ($aDisk.MediaType -eq 'SSD') {       
+                Optimize-Volume -DriveLetter C -ReTrim -Verbose
+            } else {
+                Optimize-Volume -DriveLetter C -Defrag -Verbose
+            }  
+        }
     } else {
-        Optimize-Volume -DriveLetter C -Defrag -Verbose
-    }  
+        Pause
+    }
+    $i++
 }
 
 # reboot
