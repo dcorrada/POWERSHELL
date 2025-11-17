@@ -213,7 +213,7 @@ if ($proceed2ujoin -eq 'Yes') {
 
     # getting AD credentials
     Write-Host -NoNewline "Credential management... "
-    $pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'Join2Domain'
+    $pswout = PowerShell.exe -file "$workdir\Safety\Stargate.ps1" -ascript 'UnjoinEmAll'
     if ($pswout.Count -eq 2) {
         $ad_login = New-Object System.Management.Automation.PSCredential($pswout[0], (ConvertTo-SecureString $pswout[1] -AsPlainText -Force))
     } else {
