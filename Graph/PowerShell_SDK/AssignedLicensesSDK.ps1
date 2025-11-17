@@ -59,6 +59,7 @@ $ErrorActionPreference= 'Stop'
 do {
     try {
         Import-Module -Name "$workdir\Modules\Forms.psm1"
+        Import-Module Microsoft.Graph.Users
         Import-Module ImportExcel
         $ThirdParty = 'Ok'
     } catch {
