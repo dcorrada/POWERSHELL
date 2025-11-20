@@ -9,6 +9,6 @@ $downbin = 'C:\Users\' + $env:USERNAME + '\Downloads\PPPC.ps1'
 if (Test-Path $downbin) {
     Remove-Item $downbin -Force
 }
-Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/PPPC.ps1' -OutFile $downbin
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/AGM_scripts/miscellaneous/PPPC.ps1' -OutFile $downbin
 PowerShell.exe "& ""$downbin"
 Remove-Item $downbin -Force
