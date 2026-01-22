@@ -64,7 +64,8 @@ do {
         $ThirdParty = 'Ok'
     } catch {
         if (!(((Get-InstalledModule).Name) -contains 'Microsoft.Graph')) {
-            Install-Module Microsoft.Graph -Scope AllUsers -RequiredVersion 2.32.0 -Confirm:$False -Force
+            # PLEASE NOTE: the RequiredVersion is just temporary since the script doesn't work with the release 2.34.0 
+            Install-Module Microsoft.Graph -Scope AllUsers -RequiredVersion 2.33.0 -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [Microsoft.Graph] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
