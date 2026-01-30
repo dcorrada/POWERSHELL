@@ -1,6 +1,6 @@
 <#
 Name......: AGMConfMan_init.ps1
-Version...: 25.05.1
+Version...: 26.06.1
 Author....: Dario CORRADA
 
 Questo script si occupa di installare e lanciare il servizio AGM_ConfigManager.
@@ -199,6 +199,24 @@ if ($SkipInstallation) {
     }
     $ErrorActionPreference= 'Inquire'
 }
+
+<# *******************************************************************************
+                                 PATCHES
+******************************************************************************* #>
+# 
+$regpath = 'HKLM:\SYSTEM\CurrentControlSet\Services\AGM_ConfigManager'
+$keyname = 'TenantID'
+$ErrorActionPreference= 'SilentlyContinue'
+try {
+    $exists = Get-ItemProperty $regpath $keyname
+    if ($exists.$keyname -ne '1') {
+        Set-ItemProperty -Path $regpath -Name $keyname -Value 1
+    }
+}
+catch {
+    New-ItemProperty -Path $regpath -Name $keyname -Value 1 -PropertyType String
+}
+$ErrorActionPreference= 'Inquire'
 
 <#
 +++ original script +++
