@@ -203,18 +203,20 @@ if ($SkipInstallation) {
 <# *******************************************************************************
                                  PATCHES
 ******************************************************************************* #>
-# 
-$regpath = 'HKLM:\SYSTEM\CurrentControlSet\Services\AGM_ConfigManager'
+$regpath = 'HKLM:\SYSTEM\CurrentControlSet\Services\AGM_ConfigManager\Parameters'
+if (!(Test-Path $regpath)) {
+    New-Item -Path $regpath | Out-Null
+}
 $keyname = 'TenantID'
 $ErrorActionPreference= 'SilentlyContinue'
 try {
     $exists = Get-ItemProperty $regpath $keyname
     if ($exists.$keyname -ne '1') {
-        Set-ItemProperty -Path $regpath -Name $keyname -Value 1
+        Set-ItemProperty -Path $regpath -Name $keyname -Value '1'
     }
 }
 catch {
-    New-ItemProperty -Path $regpath -Name $keyname -Value 1 -PropertyType String
+    New-ItemProperty -Path $regpath -Name $keyname -Value '1' -PropertyType String
 }
 $ErrorActionPreference= 'Inquire'
 
