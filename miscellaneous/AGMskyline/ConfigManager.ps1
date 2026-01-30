@@ -34,9 +34,10 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName PresentationFramework
 Import-Module -Name "$workdir\Modules\Forms.psm1"
+Import-Module ImportExcel
 
-# carico il csv preprocessato 
-$answ = [System.Windows.MessageBox]::Show("Disponi di un file CSV?",'INFILE','YesNo','Warning')
+# carico il file Excel preprocessato
+$answ = [System.Windows.MessageBox]::Show("Caricare il summary file?",'INFILE','YesNo','Warning')
 if ($answ -eq "No") {    
     Write-Host -ForegroundColor red "Aborting..."
     Start-Sleep -Seconds 3
@@ -46,30 +47,29 @@ if ($answ -eq "No") {
 $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
 $OpenFileDialog.Title = "Open File"
 $OpenFileDialog.initialDirectory = "C:\Users\$env:USERNAME\Downloads"
-$OpenFileDialog.filter = 'CSV file (*.csv)| *.csv'
+$OpenFileDialog.filter = 'Excel file (*.xlsx)| *.xlsx'
 $OpenFileDialog.ShowDialog() | Out-Null
 $infile = $OpenFileDialog.filename
-
-$rawdata = Import-Csv -Path $infile
-$chomp = @()
-$selected_fields = ('Dispositivo', 'Sistema operativo', 'Utente', 'Versione agente', 'Motore di scansione')
-foreach ($item in $rawdata) {
-    $arecord = @{}
-    foreach ($akey in $selected_fields) {
-        $arecord["$akey"] = $item."$akey"
-    }
-    $chomp += $arecord
-}
+$rawdata = Import-Excel -Path $infile -WorksheetName 'Assets' | Select 'Hostname',  'Last User', 'Inv. Date'
 
 # writing output file
 Write-Host -NoNewline "Writing output file... "
-$outfile = "C:\Users\$env:USERNAME\Downloads\" + (Get-Date -format "yyMMdd") + '-TrendMicroparsed.csv'
+$outfile = "C:\Users\$env:USERNAME\Downloads\" + (Get-Date -format "yyMMdd") + '-ConfigManager.csv'
 
 $i = 1
-$totrec = $chomp.Count
+$totrec = $rawdata.Count
 $parsebar = ProgressBar
-foreach ($item in $chomp) {
-    $string = ("AGM{0:d5};{1};{2};{3};{4};{5}" -f ($i,$item['Utente'],$item['Dispositivo'],$item['Sistema operativo'],$item['Versione agente'],$item['Motore di scansione']))
+foreach ($item in $rawdata) {
+    $LastUser = $item.'Last User' -replace "\\", '/'
+    $matches = @()
+    $item.'Inv. Date' -match "^([/0-9]+)\s" > $null
+    if ($matches[1]) {
+        $InvDate = $matches[1] | Get-Date -format "yyyy-MM-dd"
+    } else {
+        $InvDate = '1980-02-07'
+    }
+    
+    $string = ("AGM{0:d5};{1};{2};{3}" -f ($i,$item.'Hostname',$LastUser,$InvDate))
     $string = $string -replace ';\s*;', ';NULL;'
     $string = $string -replace ';+\s*$', ';NULL'
     $string = $string -replace ';\s\[\];', ';NULL;'
@@ -77,6 +77,8 @@ foreach ($item in $chomp) {
     $string = '"' + $string + '"'
     $string = $string -replace '"NULL"', 'NULL'
     $string | Out-File $outfile -Encoding utf8 -Append
+
+    Start-Sleep -Milliseconds 10
     $i++
 
     # progress
