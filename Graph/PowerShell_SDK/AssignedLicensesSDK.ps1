@@ -65,7 +65,7 @@ do {
     } catch {
         if (!(((Get-InstalledModule).Name) -contains 'Microsoft.Graph')) {
             # PLEASE NOTE: the RequiredVersion is just temporary since the script doesn't work with the release 2.34.0 
-            Install-Module Microsoft.Graph -Scope AllUsers -RequiredVersion 2.33.0 -Confirm:$False -Force
+            Install-Module Microsoft.Graph -Scope AllUsers -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [Microsoft.Graph] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
@@ -80,25 +80,6 @@ do {
     }
 } while ($ThirdParty -eq 'Ko')
 $ErrorActionPreference= 'Inquire'
-
-<# 
-Currently the script works with version 2.32. 
-
-Check out your current module release woth the command:
-Get-InstalledModule -Name Microsoft.Graph
-
-A list of the odule release is available at
-https://github.com/microsoftgraph/msgraph-sdk-powershell/releases
-#>
-$answ = [System.Windows.MessageBox]::Show(@"
-The script does not work with the module 
-Microsoft.Graph version 2.34. 
-
-Do yu want to proceed?
-"@,'GRAPH','YesNo','Warning')
-if ($answ -eq "No") {    
-    Exit
-}
 
 <# *******************************************************************************
                             CREDENTIALS MANAGEMENT
