@@ -1,6 +1,6 @@
 <#
 Name......: OneShot.ps1
-Version...: 25.03.4
+Version...: 26.02.1
 Author....: Dario CORRADA
 
 This script allow to navigate and select single scripts from this repository.
@@ -480,13 +480,12 @@ if ($selectedItem.PATH -match 'AGMskyline') {
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/ADusers.ps1', "$workdir\miscellaneous\AGMskyline\ADusers.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/AzureDevices.ps1', "$workdir\miscellaneous\AGMskyline\AzureDevices.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/CheckinFrom.ps1', "$workdir\miscellaneous\AGMskyline\CheckinFrom.ps1")
+    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/ConfigManager.ps1', "$workdir\miscellaneous\AGMskyline\ConfigManager.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/DLmembers.ps1', "$workdir\miscellaneous\AGMskyline\DLmembers.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/EstrazioneAsset.ps1', "$workdir\miscellaneous\AGMskyline\EstrazioneAsset.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/EstrazioneUtenti.ps1', "$workdir\miscellaneous\AGMskyline\EstrazioneUtenti.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/PwdExpire.ps1', "$workdir\miscellaneous\AGMskyline\PwdExpire.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/SchedeAssunzione.ps1', "$workdir\miscellaneous\AGMskyline\SchedeAssunzione.ps1")
-    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/SchedeSIM.ps1', "$workdir\miscellaneous\AGMskyline\SchedeSIM.ps1")
-    $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/SchedeTelefoni.ps1', "$workdir\miscellaneous\AGMskyline\SchedeTelefoni.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/TrendMicroparsed.ps1', "$workdir\miscellaneous\AGMskyline\TrendMicroparsed.ps1")
     $download.Downloadfile('https://raw.githubusercontent.com/dcorrada/POWERSHELL/tempus/miscellaneous/AGMskyline/o365licenses.ps1', "$workdir\miscellaneous\AGMskyline\o365licenses.ps1")
     New-Item -ItemType Directory -Path "$workdir\Graph" | Out-Null
