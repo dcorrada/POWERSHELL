@@ -106,6 +106,14 @@ foreach ($item in $halloffame) {
 Write-Host -ForegroundColor Green ' DONE'
 
 # show dialog
+[System.Windows.MessageBox]::Show(@"
+PLEASE NOTE: upgrading modules "ExchangeOnlineManagement" 
+and/or "Microsoft.Graph" may cause unexpected anomalous 
+behaviour in the script of the repository.
+ 
+Please pay attention to release notes before upgrading.
+"@,'UPGRADE','Ok','warning') | Out-Null
+
 $adialog = FormBase -w 425 -h ((($halloffame.Count-1) * 30) + 175) -text "INSTALLED MODULES"
 $they = 20
 $selmods = @{}

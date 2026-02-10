@@ -63,7 +63,7 @@ do {
         $ThirdParty = 'Ok'
     } catch {
         if (!(((Get-InstalledModule).Name) -contains 'ExchangeOnlineManagement')) {
-            Install-Module ExchangeOnlineManagement -Confirm:$False -Force
+            Install-Module ExchangeOnlineManagement -RequiredVersion 3.9.0 -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [ExchangeOnlineManagement] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
@@ -71,7 +71,7 @@ do {
             [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } elseif (!(((Get-InstalledModule).Name) -contains 'Microsoft.Graph')) {
-            Install-Module Microsoft.Graph -Scope AllUsers -Confirm:$False -Force
+            Install-Module Microsoft.Graph -Scope AllUsers -RequiredVersion 2.33 -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [Microsoft.Graph] module: click Ok restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } else {
