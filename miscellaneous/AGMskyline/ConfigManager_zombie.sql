@@ -11,3 +11,4 @@ SELECT ConfigManager.HOSTNAME, EstrazioneAsset.STATUS
 FROM ConfigManager
 LEFT JOIN EstrazioneAsset 
 ON ConfigManager.HOSTNAME = EstrazioneAsset.HOSTNAME
+WHERE EstrazioneAsset.Status NOT IN ('Assegnato', 'da Assegnare', 'in transito');

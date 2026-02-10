@@ -11,3 +11,4 @@ SELECT TrendMicroparsed.HOSTNAME, EstrazioneAsset.STATUS
 FROM TrendMicroparsed
 LEFT JOIN EstrazioneAsset 
 ON TrendMicroparsed.HOSTNAME = EstrazioneAsset.HOSTNAME
+WHERE EstrazioneAsset.STATUS != 'Assegnato';
