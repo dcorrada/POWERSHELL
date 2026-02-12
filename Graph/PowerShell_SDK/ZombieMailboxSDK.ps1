@@ -63,7 +63,7 @@ do {
         $ThirdParty = 'Ok'
     } catch {
         if (!(((Get-InstalledModule).Name) -contains 'ExchangeOnlineManagement')) {
-            Install-Module ExchangeOnlineManagement -RequiredVersion 3.9.0 -Confirm:$False -Force
+            Install-Module ExchangeOnlineManagement -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [ExchangeOnlineManagement] module: click Ok to restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } elseif (!(((Get-InstalledModule).Name) -contains 'ImportExcel')) {
