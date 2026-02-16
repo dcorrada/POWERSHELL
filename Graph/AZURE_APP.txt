@@ -26,3 +26,10 @@ Under Manage, select Properties and set "Assignment required?" to Yes. Then sele
 Under Manage, select Users and groups and add the users and groups permitted to use this application.
 Once you've added all the users and groups, select Assign.
 
+
+
+!!! PLEASE NOTE !!!
+Starting from Microsoft.Graph release 2.34 you need to add a supplemental Redirect URI (see step 2) as follows:
+ms-appx-web://Microsoft.AAD.BrokerPlugin/[your appID such as "e5a1e258-..."]
+see also: https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/3515
+

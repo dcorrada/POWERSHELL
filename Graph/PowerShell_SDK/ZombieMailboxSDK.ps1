@@ -71,7 +71,7 @@ do {
             [System.Windows.MessageBox]::Show("Installed [ImportExcel] module: click Ok restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } elseif (!(((Get-InstalledModule).Name) -contains 'Microsoft.Graph')) {
-            Install-Module Microsoft.Graph -Scope AllUsers -Confirm:$False -Force
+            Install-Module Microsoft.Graph -Scope AllUsers -RequiredVersion 2.33 -Confirm:$False -Force
             [System.Windows.MessageBox]::Show("Installed [Microsoft.Graph] module: click Ok restart the script",'RESTART','Ok','warning') > $null
             $ThirdParty = 'Ko'
         } else {

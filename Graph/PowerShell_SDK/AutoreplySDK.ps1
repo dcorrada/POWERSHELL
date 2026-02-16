@@ -56,7 +56,7 @@ try {
     Import-Module Microsoft.Graph.Users    
 } catch {
     if (!(((Get-InstalledModule).Name) -contains 'Microsoft.Graph')) {
-        Install-Module Microsoft.Graph -Scope AllUsers
+        Install-Module Microsoft.Graph -Scope AllUsers -RequiredVersion 2.33 -Confirm:$False -Force
         [System.Windows.MessageBox]::Show("Installed [MIcrosoft.Graph] module: please restart the script",'RESTART','Ok','warning')
         exit
     } else {
