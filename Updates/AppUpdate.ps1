@@ -107,7 +107,7 @@ if ($upgradable -eq $true) {
 # run upgrade
 foreach ($currentId in $selmods.Keys) {
     if ($selmods[$currentId].Checked) {
-        $currentArg = "upgrade --id $currentId"
+        $currentArg = "upgrade --id $currentId --source winget"
         Write-Host -ForegroundColor Yellow "`n*** Upgrading $($selmods[$currentId].Text) ***"
         Start-Process -Wait -FilePath "winget.exe" -ArgumentList $currentArg -NoNewWindow
     }
