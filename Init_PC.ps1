@@ -263,8 +263,13 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 }
                 Write-Host -ForegroundColor Green " DONE"
             } else {
-                Write-Host -ForegroundColor Red " FAILED"
-                [System.Windows.MessageBox]::Show("Something has gone wrong, check the file `n[$winget_stdout_file]",'OOOPS!','Ok','Error') | Out-Null
+                # trying manual install
+                Write-Host -NoNewline "Download software..."
+                $download.Downloadfile("https://revo-uninstaller.b-cdn.net/revosetup.exe", "$env:USERPROFILE\Downloads\revosetup.exe")
+                Write-Host -ForegroundColor Green " DONE"
+                Write-Host -NoNewline "Install software..."
+                Start-Process -Wait -FilePath "$env:USERPROFILE\Downloads\revosetup.exe"
+                Write-Host -ForegroundColor Green " DONE"
             }
         } elseif ($item -eq 'Office 365 Desktop') {
             Write-Host -NoNewline "Download software..."
