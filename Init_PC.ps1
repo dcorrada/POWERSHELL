@@ -264,12 +264,13 @@ foreach ($item in ($swlist.Keys | Sort-Object)) {
                 Write-Host -ForegroundColor Green " DONE"
             } else {
                 # trying manual install
-                Write-Host -NoNewline "Download software..."
+                Write-Host -NoNewline "`nDownload software..."
                 $download.Downloadfile("https://revo-uninstaller.b-cdn.net/revosetup.exe", "$env:USERPROFILE\Downloads\revosetup.exe")
                 Write-Host -ForegroundColor Green " DONE"
                 Write-Host -NoNewline "Install software..."
                 Start-Process -Wait -FilePath "$env:USERPROFILE\Downloads\revosetup.exe"
                 Write-Host -ForegroundColor Green " DONE"
+                Remove-Item -Path "$env:USERPROFILE\Downloads\revosetup.exe" -Force
             }
         } elseif ($item -eq 'Office 365 Desktop') {
             Write-Host -NoNewline "Download software..."
