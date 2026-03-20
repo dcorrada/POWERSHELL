@@ -53,7 +53,7 @@ $headers = @{
 # query tabella assets
 Write-Host -NoNewline "Fetching asset list..."
 $query_params = @(
-    'limit=100000'
+    'limit=9400'
     'offset=0'
 )
 $uri_suffix = '?' + ($query_params -join '&')
@@ -81,7 +81,7 @@ Write-Host -ForegroundColor Green " DONE"
 # query tabella users
 Write-Host -NoNewline "Fetching users list..."
 $query_params = @(
-    'limit=100000'
+    'limit=9400'
     'offset=0'
 )
 $uri_suffix = '?' + ($query_params -join '&')
@@ -108,7 +108,7 @@ Write-Host -ForegroundColor Green " DONE"
 # query tabella logs
 Write-Host -NoNewline "Fetching activity logs..."
 $query_params = @(
-    'limit=100000'
+    'limit=9400'
     'offset=0'
 )
 $uri_suffix = '?' + ($query_params -join '&')
