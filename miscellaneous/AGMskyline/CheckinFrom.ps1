@@ -108,7 +108,7 @@ Write-Host -ForegroundColor Green " DONE"
 # query tabella logs
 Write-Host -NoNewline "Fetching activity logs..."
 $query_params = @(
-    'limit=9400'
+    'limit=9000'
     'offset=0'
 )
 $uri_suffix = '?' + ($query_params -join '&')
